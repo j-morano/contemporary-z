@@ -87,12 +87,11 @@ fn main() -> Result<()> {
     // If there is a folder argument, cd to the folder
     if args.len() > 1 {
 
-        // Print argument
-        // println!("The first argument is {}", args[1]);
-
+        // Check if folder is in the table
         let folder = get_folder(&conn, &args[1]);
         
-        // If the folder is not in the table and exists, add it
+        // If the folder is not in the table and it does exists in the
+        //   FS, add it
         if let Err(_err) = folder {
             // If the folder exists, add it
             if Path::new(&args[1]).exists() {
@@ -143,19 +142,27 @@ fn main() -> Result<()> {
 
         let folders_collection: Vec<_> = folders.collect();
 
+        // Filter invalid folders from the current path
+        let mut valid_folders: Vec<Folder> = Vec::new();
+
+        for folder in folders_collection {
+            let folder_info = folder.as_ref().expect("Error");
+            if Path::new(&folder_info.name).exists() {
+                valid_folders.push(folder?);
+            }
+        }
+
         // If there are no folders, exit
-        if folders_collection.len() == 0 {
+        if valid_folders.len() == 0 {
             println!("No folders");
             exit(0);
         }
 
-        for (i, folder) in folders_collection.iter().enumerate() {
-            let folder_info = folder.as_ref().expect("Error");
-            println!("{}) {} [{}]", i+1, folder_info.name, folder_info.counter);
+        // Show valid folders
+        for (i, folder) in valid_folders.iter().enumerate() {
+            println!("{}) {} [{}]", i+1, folder.name, folder.counter);
         }
         println!();
-
-        // let selected_folder: usize = select_folder().parse().unwrap();
 
         let selected_folder = match select_folder().parse::<usize>() {
             Ok(number)  => number,
@@ -166,9 +173,18 @@ fn main() -> Result<()> {
             },
         };
 
-        let folder_name =
-            format!("{}", folders_collection[selected_folder-1].as_ref().unwrap().name);
+        // Check if the introduced number is valid
+        if selected_folder > valid_folders.len() || selected_folder < 1{
+            write("error", "".to_string());
+            println!("Invalid number: {} > {}", selected_folder, valid_folders.len());
+            exit(1);
+        }
 
+        // Get name of the selected folder
+        let folder_name =
+            format!("{}", valid_folders[selected_folder-1].name);
+
+        // Update folder accesses counter
         conn.execute(
             "UPDATE folders SET counter = counter + 1 where name = ?1",
             params![folder_name],
