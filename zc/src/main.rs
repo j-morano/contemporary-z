@@ -4,6 +4,9 @@ use std::path::Path;
 use std::process::exit;
 use std::fs;
 use home::home_dir;
+use std::fs::File;
+use std::io::prelude::*;
+use std::io;
 
 
 #[derive(Debug)]
@@ -19,6 +22,21 @@ fn get_folder(conn: &Connection, name: &str) -> Result<String> {
         params![name],
         |row| row.get(0),
     )
+}
+
+fn write(mut z_file: &File, action:&str, text: String) {
+    z_file.write_all(
+        format!("{}#{}", action, text).as_bytes()
+    ).expect("Could not write to file");
+    // println!("{}", format!("{}#{}", action, text));
+}
+
+fn select_folder() -> String {
+    let mut line = String::new();
+    print!("Number: ");
+    io::stdout().flush().expect("Could not flush output");
+    std::io::stdin().read_line(&mut line).unwrap();
+    return line.replace('\n', "");
 }
 
 fn main() -> Result<()> {
@@ -42,9 +60,12 @@ fn main() -> Result<()> {
     // Open connection with the database
     let conn = Connection::open(database_file_path)?;
 
+    let z_file = File::create("/tmp/z_path").expect("");
+
     // Clear table command option
     if args.len() > 1 && args[1] == "--clear" {
-        println!("clear#");
+        println!("Cleared database");
+        // write(z_file, "clear#", "".to_string());
         conn.execute("drop table if exists folders", [])?;
         exit(0);
     }
@@ -59,7 +80,9 @@ fn main() -> Result<()> {
          )",
         [],
     )?;
-    
+
+    write(&z_file, "empty", "".to_string());
+
     // If there is a folder argument, cd to the folder
     if args.len() > 1 {
 
@@ -79,7 +102,8 @@ fn main() -> Result<()> {
                         params![args[1]],
                     )?;
                 }
-                println!("direct_cd#{}", args[1]);
+                println!("{}", args[1]);
+                write(&z_file, "direct_cd", args[1].clone());
             } else {
                 println!("Invalid path '{}'", args[1]);
                 exit(1);
@@ -92,7 +116,7 @@ fn main() -> Result<()> {
                 params![args[1]],
             )?;
 
-            println!("direct_cd#{}", folder?);
+            write(&z_file, "direct_cd", folder?);
         }
 
         Ok(())
@@ -118,10 +142,6 @@ fn main() -> Result<()> {
 
         let folders_collection: Vec<_> = folders.collect();
 
-        // Action
-        print!("folder_selection#");
-        // Number of items
-        print!("{}#", folders_collection.len());
 
         // If there are no folders, exit
         if folders_collection.len() == 0 {
@@ -130,8 +150,30 @@ fn main() -> Result<()> {
 
         for (i, folder) in folders_collection.iter().enumerate() {
             let folder_info = folder.as_ref().expect("Error");
-            print!("{}) {} [{}]\\n", i+1, folder_info.name, folder_info.counter);
+            println!("{}) {} [{}]", i+1, folder_info.name, folder_info.counter);
         }
+        println!();
+
+        // let selected_folder: usize = select_folder().parse().unwrap();
+
+        let selected_folder = match select_folder().parse::<usize>() {
+            Ok(number)  => number,
+            Err(e) => {
+                write(&z_file, "error", "".to_string());
+                println!("No folder selected: {}", e);
+                exit(1);
+            },
+        };
+
+        let folder_name =
+            format!("{}", folders_collection[selected_folder-1].as_ref().unwrap().name);
+
+        conn.execute(
+            "UPDATE folders SET counter = counter + 1 where name = ?1",
+            params![folder_name],
+        )?;
+
+        write(&z_file, "direct_cd", folder_name);
 
         Ok(())
     }
