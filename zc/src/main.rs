@@ -1,10 +1,10 @@
 use rusqlite::{params, Connection, Result};
 use std::env;
-use std::process;
 use std::path::Path;
 use std::process::exit;
 use std::fs;
 use home::home_dir;
+
 
 #[derive(Debug)]
 struct Folder {
@@ -25,10 +25,9 @@ fn main() -> Result<()> {
     // Collect command-line arguments 
     let args: Vec<_> = env::args().collect();
 
+    // Get user home directory
     let home_dir_o = home_dir().unwrap();
     let home_dir_d = home_dir_o.display();
-
-    // print!("{}", home_dir_d);
 
     let database_folder_path = format!(
         "{}{}", home_dir_d, "/.local/share/z/");
@@ -47,7 +46,7 @@ fn main() -> Result<()> {
     if args.len() > 1 && args[1] == "--clear" {
         println!("clear#");
         conn.execute("drop table if exists folders", [])?;
-        process::exit(0);
+        exit(0);
     }
 
     // Create folders table if it does not exist
@@ -61,7 +60,7 @@ fn main() -> Result<()> {
         [],
     )?;
     
-    
+    // If there is a folder argument, cd to the folder
     if args.len() > 1 {
 
         // Print argument
@@ -73,14 +72,16 @@ fn main() -> Result<()> {
         if let Err(_err) = folder {
             // If the folder exists, add it
             if Path::new(&args[1]).exists() {
-                // println!("New folder {}", args[1]);
-                conn.execute(
-                    "INSERT INTO folders (name, counter) values (?1, 1)",
-                    params![args[1]],
-                )?;
+                // Do not store '..' or '.' folders
+                if !(args[1] == "." || args[1] == "..") {
+                    conn.execute(
+                        "INSERT INTO folders (name, counter) values (?1, 1)",
+                        params![args[1]],
+                    )?;
+                }
                 println!("direct_cd#{}", args[1]);
             } else {
-                println!("Invalid path {}", args[1]);
+                println!("Invalid path '{}'", args[1]);
                 exit(1);
             }
 
@@ -96,15 +97,15 @@ fn main() -> Result<()> {
 
         Ok(())
 
-    // If there is no argument, go to the most frequent folder
+    // If there is no argument, list frequent folders
     } else {
-        print!("folder_selection#");
 
         // Return most common folders ordered by counter (descending) 
         let mut stmt = conn.prepare(
             "SELECT name, counter 
             FROM folders
             ORDER BY counter DESC
+            LIMIT 9
             ;",
         )?;
 
@@ -117,19 +118,19 @@ fn main() -> Result<()> {
 
         let folders_collection: Vec<_> = folders.collect();
 
-        if folders_collection.len() == 0 {
-            exit(1);
-        }
-
+        // Action
+        print!("folder_selection#");
         // Number of items
         print!("{}#", folders_collection.len());
 
-        let max_results = 9;
+        // If there are no folders, exit
+        if folders_collection.len() == 0 {
+            exit(0);
+        }
+
         for (i, folder) in folders_collection.iter().enumerate() {
             let folder_info = folder.as_ref().expect("Error");
             print!("{}) {} [{}]\\n", i+1, folder_info.name, folder_info.counter);
-            // Only print the first folder
-            if i > max_results+1 { break; }
         }
 
         Ok(())
