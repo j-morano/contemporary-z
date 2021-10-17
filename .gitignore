@@ -1,3 +1,4 @@
 *.db
+Cargo.lock
 .idea/
-/target
+zc/target
