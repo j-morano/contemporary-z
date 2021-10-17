@@ -24,7 +24,10 @@ fn get_folder(conn: &Connection, name: &str) -> Result<String> {
     )
 }
 
-fn write(mut z_file: &File, action:&str, text: String) {
+fn write(action:&str, text: String) {
+    // https://stackoverflow.com/questions/65782872/
+    let mut z_file = File::create(
+        "/tmp/z_path").expect("Could not open file");
     z_file.write_all(
         format!("{}#{}", action, text).as_bytes()
     ).expect("Could not write to file");
@@ -60,8 +63,6 @@ fn main() -> Result<()> {
     // Open connection with the database
     let conn = Connection::open(database_file_path)?;
 
-    let z_file = File::create("/tmp/z_path").expect("");
-
     // Clear table command option
     if args.len() > 1 && args[1] == "--clear" {
         println!("Cleared database");
@@ -81,7 +82,7 @@ fn main() -> Result<()> {
         [],
     )?;
 
-    write(&z_file, "empty", "".to_string());
+    write("empty", "".to_string());
 
     // If there is a folder argument, cd to the folder
     if args.len() > 1 {
@@ -102,8 +103,8 @@ fn main() -> Result<()> {
                         params![args[1]],
                     )?;
                 }
-                println!("{}", args[1]);
-                write(&z_file, "direct_cd", args[1].clone());
+                // println!("{}", args[1]);
+                write("direct_cd", args[1].clone());
             } else {
                 println!("Invalid path '{}'", args[1]);
                 exit(1);
@@ -116,7 +117,7 @@ fn main() -> Result<()> {
                 params![args[1]],
             )?;
 
-            write(&z_file, "direct_cd", folder?);
+            write("direct_cd", folder?);
         }
 
         Ok(())
@@ -142,9 +143,9 @@ fn main() -> Result<()> {
 
         let folders_collection: Vec<_> = folders.collect();
 
-
         // If there are no folders, exit
         if folders_collection.len() == 0 {
+            println!("No folders");
             exit(0);
         }
 
@@ -159,7 +160,7 @@ fn main() -> Result<()> {
         let selected_folder = match select_folder().parse::<usize>() {
             Ok(number)  => number,
             Err(e) => {
-                write(&z_file, "error", "".to_string());
+                write("error", "".to_string());
                 println!("No folder selected: {}", e);
                 exit(1);
             },
@@ -173,7 +174,7 @@ fn main() -> Result<()> {
             params![folder_name],
         )?;
 
-        write(&z_file, "direct_cd", folder_name);
+        write("direct_cd", folder_name);
 
         Ok(())
     }
