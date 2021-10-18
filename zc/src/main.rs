@@ -138,14 +138,12 @@ fn main() -> Result<()> {
             // println!("{}", pages);
             pages += 1;
             let mut sql = format!("SELECT name, counter
-                FROM folders #
+                FROM folders --where
                 ORDER BY counter DESC
                 LIMIT {}
                 ;", MAX_RESULTS);
-            if pages == 1 {
-                sql = sql.replace("#", "");
-            } else {
-                sql = sql.replace("#", format!("WHERE name NOT IN ( SELECT name FROM folders
+            if pages > 1 {
+                sql = sql.replace("--where", format!("WHERE name NOT IN ( SELECT name FROM folders
                     ORDER BY counter DESC LIMIT {} )", (pages-1)*MAX_RESULTS).as_str());
             }
 
