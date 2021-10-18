@@ -32,9 +32,9 @@ fn write(action:&str, text: String) {
     let mut z_file = File::create(
         "/tmp/z_path").expect("Could not open file");
     z_file.write_all(
-        format!("{}#{}", action, text).as_bytes()
+        format!("{}|{}", action, text).as_bytes()
     ).expect("Could not write to file");
-    // println!("{}", format!("{}#{}", action, text));
+    // println!("{}", format!("{}|{}", action, text));
 }
 
 fn select_folder() -> String {
