@@ -9,6 +9,9 @@ use std::io::prelude::*;
 use std::io;
 
 
+const MAX_RESULTS: usize = 9;
+
+
 #[derive(Debug)]
 struct Folder {
     name: String,
@@ -124,31 +127,61 @@ fn main() -> Result<()> {
     // If there is no argument, list frequent folders
     } else {
 
-        // Return most common folders ordered by counter (descending) 
-        let mut stmt = conn.prepare(
-            "SELECT name, counter 
-            FROM folders
-            ORDER BY counter DESC
-            LIMIT 9
-            ;",
-        )?;
-
-        let folders = stmt.query_map([], |row| {
-            Ok(Folder {
-                name: row.get(0)?,
-                counter: row.get(1)?
-            })
-        })?;
-
-        let folders_collection: Vec<_> = folders.collect();
-
         // Filter invalid folders from the current path
         let mut valid_folders: Vec<Folder> = Vec::new();
 
-        for folder in folders_collection {
-            let folder_info = folder.as_ref().expect("Error");
-            if Path::new(&folder_info.name).exists() {
-                valid_folders.push(folder?);
+        // Results pages
+        let mut pages = 0;
+
+        // Database pagination
+        while valid_folders.len() != MAX_RESULTS {
+            // println!("{}", pages);
+            pages += 1;
+            let mut sql = format!("SELECT name, counter
+                FROM folders #
+                ORDER BY counter DESC
+                LIMIT {}
+                ;", MAX_RESULTS);
+            if pages == 1 {
+                sql = sql.replace("#", "");
+            } else {
+                sql = sql.replace("#", format!("WHERE name NOT IN ( SELECT name FROM folders
+                    ORDER BY counter DESC LIMIT {} )", (pages-1)*MAX_RESULTS).as_str());
+            }
+
+            // println!("{}", sql);
+
+            // Return most common folders ordered by counter (descending)
+            let mut stmt = conn.prepare(sql.as_str(),)?;
+
+            let folders = stmt.query_map([], |row| {
+                Ok(Folder {
+                    name: row.get(0)?,
+                    counter: row.get(1)?
+                })
+            })?;
+
+            let folders_collection: Vec<_> = folders.collect();
+
+            // Number of folders collected
+            let num_folders = folders_collection.len();
+
+            // Add collected folders to valid folders, if appropriate
+            for folder in folders_collection {
+                let folder_info = folder.as_ref().expect("Error");
+                if Path::new(&folder_info.name).exists() {
+                    valid_folders.push(folder?);
+                }
+                // If there are enough results, do not add more
+                if valid_folders.len() == MAX_RESULTS {
+                    break;
+                }
+            }
+
+            // Exit loop if this was the last page or if there are
+            //   enough results.
+            if num_folders < MAX_RESULTS || valid_folders.len() == MAX_RESULTS {
+                break;
             }
         }
 
@@ -164,6 +197,7 @@ fn main() -> Result<()> {
         }
         println!();
 
+        // Select folder by number
         let selected_folder = match select_folder().parse::<usize>() {
             Ok(number)  => number,
             Err(e) => {
