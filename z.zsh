@@ -1,7 +1,7 @@
 #!/usr/bin/env zsh
 
-zc "$@"
-zout=$(cat "/tmp/z_path")
+cz "$@"
+zout=$(cat "/tmp/cz_path")
 zouts=("${(@s/|/)zout}")
 if [ "${zouts[1]}" = "direct_cd" ]; then
     cd ${zouts[2]}

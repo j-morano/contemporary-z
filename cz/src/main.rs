@@ -30,7 +30,7 @@ fn get_folder(conn: &Connection, name: &str) -> Result<String> {
 fn write(action:&str, text: String) {
     // https://stackoverflow.com/questions/65782872/
     let mut z_file = File::create(
-        "/tmp/z_path").expect("Could not open file");
+        "/tmp/cz_path").expect("Could not open file");
     z_file.write_all(
         format!("{}|{}", action, text).as_bytes()
     ).expect("Could not write to file");

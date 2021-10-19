@@ -1,7 +1,7 @@
 #!/usr/bin/env fish
 
-cargo install --path zc
-mkdir -p ~/.local/share/z/
-cp z.fish ~/.local/share/z/
-alias z ". ~/.local/share/z/z.fish"
+cargo install --path cz
+mkdir -p ~/.local/share/cz/
+cp cz.fish ~/.local/share/cz/
+alias z ". ~/.local/share/cz/cz.fish"
 funcsave z
