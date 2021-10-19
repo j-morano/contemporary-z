@@ -16,12 +16,12 @@
 
 Contemporary-z is in early development, so it lacks many of the functionalities available in the original `z`. However, its design makes it easily extensible, which makes it possible not to delay the incorporation of these functionalities for too long.
 
-For the time being, Contemporary-z already supports [fish shell](https://github.com/fish-shell/fish-shell) and [bash](https://www.gnu.org/software/bash/). Furthermore, since it is written in Rust and uses an SQLite database, it should be relatively easy to adapt it to more shells; it is only necessary to incorporate new installation and runtime scripts for the new shell.
+For the time being, Contemporary-z already supports [fish shell](https://github.com/fish-shell/fish-shell), [bash](https://www.gnu.org/software/bash/) and [Zsh](https://www.zsh.org/). Furthermore, since it is written in Rust and uses an SQLite database, it should be relatively easy to adapt it to more shells; it is only necessary to incorporate new installation and runtime scripts for the new shell.
 
 
 ## Installation
 
-At the moment, Comeplementary-z supports both fish shell and bash. To install it from source, it is only necessary to run the specific installation script for the desired shell.
+At the moment, Comeplementary-z supports fish shell, bash and Zsh. To install it from source, it is only necessary to run the specific installation script for the desired shell.
 
 ### Fish
 
@@ -33,6 +33,12 @@ At the moment, Comeplementary-z supports both fish shell and bash. To install it
 
 ```bash
 ./install.sh
+```
+
+### Zsh
+
+```zsh
+./install.zsh
 ```
 
 

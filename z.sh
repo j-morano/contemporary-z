@@ -1,8 +1,8 @@
-#!/usr/bin/env fish
+#!/usr/bin/env bash
 
-zc $argv
+zc "$@"
 zout=$(cat "/tmp/z_path")
-IFS=';'; zouts=($zout); unset IFS
-if [ "${zouts[1]}" == "direct_cd" ]; then
-    cd ${zouts[2]}
+IFS='|'; zouts=($zout); unset IFS
+if [ "${zouts[0]}" = "direct_cd" ]; then
+    cd ${zouts[1]}
 fi
