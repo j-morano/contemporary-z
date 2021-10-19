@@ -54,7 +54,7 @@ fn main() -> Result<()> {
     let home_dir_d = home_dir_o.display();
 
     let database_folder_path = format!(
-        "{}{}", home_dir_d, "/.local/share/z/");
+        "{}{}", home_dir_d, "/.local/share/cz/");
 
     // Create application user-specific data folder if it does not exist
     fs::create_dir_all(&database_folder_path).unwrap_or_else(
