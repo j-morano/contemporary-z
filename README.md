@@ -12,20 +12,29 @@
 
 ## Key Features
 
-Contemporary-z is a modern and improved version of [z - jump around](https://github.com/rupa/z). It is implemented in Rust+SQLite, and utilizes temporary files for the interprocess communication with the shell. Contemporary-z is in early development, so it lacks many of the functionalities available in the original `z`. However, its design makes it easily extensible, which makes it possible not to delay the incorporation of these functionalities for too long.
+**Contemporary-z** is a modern and improved version of [z - jump around](https://github.com/rupa/z). It is implemented in Rust+SQLite, and utilizes temporary files for the interprocess communication with the shell.
 
-For the time being, Contemporary-z only supports fish shell but, since it is written in Rust and uses an SQLite database, it should be relatively easy to adapt it to new shells. In fact, it would only be necessary to incorporate new installation and runtime scripts for the shell in question. Taking this into account, it is expected to support these and other shells in the near future.
+Contemporary-z is in early development, so it lacks many of the functionalities available in the original `z`. However, its design makes it easily extensible, which makes it possible not to delay the incorporation of these functionalities for too long.
+
+For the time being, Contemporary-z already supports [fish shell](https://github.com/fish-shell/fish-shell) and [bash](https://www.gnu.org/software/bash/). Furthermore, since it is written in Rust and uses an SQLite database, it should be relatively easy to adapt it to more shells; it is only necessary to incorporate new installation and runtime scripts for the new shell.
 
 
 ## Installation
 
-At the moment, Comeplementary-z only supports fish shell. To install it from source, it is only necessary to run the specific installation script.
+At the moment, Comeplementary-z supports both fish shell and bash. To install it from source, it is only necessary to run the specific installation script for the desired shell.
 
 ### Fish
 
 ```fish
 ./install.fish
 ```
+
+### Bash
+
+```bash
+./install.sh
+```
+
 
 ## How to use
 
