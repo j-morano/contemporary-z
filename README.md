@@ -12,10 +12,39 @@
 
 ## Key Features
 
+Contemporary-z is a modern and improved version of [z - jump around](https://github.com/rupa/z). It is implemented in Rust+SQLite, and utilizes temporary files for the interprocess communication with the shell. Contemporary-z is in early development, so it lacks many of the functionalities available in the original `z`. However, its design makes it easily extensible, which makes it possible not to delay the incorporation of these functionalities for too long.
+
+For the time being, Contemporary-z only supports fish shell but, since it is written in Rust and uses an SQLite database, it should be relatively easy to adapt it to new shells. In fact, it would only be necessary to incorporate new installation and runtime scripts for the shell in question. Taking this into account, it is expected to support these and other shells in the near future.
+
 
 ## Installation
 
+At the moment, Comeplementary-z only supports fish shell. To install it from source, it is only necessary to run the specific installation script.
+
+### Fish
+
+```fish
+./install.fish
+```
 
 ## How to use
+
+
+### Usage:
+
+```fish
+z [options] [folder]
+```
+
+If no option nor folder is specified, `z` prints a numbered list of the most frequent directories to select one of them by introducing the number of the desired folder.
+
+If a folder name is itroduced, `z` jumps to the folder, if available, and adds it to the folders database (if it is not already added).
+
+
+
+### Options:
+
+* `--clear`: clears the folders database.
+
 
 
