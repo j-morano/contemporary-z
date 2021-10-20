@@ -12,11 +12,11 @@
 
 ## Key Features
 
-**Contemporary-z** is a modern and improved version of [z - jump around](https://github.com/rupa/z). It is implemented in Rust+SQLite, and utilizes temporary files for the interprocess communication with the shell.
+**Contemporary-z** is a modern and improved version of [z - jump around](https://github.com/rupa/z). It is implemented in Rust+SQLite, and utilizes temporary files for the inter-process communication with the shell.
 
-Contemporary-z is in early development, so it lacks many of the functionalities available in the original `z`. However, its design makes it easily extensible, which makes it possible not to delay the incorporation of these functionalities for too long.
+Contemporary-z is at an early stage of development, so it lacks many of the functionalities available in the original `z`. However, its design makes it easily extensible, so these functionalities will not take long to be incorporated.
 
-For the time being, Contemporary-z already supports [fish shell](https://github.com/fish-shell/fish-shell), [bash](https://www.gnu.org/software/bash/) and [Zsh](https://www.zsh.org/). Furthermore, since it is written in Rust and uses an SQLite database, it should be relatively easy to adapt it to more shells; it is only necessary to incorporate new installation and runtime scripts for the new shell.
+For the time being, Contemporary-z already supports [fish shell](https://github.com/fish-shell/fish-shell), [bash](https://www.gnu.org/software/bash/) and [Zsh](https://www.zsh.org/). Furthermore, since it is written in Rust and uses an SQLite database, it should be relatively easy to adapt it to more shells; it is only necessary to adapt the installation and runtime scripts.
 
 
 ## Installation
@@ -60,6 +60,5 @@ If a folder name is itroduced, `z` jumps to the folder, if available, and adds i
 ### Options:
 
 * `--clear`: clears the folders database.
-
 
 
