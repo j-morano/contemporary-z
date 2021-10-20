@@ -90,25 +90,35 @@ fn main() -> Result<()> {
     // If there is a folder argument, cd to the folder
     if args.len() > 1 {
 
+        // Folder argument
+        let mut folder_str = args[1].as_str();
+
+        // If folder name ends with '/', remove it, in order to avoid
+        //   having duplicated folders (with and without '/' versions)
+        if folder_str.chars().last().unwrap() == '/' {
+            folder_str = &folder_str[..folder_str.len() - 1];
+        }
+
         // Check if folder is in the table
-        let folder = get_folder(&conn, &args[1]);
+        let folder = get_folder(&conn, folder_str);
         
         // If the folder is not in the table and it does exists in the
         //   FS, add it
         if let Err(_err) = folder {
             // If the folder exists, add it
-            if Path::new(&args[1]).exists() {
+            if Path::new(folder_str).exists() {
                 // Do not store '..' or '.' folders
-                if !(args[1] == "." || args[1] == "..") {
+                if !(folder_str == "." || folder_str == "..") {
                     conn.execute(
                         "INSERT INTO folders (name, counter) values (?1, 1)",
-                        params![args[1]],
+                        params![folder_str],
                     )?;
                 }
                 // println!("{}", args[1]);
-                write("direct_cd", args[1].clone());
+                write("direct_cd", folder_str.to_string());
             } else {
-                println!("Invalid path '{}'", args[1]);
+                write("error", "".to_string());
+                println!("Invalid path '{}'", folder_str);
                 exit(1);
             }
 
@@ -116,7 +126,7 @@ fn main() -> Result<()> {
         } else {
             conn.execute(
                 "UPDATE folders SET counter = counter + 1 where name = ?1",
-                params![args[1]],
+                params![folder_str],
             )?;
 
             write("direct_cd", folder?);
@@ -143,8 +153,14 @@ fn main() -> Result<()> {
                 LIMIT {}
                 ;", MAX_RESULTS);
             if pages > 1 {
-                sql = sql.replace("--where", format!("WHERE name NOT IN ( SELECT name FROM folders
-                    ORDER BY counter DESC LIMIT {} )", (pages-1)*MAX_RESULTS).as_str());
+                sql = sql.replace(
+                    "--where",
+                    format!(
+                        "WHERE name NOT IN ( SELECT name FROM folders
+                            ORDER BY counter DESC LIMIT {} )",
+                        (pages-1)*MAX_RESULTS
+                    ).as_str()
+                );
             }
 
             // println!("{}", sql);
