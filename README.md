@@ -48,12 +48,14 @@ At the moment, Comeplementary-z supports fish shell, bash and Zsh. To install it
 ### Usage:
 
 ```fish
-z [options] [folder]
+z [options] [folder or substrings]
 ```
 
-If no option nor folder is specified, `z` prints a numbered list of the most frequent directories to select one of them by introducing the number of the desired folder.
+1. If no option nor folder or substrings are specified, `z` prints a numbered list of the most frequent directories to select one of them by introducing the number of the desired folder.
 
-If a folder name is itroduced, `z` jumps to the folder, if available, and adds it to the folders database (if it is not already added).
+2. If a folder name is itroduced, `z` jumps to the folder (if available) and adds it to the folders database (if it is not already added).
+
+3. If a substring is introduced, `z` searches in the database for coincidences, and outputs the list, as in the case 1.
 
 
 
