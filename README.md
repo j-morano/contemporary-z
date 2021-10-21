@@ -31,11 +31,13 @@ If this requirement is met, it is only necessary to clone the repository and run
 
 #### Repository cloning
 
+Using SSH:
 ```shell
-# Using SSH
 git clone git@github.com:sonarom/contemporary-z.git
+```
 
-# Using HTTPS
+Using HTTPS:
+```shell
 git clone https://github.com/sonarom/contemporary-z.git
 ```
 
