@@ -21,7 +21,22 @@ For the time being, Contemporary-z already supports [fish shell](https://github.
 
 ## Installation
 
-At the moment, Complementary-z supports fish shell, bash and Zsh. To install it from source, it is only necessary to run the specific installation script for the desired shell.
+At the moment, Contemporary-z supports fish shell, bash and Zsh.
+
+### Install from source
+
+To install Complementary-z from source, it is necessary to have installed [Cargo](https://doc.rust-lang.org/cargo/), the Rust _package manager_.
+
+If this requirement is met, it is only necessary to clone the repository and run the specific installation script for the desired shell.
+
+```shell
+# Using SSH
+git clone git@github.com:sonarom/contemporary-z.git
+
+# Using HTTPS
+git clone https://github.com/sonarom/contemporary-z.git
+```
+
 
 ### Fish
 
