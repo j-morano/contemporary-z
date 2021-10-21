@@ -29,6 +29,8 @@ To install Complementary-z from source, it is required to have installed [Cargo]
 
 If this requirement is met, it is only necessary to clone the repository and run the specific installation script for the desired shell.
 
+#### Repository cloning
+
 ```shell
 # Using SSH
 git clone git@github.com:sonarom/contemporary-z.git
@@ -37,20 +39,19 @@ git clone git@github.com:sonarom/contemporary-z.git
 git clone https://github.com/sonarom/contemporary-z.git
 ```
 
-
-### Fish
+#### Fish
 
 ```fish
 ./install.fish
 ```
 
-### Bash
+#### Bash
 
 ```bash
 ./install.sh
 ```
 
-### Zsh
+#### Zsh
 
 ```zsh
 ./install.zsh
