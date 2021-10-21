@@ -55,7 +55,7 @@ z [options] [folder or substrings]
 
 2. If a folder name is introduced, `z` jumps to the folder (if available) and adds it to the folders database (if it is not already added).
 
-3. If a substring is introduced, `z` searches in the database for coincidences, and outputs the list, as in the case 1.
+3. If a substring or substrings are introduced, `z` searches in the database for coincidences. If there is only one coincidence, `z` accesses the folder directly. If there are 2 or more coincidences, `z` outputs the list, as in the case 1.
 
 
 
