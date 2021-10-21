@@ -102,8 +102,7 @@ fn get_valid_folders(
             }
         }
 
-        // Exit loop if this was the last page or if there are
-        //   enough results.
+        // Exit loop if this was the last page or if there are enough results.
         if num_folders < MAX_RESULTS || valid_folders.len() == MAX_RESULTS {
             break;
         }
@@ -124,7 +123,8 @@ fn get_folder(conn: &Connection, name: &str) -> Result<String> {
 fn write(action:&str, text: String) {
     // https://stackoverflow.com/questions/65782872/
     let mut z_file = File::create(
-        "/tmp/cz_path").expect("Could not open file");
+        "/tmp/cz_path"
+    ).expect("Could not open file");
     z_file.write_all(
         format!("{}|{}", action, text).as_bytes()
     ).expect("Could not write to file");
@@ -265,8 +265,9 @@ fn main() -> Result<()> {
                 // println!("{}", args[1]);
                 write("direct_cd", folder_str.to_string());
 
-            // If it is already present in the table, update its counter
-            } else {
+
+            } else { // if it is already present in the table, update its
+                     // counter
                 conn.execute(
                     "UPDATE folders SET counter = counter + 1 where name = ?1",
                     params![folder_str],
@@ -274,22 +275,25 @@ fn main() -> Result<()> {
 
                 write("direct_cd", folder?);
             }
-        } else {
+        } else { // if arguments are substrings
 
             let valid_folders = get_valid_folders(
                 &conn, Vec::from(&args[1..])).unwrap();
 
-            let folder_name = select_valid_folder(
-                &conn, valid_folders).unwrap();
-
-            write("direct_cd", folder_name);
-
+            // if these is only one result, access it directly
+            if valid_folders.len() == 1 {
+                let folder = &valid_folders[0].name;
+                write("direct_cd", folder.to_string());
+            } else {
+                let folder_name = select_valid_folder(
+                    &conn, valid_folders).unwrap();
+                write("direct_cd", folder_name);
+            }
         }
 
         Ok(())
 
-    // If there is no argument, list frequent folders
-    } else {
+    } else { // if there is no argument, list frequent folders
 
         let valid_folders = get_valid_folders(
             &conn, Vec::new()).unwrap();
