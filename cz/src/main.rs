@@ -4,7 +4,7 @@ use std::path::Path;
 use std::process::exit;
 use std::fs;
 use home::home_dir;
-use std::fs::File;
+use std::fs::{File, metadata};
 use std::io::prelude::*;
 use std::io;
 
@@ -16,6 +16,100 @@ const MAX_RESULTS: usize = 9;
 struct Folder {
     name: String,
     counter: i32,
+}
+
+
+fn get_valid_folders(
+    conn: &Connection,
+    patterns: Vec<String>
+) -> Result<Vec<Folder>> {
+    // Filter invalid folders from the current path
+    let mut valid_folders: Vec<Folder> = Vec::new();
+
+    // Sub-string coincidences
+    let mut pattern = String::new();
+    if !patterns.is_empty() {
+        pattern = patterns.join("*");
+        pattern = format!("*{}*", pattern);
+    }
+
+    // Results pages
+    let mut pages = 0;
+
+    // Database pagination
+    while valid_folders.len() != MAX_RESULTS {
+        // println!("{}", pages);
+        pages += 1;
+        let mut sql = format!("SELECT name, counter
+            FROM folders
+            --where
+            ORDER BY counter DESC
+            LIMIT {}
+            ;", MAX_RESULTS);
+
+        if pages > 1 {
+            sql = sql.replace(
+                "--where",
+                format!(
+                    "WHERE
+                            (name NOT IN ( SELECT name FROM folders
+                            ORDER BY counter DESC LIMIT {} ))
+                        --pattern",
+                    (pages-1)*MAX_RESULTS
+                ).as_str()
+            );
+            if !pattern.is_empty() {
+                sql = sql.replace(
+                    "--pattern",
+                    format!("AND (name GLOB '{}')", pattern).as_str()
+                );
+            }
+        } else {
+            if !pattern.is_empty() {
+                sql = sql.replace(
+                    "--where",
+                    format!("WHERE (name GLOB '{}')", pattern).as_str()
+                );
+            }
+        }
+
+        // println!("{}", sql);
+
+        // Return most common folders ordered by counter (descending)
+        let mut stmt = conn.prepare(sql.as_str(),)?;
+
+        let folders = stmt.query_map([], |row| {
+            Ok(Folder {
+                name: row.get(0)?,
+                counter: row.get(1)?
+            })
+        })?;
+
+        let folders_collection: Vec<_> = folders.collect();
+
+        // Number of folders collected
+        let num_folders = folders_collection.len();
+
+        // Add collected folders to valid folders, if appropriate
+        for folder in folders_collection {
+            let folder_info = folder.as_ref().expect("Error");
+            if Path::new(&folder_info.name).exists() {
+                valid_folders.push(folder?);
+            }
+            // If there are enough results, do not add more
+            if valid_folders.len() == MAX_RESULTS {
+                break;
+            }
+        }
+
+        // Exit loop if this was the last page or if there are
+        //   enough results.
+        if num_folders < MAX_RESULTS || valid_folders.len() == MAX_RESULTS {
+            break;
+        }
+    }
+
+    return Ok(valid_folders);
 }
 
 
@@ -44,6 +138,56 @@ fn select_folder() -> String {
     std::io::stdin().read_line(&mut line).unwrap();
     return line.replace('\n', "");
 }
+
+
+fn select_valid_folder(
+    conn: &Connection,
+    valid_folders: Vec<Folder>
+) -> Result<String> {
+    // If there are no folders, exit
+    if valid_folders.len() == 0 {
+        println!("No folders");
+        exit(0);
+    }
+
+    // Show valid folders
+    for (i, folder) in valid_folders.iter().enumerate() {
+        println!("{}) {} [{}]", i+1, folder.name, folder.counter);
+    }
+    println!();
+
+    // Select folder by number
+    let selected_folder = match select_folder().parse::<usize>() {
+        Ok(number)  => number,
+        Err(e) => {
+            write("error", "".to_string());
+            println!("No folder selected: {}", e);
+            exit(1);
+        },
+    };
+
+    // Check if the introduced number is valid
+    if selected_folder > valid_folders.len() || selected_folder < 1{
+        write("error", "".to_string());
+        println!("Invalid number: {} > {}", selected_folder, valid_folders.len());
+        exit(1);
+    }
+
+    // Get name of the selected folder
+    let folder_name =
+        format!("{}", valid_folders[selected_folder-1].name);
+
+    // Update folder accesses counter
+    conn.execute(
+        "UPDATE folders SET counter = counter + 1 where name = ?1",
+        params![folder_name],
+    )?;
+
+    // println!("{}", folder_name);
+
+    return Ok(folder_name);
+}
+
 
 fn main() -> Result<()> {
     // Collect command-line arguments 
@@ -99,14 +243,16 @@ fn main() -> Result<()> {
             folder_str = &folder_str[..folder_str.len() - 1];
         }
 
-        // Check if folder is in the table
-        let folder = get_folder(&conn, folder_str);
-        
-        // If the folder is not in the table and it does exists in the
-        //   FS, add it
-        if let Err(_err) = folder {
-            // If the folder exists, add it
-            if Path::new(folder_str).exists() {
+        // If it is a folder AND exists in the FS
+        if Path::new(folder_str).exists()
+            && metadata(folder_str).unwrap().is_dir()
+        {
+            // Check if folder is in the table
+            let folder = get_folder(&conn, folder_str);
+
+            // If the folder is not in the table and it does exists in the
+            //   FS, add it
+            if let Err(_err) = folder {
                 // Do not store '..' or '.' folders
                 if !(folder_str == "." || folder_str == "..") {
                     conn.execute(
@@ -116,20 +262,26 @@ fn main() -> Result<()> {
                 }
                 // println!("{}", args[1]);
                 write("direct_cd", folder_str.to_string());
+
+            // If it is already present in the table, update its counter
             } else {
-                write("error", "".to_string());
-                println!("Invalid path '{}'", folder_str);
-                exit(1);
+                conn.execute(
+                    "UPDATE folders SET counter = counter + 1 where name = ?1",
+                    params![folder_str],
+                )?;
+
+                write("direct_cd", folder?);
             }
-
-        // If it is already present in the table, update its counter
         } else {
-            conn.execute(
-                "UPDATE folders SET counter = counter + 1 where name = ?1",
-                params![folder_str],
-            )?;
 
-            write("direct_cd", folder?);
+            let valid_folders = get_valid_folders(
+                &conn, Vec::from(&args[1..])).unwrap();
+
+            let folder_name = select_valid_folder(
+                &conn, valid_folders).unwrap();
+
+            write("direct_cd", folder_name);
+
         }
 
         Ok(())
@@ -137,106 +289,11 @@ fn main() -> Result<()> {
     // If there is no argument, list frequent folders
     } else {
 
-        // Filter invalid folders from the current path
-        let mut valid_folders: Vec<Folder> = Vec::new();
+        let valid_folders = get_valid_folders(
+            &conn, Vec::new()).unwrap();
 
-        // Results pages
-        let mut pages = 0;
-
-        // Database pagination
-        while valid_folders.len() != MAX_RESULTS {
-            // println!("{}", pages);
-            pages += 1;
-            let mut sql = format!("SELECT name, counter
-                FROM folders --where
-                ORDER BY counter DESC
-                LIMIT {}
-                ;", MAX_RESULTS);
-            if pages > 1 {
-                sql = sql.replace(
-                    "--where",
-                    format!(
-                        "WHERE name NOT IN ( SELECT name FROM folders
-                            ORDER BY counter DESC LIMIT {} )",
-                        (pages-1)*MAX_RESULTS
-                    ).as_str()
-                );
-            }
-
-            // println!("{}", sql);
-
-            // Return most common folders ordered by counter (descending)
-            let mut stmt = conn.prepare(sql.as_str(),)?;
-
-            let folders = stmt.query_map([], |row| {
-                Ok(Folder {
-                    name: row.get(0)?,
-                    counter: row.get(1)?
-                })
-            })?;
-
-            let folders_collection: Vec<_> = folders.collect();
-
-            // Number of folders collected
-            let num_folders = folders_collection.len();
-
-            // Add collected folders to valid folders, if appropriate
-            for folder in folders_collection {
-                let folder_info = folder.as_ref().expect("Error");
-                if Path::new(&folder_info.name).exists() {
-                    valid_folders.push(folder?);
-                }
-                // If there are enough results, do not add more
-                if valid_folders.len() == MAX_RESULTS {
-                    break;
-                }
-            }
-
-            // Exit loop if this was the last page or if there are
-            //   enough results.
-            if num_folders < MAX_RESULTS || valid_folders.len() == MAX_RESULTS {
-                break;
-            }
-        }
-
-        // If there are no folders, exit
-        if valid_folders.len() == 0 {
-            println!("No folders");
-            exit(0);
-        }
-
-        // Show valid folders
-        for (i, folder) in valid_folders.iter().enumerate() {
-            println!("{}) {} [{}]", i+1, folder.name, folder.counter);
-        }
-        println!();
-
-        // Select folder by number
-        let selected_folder = match select_folder().parse::<usize>() {
-            Ok(number)  => number,
-            Err(e) => {
-                write("error", "".to_string());
-                println!("No folder selected: {}", e);
-                exit(1);
-            },
-        };
-
-        // Check if the introduced number is valid
-        if selected_folder > valid_folders.len() || selected_folder < 1{
-            write("error", "".to_string());
-            println!("Invalid number: {} > {}", selected_folder, valid_folders.len());
-            exit(1);
-        }
-
-        // Get name of the selected folder
-        let folder_name =
-            format!("{}", valid_folders[selected_folder-1].name);
-
-        // Update folder accesses counter
-        conn.execute(
-            "UPDATE folders SET counter = counter + 1 where name = ?1",
-            params![folder_name],
-        )?;
+        let folder_name = select_valid_folder(
+            &conn, valid_folders).unwrap();
 
         write("direct_cd", folder_name);
 
