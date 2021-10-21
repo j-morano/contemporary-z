@@ -16,12 +16,12 @@
 
 Contemporary-z is at an early stage of development, so it lacks many of the functionalities available in the original `z`. However, its design makes it easily extensible, so these functionalities will not take long to be incorporated.
 
-For the time being, Contemporary-z already supports [fish shell](https://github.com/fish-shell/fish-shell), [bash](https://www.gnu.org/software/bash/) and [Zsh](https://www.zsh.org/). Furthermore, since it is written in Rust and uses an SQLite database, it should be relatively easy to adapt it to more shells; it is only necessary to adapt the installation and runtime scripts.
+For the time being, Contemporary-z already supports [fish shell](https://github.com/fish-shell/fish-shell), [bash](https://www.gnu.org/software/bash/) and [Zsh](https://www.zsh.org/). Furthermore, since it is written in Rust and uses an SQLite database, it should be relatively easy to adapt it to more shells; it is only necessary to translate into the language of the new shell the installation and runtime scripts.
 
 
 ## Installation
 
-At the moment, Comeplementary-z supports fish shell, bash and Zsh. To install it from source, it is only necessary to run the specific installation script for the desired shell.
+At the moment, Complementary-z supports fish shell, bash and Zsh. To install it from source, it is only necessary to run the specific installation script for the desired shell.
 
 ### Fish
 
@@ -53,7 +53,7 @@ z [options] [folder or substrings]
 
 1. If no option nor folder or substrings are specified, `z` prints a numbered list of the most frequent directories to select one of them by introducing the number of the desired folder.
 
-2. If a folder name is itroduced, `z` jumps to the folder (if available) and adds it to the folders database (if it is not already added).
+2. If a folder name is introduced, `z` jumps to the folder (if available) and adds it to the folders database (if it is not already added).
 
 3. If a substring is introduced, `z` searches in the database for coincidences, and outputs the list, as in the case 1.
 
