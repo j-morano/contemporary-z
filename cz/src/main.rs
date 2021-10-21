@@ -239,7 +239,9 @@ fn main() -> Result<()> {
 
         // If folder name ends with '/', remove it, in order to avoid
         //   having duplicated folders (with and without '/' versions)
-        if folder_str.chars().last().unwrap() == '/' {
+        if folder_str.len() > 1
+            && folder_str.chars().last().unwrap() == '/'
+        {
             folder_str = &folder_str[..folder_str.len() - 1];
         }
 
