@@ -72,19 +72,19 @@ The default alias of Contemporary-z is `z`. However, if a different alias is pre
 ### Usage:
 
 ```fish
-z [options] [folder or substrings]
+z [options] [directory or substrings]
 ```
 
-1. If no option nor folder or substrings are specified, `cz` prints a numbered list of the most frequent directories to select one of them by introducing its number.
+1. If no option nor directory or substrings are specified, `cz` prints a numbered list of the most frequent directories to select one of them by introducing its number.
 
-2. If a folder name is introduced, `cz` jumps to the folder (if available) and adds it to the folders database (if it is not already added).
+2. If a directory name is introduced, `cz` jumps to the directory (if available) and adds it to the directories database (if it is not already added).
 
-3. If a substring or substrings are introduced, `cz` searches in the database for coincidences. If there is only one coincidence, `cz` accesses the folder directly. If there are 2 or more coincidences, `cz` outputs the list, as in the case 1.
+3. If a substring or substrings are introduced, `cz` searches in the database for coincidences. If there is only one coincidence, `cz` accesses the directory directly. If there are 2 or more coincidences, `cz` outputs the list, as in the case 1.
 
 
 
 ### Options:
 
-* `--clear`: clears the folders database.
+* `--clear`: clears the directories database.
 
 
