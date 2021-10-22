@@ -15,7 +15,7 @@ const MAX_RESULTS: usize = 9;
 
 
 #[derive(Debug)]
-struct Folder {
+struct Directory {
     name: String,
     counter: i32,
 }
@@ -24,9 +24,9 @@ struct Folder {
 fn get_valid_dirs(
     conn: &Connection,
     patterns: Vec<String>
-) -> Result<Vec<Folder>> {
+) -> Result<Vec<Directory>> {
     // Filter invalid dirs from the current path
-    let mut valid_dirs: Vec<Folder> = Vec::new();
+    let mut valid_dirs: Vec<Directory> = Vec::new();
 
     // Sub-string coincidences
     let mut pattern = String::new();
@@ -81,7 +81,7 @@ fn get_valid_dirs(
         let mut stmt = conn.prepare(sql.as_str(),)?;
 
         let dirs = stmt.query_map([], |row| {
-            Ok(Folder {
+            Ok(Directory {
                 name: row.get(0)?,
                 counter: row.get(1)?
             })
@@ -144,7 +144,7 @@ fn select_dir() -> String {
 
 fn select_valid_dir(
     conn: &Connection,
-    valid_dirs: Vec<Folder>
+    valid_dirs: Vec<Directory>
 ) -> Result<String> {
     // If there are no dirs, exit
     if valid_dirs.len() == 0 {
@@ -236,7 +236,7 @@ fn main() -> Result<()> {
     // If there is a dir argument, cd to the dir
     if args.len() > 1 {
 
-        // Folder argument
+        // Directory argument
         let mut dir_str = args[1].as_str();
 
         // If it is a dir AND exists in the FS
