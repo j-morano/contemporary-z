@@ -12,20 +12,24 @@
 
 ## Key Features
 
-**Contemporary-z** is a modern and improved version of [z - jump around](https://github.com/rupa/z). It is implemented in Rust+SQLite, and utilizes temporary files for the inter-process communication with the shell.
+**Contemporary-z** (`cz`) is a modern and improved version of [z - jump around](https://github.com/rupa/z). It is implemented in Rust+SQLite, and utilizes temporary files for the inter-process communication with the shell.
 
-Contemporary-z is at an early stage of development, so it lacks many of the functionalities available in the original `z`. However, its design makes it easily extensible, so these functionalities will not take long to be incorporated.
+`cz` is at an early stage of development, so it lacks many of the functionalities available in the original `z`. However, its design makes it easily extensible, so these functionalities will not take long to be incorporated.
 
-For the time being, Contemporary-z already supports [fish shell](https://github.com/fish-shell/fish-shell), [bash](https://www.gnu.org/software/bash/) and [Zsh](https://www.zsh.org/). Furthermore, since it is written in Rust and uses an SQLite database, it should be relatively easy to adapt it to more shells; it is only necessary to translate into the language of the new shell the installation and runtime scripts.
+For the time being, `cz` is available for [fish shell](https://github.com/fish-shell/fish-shell), [Bash](https://www.gnu.org/software/bash/) and [Zsh](https://www.zsh.org/). Furthermore, since it is written in Rust and uses an SQLite database, it should be relatively easy to adapt it to more shells; it is only necessary to translate into the language of the new shell the installation and runtime scripts.
 
 
 ## Installation
 
-At the moment, Contemporary-z supports fish shell, bash and Zsh.
+### Availability
+
+- fish shell
+- Bash
+- Zsh
 
 ### Install from source
 
-To install Complementary-z from source, it is required to have installed [Cargo](https://doc.rust-lang.org/cargo/), the Rust _package manager_.
+To install `cz` from source, it is required to have installed [Cargo](https://doc.rust-lang.org/cargo/), the Rust _package manager_.
 
 If this requirement is met, it is only necessary to clone the repository and run the specific installation script for the desired shell.
 
@@ -69,7 +73,7 @@ git clone https://github.com/sonarom/contemporary-z.git
 z [options] [folder or substrings]
 ```
 
-1. If no option nor folder or substrings are specified, `z` prints a numbered list of the most frequent directories to select one of them by introducing the number of the desired folder.
+1. If no option nor folder or substrings are specified, `z` prints a numbered list of the most frequent directories to select one of them by introducing its number.
 
 2. If a folder name is introduced, `z` jumps to the folder (if available) and adds it to the folders database (if it is not already added).
 
