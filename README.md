@@ -66,10 +66,10 @@ git clone https://github.com/sonarom/contemporary-z.git
 
 ## How to use
 
+The default alias of Contemporary-z is `z`. However, if a different alias is preferred, it can be easily changed in the installation scripts. Hereafter, `cz` refers to the entire application, and `z` refers to the command.
+
 
 ### Usage:
-
-The default alias of Contemporary-z is `z`. However, if a different alias is preferred, it can be easily changed in the installation scripts. Hereafter, `cz` refers to the entire application, and `z` refers to the command.
 
 ```fish
 z [options] [folder or substrings]
