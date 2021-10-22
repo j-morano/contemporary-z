@@ -1,5 +1,14 @@
+mod database;
+mod data;
+
+use crate::data::Directory;
+use crate::database::{
+    get_dir,get_valid_dirs,create_dirs_table_if_not_exist,
+    update_dir_counter, drop_directories_table, insert_dir
+};
+
 use std::borrow::Borrow;
-use rusqlite::{params, Connection, Result};
+use rusqlite::{Connection, Result};
 use std::env;
 use std::path::Path;
 use std::process::exit;
@@ -10,117 +19,6 @@ use std::io::prelude::*;
 use std::io;
 use regex::Regex;
 
-
-const MAX_RESULTS: usize = 9;
-
-
-#[derive(Debug)]
-struct Directory {
-    name: String,
-    counter: i32,
-}
-
-
-fn get_valid_dirs(
-    conn: &Connection,
-    patterns: Vec<String>
-) -> Result<Vec<Directory>> {
-    // Filter invalid dirs from the current path
-    let mut valid_dirs: Vec<Directory> = Vec::new();
-
-    // Sub-string coincidences
-    let mut pattern = String::new();
-    if !patterns.is_empty() {
-        pattern = patterns.join("*");
-        pattern = format!("*{}*", pattern);
-    }
-
-    // Results pages
-    let mut pages = 0;
-
-    // Database pagination
-    while valid_dirs.len() != MAX_RESULTS {
-        // println!("{}", pages);
-        pages += 1;
-        let mut sql = format!("SELECT name, counter
-            FROM dirs
-            --where
-            ORDER BY counter DESC
-            LIMIT {}
-            ;", MAX_RESULTS);
-
-        if pages > 1 {
-            sql = sql.replace(
-                "--where",
-                format!(
-                    "WHERE
-                            (name NOT IN ( SELECT name FROM dirs
-                            ORDER BY counter DESC LIMIT {} ))
-                        --pattern",
-                    (pages-1)*MAX_RESULTS
-                ).as_str()
-            );
-            if !pattern.is_empty() {
-                sql = sql.replace(
-                    "--pattern",
-                    format!("AND (name GLOB '{}')", pattern).as_str()
-                );
-            }
-        } else {
-            if !pattern.is_empty() {
-                sql = sql.replace(
-                    "--where",
-                    format!("WHERE (name GLOB '{}')", pattern).as_str()
-                );
-            }
-        }
-
-        // println!("{}", sql);
-
-        // Return most common dirs ordered by counter (descending)
-        let mut stmt = conn.prepare(sql.as_str(),)?;
-
-        let dirs = stmt.query_map([], |row| {
-            Ok(Directory {
-                name: row.get(0)?,
-                counter: row.get(1)?
-            })
-        })?;
-
-        let dirs_collection: Vec<_> = dirs.collect();
-
-        // Number of dirs collected
-        let num_dirs = dirs_collection.len();
-
-        // Add collected dirs to valid dirs, if appropriate
-        for dir in dirs_collection {
-            let dir_info = dir.as_ref().expect("Error");
-            if Path::new(&dir_info.name).exists() {
-                valid_dirs.push(dir?);
-            }
-            // If there are enough results, do not add more
-            if valid_dirs.len() == MAX_RESULTS {
-                break;
-            }
-        }
-
-        // Exit loop if this was the last page or if there are enough results.
-        if num_dirs < MAX_RESULTS || valid_dirs.len() == MAX_RESULTS {
-            break;
-        }
-    }
-
-    return Ok(valid_dirs);
-}
-
-
-fn get_dir(conn: &Connection, name: &str) -> Result<String> {
-    conn.query_row(
-        "SELECT name FROM dirs WHERE name = ?",
-        params![name],
-        |row| row.get(0),
-    )
-}
 
 fn write(action:&str, text: String) {
     // https://stackoverflow.com/questions/65782872/
@@ -179,12 +77,7 @@ fn select_valid_dir(
     let dir_name =
         format!("{}", valid_dirs[selected_dir-1].name);
 
-    // Update dir accesses counter
-    conn.execute(
-        "UPDATE dirs SET counter = counter + 1 where name = ?1",
-        params![dir_name],
-    )?;
-
+    update_dir_counter(conn, dir_name.clone())?;
     // println!("{}", dir_name);
 
     return Ok(dir_name);
@@ -216,20 +109,11 @@ fn main() -> Result<()> {
     if args.len() > 1 && args[1] == "--clear" {
         println!("Cleared database");
         // write(z_file, "clear#", "".to_string());
-        conn.execute("drop table if exists dirs", [])?;
+        drop_directories_table(&conn)?;
         exit(0);
     }
 
-    // Create dirs table if it does not exist
-    conn.execute(
-        "create table if not exists dirs (
-             /* id integer primary key,
-             name text not null, */
-             name primary key,
-             counter integer not null
-         )",
-        [],
-    )?;
+    create_dirs_table_if_not_exist(&conn)?;
 
     write("empty", "".to_string());
 
@@ -265,10 +149,7 @@ fn main() -> Result<()> {
             if let Err(_err) = dir {
                 // Do not store '..' or '.' dirs
                 if !(dir_str == "." || dir_str == "..") {
-                    conn.execute(
-                        "INSERT INTO dirs (name, counter) values (?1, 1)",
-                        params![dir_str],
-                    )?;
+                    insert_dir(&conn, dir_str)?;
                 }
                 // println!("{}", args[1]);
                 write("direct_cd", dir_str.to_string());
@@ -276,10 +157,7 @@ fn main() -> Result<()> {
 
             } else { // if it is already present in the table, update its
                      // counter
-                conn.execute(
-                    "UPDATE dirs SET counter = counter + 1 where name = ?1",
-                    params![dir_str],
-                )?;
+                update_dir_counter(&conn, String::from(dir_str))?;
 
                 write("direct_cd", dir?);
             }
@@ -291,6 +169,7 @@ fn main() -> Result<()> {
             // if these is only one result, access it directly
             if valid_dirs.len() == 1 {
                 let dir = &valid_dirs[0].name;
+                update_dir_counter(&conn, dir.to_string())?;
                 write("direct_cd", dir.to_string());
             } else {
                 let dir_name = select_valid_dir(
