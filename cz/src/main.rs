@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use rusqlite::{params, Connection, Result};
 use std::env;
 use std::path::Path;
@@ -7,6 +8,7 @@ use home::home_dir;
 use std::fs::{File, metadata};
 use std::io::prelude::*;
 use std::io;
+use regex::Regex;
 
 
 const MAX_RESULTS: usize = 9;
@@ -237,18 +239,24 @@ fn main() -> Result<()> {
         // Folder argument
         let mut folder_str = args[1].as_str();
 
-        // If folder name ends with '/', remove it, in order to avoid
-        //   having duplicated folders (with and without '/' versions)
-        if folder_str.len() > 1
-            && folder_str.chars().last().unwrap() == '/'
-        {
-            folder_str = &folder_str[..folder_str.len() - 1];
-        }
-
         // If it is a folder AND exists in the FS
         if Path::new(folder_str).exists()
             && metadata(folder_str).unwrap().is_dir()
         {
+            // If folder name ends with '/', remove it, in order to avoid
+            //   having duplicated folders (with and without '/' versions)
+            if folder_str.len() > 1
+                && folder_str.chars().last().unwrap() == '/'
+            {
+                folder_str = &folder_str[..folder_str.len() - 1];
+            }
+
+            // Replace multiple contiguous slashes by a single slash
+            let re = Regex::new(r"/(/)+").unwrap();
+            let result = re.replace_all(folder_str, "/");
+
+            folder_str = result.borrow();
+
             // Check if folder is in the table
             let folder = get_folder(&conn, folder_str);
 
