@@ -69,15 +69,17 @@ git clone https://github.com/sonarom/contemporary-z.git
 
 ### Usage:
 
+The default alias of Contemporary-z is `z`. However, if a different alias is preferred, it can be easily changed in the installation scripts. Hereafter, `cz` refers to the entire application, and `z` refers to the command.
+
 ```fish
 z [options] [folder or substrings]
 ```
 
-1. If no option nor folder or substrings are specified, `z` prints a numbered list of the most frequent directories to select one of them by introducing its number.
+1. If no option nor folder or substrings are specified, `cz` prints a numbered list of the most frequent directories to select one of them by introducing its number.
 
-2. If a folder name is introduced, `z` jumps to the folder (if available) and adds it to the folders database (if it is not already added).
+2. If a folder name is introduced, `cz` jumps to the folder (if available) and adds it to the folders database (if it is not already added).
 
-3. If a substring or substrings are introduced, `z` searches in the database for coincidences. If there is only one coincidence, `z` accesses the folder directly. If there are 2 or more coincidences, `z` outputs the list, as in the case 1.
+3. If a substring or substrings are introduced, `cz` searches in the database for coincidences. If there is only one coincidence, `cz` accesses the folder directly. If there are 2 or more coincidences, `cz` outputs the list, as in the case 1.
 
 
 
