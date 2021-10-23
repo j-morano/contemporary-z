@@ -3,13 +3,22 @@ mod data;
 
 use crate::data::Directory;
 use crate::database::{
-    get_dir,get_valid_dirs,create_dirs_table_if_not_exist,
-    update_dir_counter, drop_directories_table, insert_dir
+    get_dir,
+    get_valid_dirs,
+    create_dirs_table_if_not_exist,
+    update_dir_counter,
+    drop_directories_table,
+    insert_dir,
+    update_current_dir,
+    create_current_dir_table_if_not_exist,
+    get_current_dir,
+    drop_current_dir_table
 };
 
 use std::borrow::Borrow;
 use rusqlite::{Connection, Result};
 use std::env;
+use std::env::current_dir;
 use std::path::Path;
 use std::process::exit;
 use std::fs;
@@ -57,17 +66,17 @@ fn bold_green(text: String) -> String {
 
 fn show_error(text: &str, error: &str) {
     write("error", text.to_string());
+    let mut joint = "";
+    if !error.is_empty() {
+        joint = ":";
+    }
     println!(
-        "{}: {}",
+        "{}{} {}",
         bold_magenta(text.to_string()),
+        joint,
         error
     );
     exit(1);
-}
-
-fn show_error_usize(text: &str, error: &str) -> usize {
-    show_error(text, error);
-    return 1;
 }
 
 fn show_exit_message(text: &str) {
@@ -99,7 +108,8 @@ fn select_valid_dir(
     let selected_dir = match select_dir().parse::<usize>() {
         Ok(number)  => number,
         Err(error) => {
-            show_error_usize("No dir selected", error.to_string().as_str())
+            show_error("No dir selected", error.to_string().as_str());
+            1 as usize
         },
     };
 
@@ -124,6 +134,22 @@ fn select_valid_dir(
     return Ok(dir_name);
 }
 
+fn set_current_dir(conn: &Connection) {
+    let current_dir = current_dir().unwrap();
+    let current_dir_string = current_dir.into_os_string().into_string().expect("Error");
+    // println!("{}", current_dir_string);
+    match update_current_dir(conn, current_dir_string) {
+        Ok(_) => { }
+        Err(error) => {
+            show_error("Could not load current dir", error.to_string().as_str());
+        }
+    };
+}
+
+fn direct_cd(dir_name: String) {
+    write("direct_cd", dir_name);
+}
+
 
 fn main() -> Result<()> {
     // Collect command-line arguments 
@@ -146,15 +172,34 @@ fn main() -> Result<()> {
     // Open connection with the database
     let conn = Connection::open(database_file_path)?;
 
+    create_dirs_table_if_not_exist(&conn)?;
+    create_current_dir_table_if_not_exist(&conn)?;
+
     // Clear table command option
     if args.len() > 1 && args[1] == "--clear" {
         // write(z_file, "clear#", "".to_string());
         drop_directories_table(&conn)?;
+        drop_current_dir_table(&conn)?;
         show_exit_message("Cleared database");
     }
 
-    create_dirs_table_if_not_exist(&conn)?;
+    // Clear table command option
+    if args.len() > 1 && args[1] == "-" {
+        // write(z_file, "clear#", "".to_string());
+        match get_current_dir(&conn) {
+            Ok(current_dir) => {
+                set_current_dir(&conn);
+                direct_cd(current_dir);
+                exit(0);
+            }
+            Err(_) => {
+                show_error("No previous directory", "");
+                "".to_string()
+            }
+        };
+    }
 
+    set_current_dir(&conn);
     write("empty", "".to_string());
 
     // If there is a dir argument, cd to the dir
@@ -192,14 +237,16 @@ fn main() -> Result<()> {
                     insert_dir(&conn, dir_str)?;
                 }
                 // println!("{}", args[1]);
-                write("direct_cd", dir_str.to_string());
+                // write("direct_cd", dir_str.to_string());
+                direct_cd(dir_str.to_string());
 
 
             } else { // if it is already present in the table, update its
                      // counter
                 update_dir_counter(&conn, String::from(dir_str))?;
 
-                write("direct_cd", dir?);
+                // write("direct_cd", dir?);
+                direct_cd(dir?);
             }
         } else { // if arguments are substrings
 
@@ -210,11 +257,13 @@ fn main() -> Result<()> {
             if valid_dirs.len() == 1 {
                 let dir = &valid_dirs[0].name;
                 update_dir_counter(&conn, dir.to_string())?;
-                write("direct_cd", dir.to_string());
+                // write("direct_cd", dir.to_string());
+                direct_cd(dir.to_string());
             } else {
                 let dir_name = select_valid_dir(
                     &conn, valid_dirs).unwrap();
-                write("direct_cd", dir_name);
+                // write("direct_cd", dir_name);
+                direct_cd(dir_name.clone());
             }
         }
 
@@ -228,7 +277,7 @@ fn main() -> Result<()> {
         let dir_name = select_valid_dir(
             &conn, valid_dirs).unwrap();
 
-        write("direct_cd", dir_name);
+        direct_cd(dir_name);
 
         Ok(())
     }

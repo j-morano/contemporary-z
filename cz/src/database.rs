@@ -21,6 +21,10 @@ pub(crate) fn drop_directories_table(conn: &Connection) -> Result<usize> {
     return conn.execute("drop table if exists directories", []);
 }
 
+pub(crate) fn drop_current_dir_table(conn: &Connection) -> Result<usize> {
+    return conn.execute("drop table if exists current_directory", []);
+}
+
 
 pub(crate) fn get_valid_dirs(
     conn: &Connection,
@@ -130,7 +134,6 @@ pub(crate) fn update_dir_counter(conn: &Connection, dir_name: String) -> Result<
         "UPDATE directories SET counter = counter + 1 where name = ?1",
         params![dir_name],
     );
-
 }
 
 pub(crate) fn create_dirs_table_if_not_exist(conn: &Connection) -> Result<usize>{
@@ -145,3 +148,31 @@ pub(crate) fn create_dirs_table_if_not_exist(conn: &Connection) -> Result<usize>
         [],
     );
 }
+
+pub(crate) fn update_current_dir(conn: &Connection, dir_name: String) -> Result<usize> {
+    // Update dir accesses counter
+    return conn.execute(
+        "INSERT OR REPLACE INTO current_directory (id, name) VALUES (0, ?1)",
+        params![dir_name],
+    );
+}
+
+pub(crate) fn get_current_dir(conn: &Connection) -> Result<String> {
+    conn.query_row(
+        "SELECT name FROM current_directory",
+        [],
+        |row| row.get(0),
+    )
+}
+
+pub(crate) fn create_current_dir_table_if_not_exist(conn: &Connection) -> Result<usize>{
+    // Create dirs table if it does not exist
+    return conn.execute(
+        "create table if not exists current_directory (
+             id integer primary key,
+             name text not null
+         )",
+        [],
+    );
+}
+
