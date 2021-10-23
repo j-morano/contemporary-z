@@ -146,7 +146,8 @@ fn set_current_dir(conn: &Connection) {
     };
 }
 
-fn direct_cd(dir_name: String) {
+fn direct_cd(conn: &Connection, dir_name: String) {
+    set_current_dir(&conn);
     write("direct_cd", dir_name);
 }
 
@@ -188,8 +189,7 @@ fn main() -> Result<()> {
         // write(z_file, "clear#", "".to_string());
         match get_current_dir(&conn) {
             Ok(current_dir) => {
-                set_current_dir(&conn);
-                direct_cd(current_dir);
+                direct_cd(&conn, current_dir);
                 exit(0);
             }
             Err(_) => {
@@ -199,7 +199,6 @@ fn main() -> Result<()> {
         };
     }
 
-    set_current_dir(&conn);
     write("empty", "".to_string());
 
     // If there is a dir argument, cd to the dir
@@ -238,7 +237,7 @@ fn main() -> Result<()> {
                 }
                 // println!("{}", args[1]);
                 // write("direct_cd", dir_str.to_string());
-                direct_cd(dir_str.to_string());
+                direct_cd(&conn, dir_str.to_string());
 
 
             } else { // if it is already present in the table, update its
@@ -246,7 +245,7 @@ fn main() -> Result<()> {
                 update_dir_counter(&conn, String::from(dir_str))?;
 
                 // write("direct_cd", dir?);
-                direct_cd(dir?);
+                direct_cd(&conn, dir?);
             }
         } else { // if arguments are substrings
 
@@ -258,12 +257,12 @@ fn main() -> Result<()> {
                 let dir = &valid_dirs[0].name;
                 update_dir_counter(&conn, dir.to_string())?;
                 // write("direct_cd", dir.to_string());
-                direct_cd(dir.to_string());
+                direct_cd(&conn, dir.to_string());
             } else {
                 let dir_name = select_valid_dir(
                     &conn, valid_dirs).unwrap();
                 // write("direct_cd", dir_name);
-                direct_cd(dir_name.clone());
+                direct_cd(&conn, dir_name.clone());
             }
         }
 
@@ -277,7 +276,7 @@ fn main() -> Result<()> {
         let dir_name = select_valid_dir(
             &conn, valid_dirs).unwrap();
 
-        direct_cd(dir_name);
+        direct_cd(&conn, dir_name);
 
         Ok(())
     }
