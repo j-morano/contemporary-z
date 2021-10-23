@@ -19,7 +19,7 @@ use std::borrow::Borrow;
 use rusqlite::{Connection, Result};
 use std::env;
 use std::env::current_dir;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::fs;
 use home::home_dir;
@@ -29,6 +29,8 @@ use std::io;
 use regex::Regex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+// Use absolute paths
+const ABS_PATHS: bool = true;
 
 fn write(action:&str, text: String) {
     // https://stackoverflow.com/questions/65782872/
@@ -226,6 +228,12 @@ fn main() -> Result<()> {
         if Path::new(dir_str).exists()
             && metadata(dir_str).unwrap().is_dir()
         {
+            let dir_pathbuf;
+            if ABS_PATHS {
+                dir_pathbuf = PathBuf::from(dir_str).canonicalize().unwrap();
+                dir_str = dir_pathbuf.to_str().unwrap();
+            }
+
             // If dir name ends with '/', remove it, in order to avoid
             //   having duplicated dirs (with and without '/' versions)
             if dir_str.len() > 1
