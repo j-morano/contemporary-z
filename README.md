@@ -45,19 +45,21 @@ Using HTTPS:
 git clone https://github.com/sonarom/contemporary-z.git
 ```
 
-#### Fish
+#### Installation
+
+##### Fish
 
 ```fish
 ./install.fish
 ```
 
-#### Bash
+##### Bash
 
 ```bash
 ./install.sh
 ```
 
-#### Zsh
+##### Zsh
 
 ```zsh
 ./install.zsh
@@ -75,7 +77,7 @@ The default alias of Contemporary-z is `z`. However, if a different alias is pre
 z [options] [directory or substrings]
 ```
 
-1. If no option nor directory or substrings are specified, `cz` prints a numbered list of the most frequent directories to select one of them by introducing its number.
+1. If no option nor directory or substrings are specified, `cz` prints a numbered list of the most frecent directories to select one of them by introducing its number.
 
 2. If a directory name is introduced, `cz` jumps to the directory (if available) and adds it to the directories database (if it is not already added).
 
@@ -85,6 +87,7 @@ z [options] [directory or substrings]
 
 ### Options:
 
-* `--clear`: clears the directories database.
+* `--clear`: clear the directories database.
+* `-`: go to the previous directory.
 
 
