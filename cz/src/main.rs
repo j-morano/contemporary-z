@@ -102,10 +102,15 @@ fn select_valid_dir(valid_dirs: Vec<Directory>) -> Result<String> {
     // Show valid dirs
     for (i, dir) in valid_dirs.iter().enumerate() {
         let mut dir_name = dir.name.clone();
+        // Replace /home/<user> with '~'
         let current_home_dir = get_home_dir();
         if dir_name.starts_with(current_home_dir.as_str()) {
             dir_name = dir_name.replace(current_home_dir.as_str(), "~")
         }
+        // Replace /run/media/<user> with '>'
+        let re = Regex::new(r"^/run/media/([^/]+)").unwrap();
+        dir_name = re.replace(dir_name.as_str(), ">").parse().unwrap();
+
         println!(
             "{}) {} {}",
             bold((i+1).to_string()),
