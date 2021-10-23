@@ -39,6 +39,41 @@ fn select_dir() -> String {
     return line.replace('\n', "");
 }
 
+fn bold_blue(text: String) -> String {
+    return format!("\x1b[1;34m{}\x1b[0m", text);
+}
+
+fn bold(text: String) -> String {
+    return format!("\x1b[1m{}\x1b[0m", text);
+}
+
+fn bold_magenta(text: String) -> String {
+    return format!("\x1b[1;35m{}\x1b[0m", text);
+}
+
+fn bold_green(text: String) -> String {
+    return format!("\x1b[1;32m{}\x1b[0m", text);
+}
+
+fn show_error(text: &str, error: &str) {
+    write("error", text.to_string());
+    println!(
+        "{}: {}",
+        bold_magenta(text.to_string()),
+        error
+    );
+    exit(1);
+}
+
+fn show_error_usize(text: &str, error: &str) -> usize {
+    show_error(text, error);
+    return 1;
+}
+
+fn show_exit_message(text: &str) {
+    println!("{}", bold_green(String::from(text)));
+    exit(0);
+}
 
 fn select_valid_dir(
     conn: &Connection,
@@ -46,31 +81,37 @@ fn select_valid_dir(
 ) -> Result<String> {
     // If there are no dirs, exit
     if valid_dirs.len() == 0 {
-        println!("No dirs");
-        exit(0);
+        show_exit_message("No dirs");
     }
 
     // Show valid dirs
     for (i, dir) in valid_dirs.iter().enumerate() {
-        println!("{}) {} [{}]", i+1, dir.name, dir.counter);
+        println!(
+            "{}) {} [{}]",
+            bold((i+1).to_string()),
+            bold_blue(dir.name.clone()),
+            dir.counter
+        );
     }
     println!();
 
     // Select dir by number
     let selected_dir = match select_dir().parse::<usize>() {
         Ok(number)  => number,
-        Err(e) => {
-            write("error", "".to_string());
-            println!("No dir selected: {}", e);
-            exit(1);
+        Err(error) => {
+            show_error_usize("No dir selected", error.to_string().as_str())
         },
     };
 
     // Check if the introduced number is valid
     if selected_dir > valid_dirs.len() || selected_dir < 1{
-        write("error", "".to_string());
-        println!("Invalid number: {} > {}", selected_dir, valid_dirs.len());
-        exit(1);
+        show_error(
+            "Invalid number",
+            format!(
+                "{} > {}",
+                selected_dir, valid_dirs.len()
+            ).as_str()
+        );
     }
 
     // Get name of the selected dir
@@ -107,10 +148,9 @@ fn main() -> Result<()> {
 
     // Clear table command option
     if args.len() > 1 && args[1] == "--clear" {
-        println!("Cleared database");
         // write(z_file, "clear#", "".to_string());
         drop_directories_table(&conn)?;
-        exit(0);
+        show_exit_message("Cleared database");
     }
 
     create_dirs_table_if_not_exist(&conn)?;
