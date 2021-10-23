@@ -44,12 +44,18 @@ pub(crate) fn get_valid_dirs(
     // Results pages
     let mut pages = 0;
 
+    // 'Frecency' formula: https://github.com/rupa/z/blob/master/z.sh
+
     // Database pagination
     while valid_dirs.len() != MAX_RESULTS {
         // println!("{}", pages);
         pages += 1;
         let mut sql = format!(
-            "SELECT name, counter, last_access
+            "SELECT name, counter, last_access, (
+                10000.0
+                * CAST(counter as REAL)
+                * (3.75 / ((0.0001 * ({} - CAST(last_access as REAL)) + 1.0) + 0.25))
+            )
             FROM directories
             --where
             ORDER BY (
@@ -58,7 +64,7 @@ pub(crate) fn get_valid_dirs(
                 * (3.75 / ((0.0001 * ({} - CAST(last_access as REAL)) + 1.0) + 0.25))
             ) DESC
             LIMIT {}
-            ;", current_seconds as f64, MAX_RESULTS);
+            ;", current_seconds, current_seconds as f64, MAX_RESULTS);
 
         if pages > 1 {
             sql = sql.replace(
@@ -95,7 +101,8 @@ pub(crate) fn get_valid_dirs(
             Ok(Directory {
                 name: row.get(0)?,
                 counter: row.get(1)?,
-                last_access: row.get(2)?
+                last_access: row.get(2)?,
+                score: row.get(3)?
             })
         })?;
 

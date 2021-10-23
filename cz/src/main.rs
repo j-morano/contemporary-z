@@ -96,7 +96,8 @@ fn select_valid_dir(valid_dirs: Vec<Directory>) -> Result<String> {
         println!(
             "{}) {}",
             bold((i+1).to_string()),
-            bold_blue(dir.name.clone())
+            bold_blue(dir.name.clone()),
+            // dir.score
         );
     }
     println!();
