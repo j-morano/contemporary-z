@@ -27,6 +27,7 @@ use std::fs::{File, metadata};
 use std::io::prelude::*;
 use std::io;
 use regex::Regex;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 
 fn write(action:&str, text: String) {
@@ -84,10 +85,7 @@ fn show_exit_message(text: &str) {
     exit(0);
 }
 
-fn select_valid_dir(
-    conn: &Connection,
-    valid_dirs: Vec<Directory>
-) -> Result<String> {
+fn select_valid_dir(valid_dirs: Vec<Directory>) -> Result<String> {
     // If there are no dirs, exit
     if valid_dirs.len() == 0 {
         show_exit_message("No dirs");
@@ -96,10 +94,9 @@ fn select_valid_dir(
     // Show valid dirs
     for (i, dir) in valid_dirs.iter().enumerate() {
         println!(
-            "{}) {} [{}]",
+            "{}) {}",
             bold((i+1).to_string()),
-            bold_blue(dir.name.clone()),
-            dir.counter
+            bold_blue(dir.name.clone())
         );
     }
     println!();
@@ -128,7 +125,7 @@ fn select_valid_dir(
     let dir_name =
         format!("{}", valid_dirs[selected_dir-1].name);
 
-    update_dir_counter(conn, dir_name.clone())?;
+    // update_dir_counter(conn, dir_name.clone())?;
     // println!("{}", dir_name);
 
     return Ok(dir_name);
@@ -146,9 +143,18 @@ fn set_current_dir(conn: &Connection) {
     };
 }
 
+fn get_current_seconds() -> i64 {
+    return SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64;
+}
+
 fn direct_cd(conn: &Connection, dir_name: String) {
+    let current_seconds = get_current_seconds();
+    match update_dir_counter(&conn, String::from(dir_name.clone()), current_seconds) {
+        Ok(_) => {}
+        Err(_) => {}
+    };
     set_current_dir(&conn);
-    write("direct_cd", dir_name);
+    write("direct_cd", dir_name.clone());
 }
 
 
@@ -233,7 +239,8 @@ fn main() -> Result<()> {
             if let Err(_err) = dir {
                 // Do not store '..' or '.' dirs
                 if !(dir_str == "." || dir_str == "..") {
-                    insert_dir(&conn, dir_str)?;
+                    let current_seconds = get_current_seconds();
+                    insert_dir(&conn, dir_str, current_seconds)?;
                 }
                 // println!("{}", args[1]);
                 // write("direct_cd", dir_str.to_string());
@@ -242,7 +249,7 @@ fn main() -> Result<()> {
 
             } else { // if it is already present in the table, update its
                      // counter
-                update_dir_counter(&conn, String::from(dir_str))?;
+                // update_dir_counter(&conn, String::from(dir_str))?;
 
                 // write("direct_cd", dir?);
                 direct_cd(&conn, dir?);
@@ -250,17 +257,16 @@ fn main() -> Result<()> {
         } else { // if arguments are substrings
 
             let valid_dirs = get_valid_dirs(
-                &conn, Vec::from(&args[1..])).unwrap();
+                &conn, Vec::from(&args[1..]), get_current_seconds()).unwrap();
 
             // if these is only one result, access it directly
             if valid_dirs.len() == 1 {
                 let dir = &valid_dirs[0].name;
-                update_dir_counter(&conn, dir.to_string())?;
+                // update_dir_counter(&conn, dir.to_string())?;
                 // write("direct_cd", dir.to_string());
                 direct_cd(&conn, dir.to_string());
             } else {
-                let dir_name = select_valid_dir(
-                    &conn, valid_dirs).unwrap();
+                let dir_name = select_valid_dir(valid_dirs).unwrap();
                 // write("direct_cd", dir_name);
                 direct_cd(&conn, dir_name.clone());
             }
@@ -271,10 +277,9 @@ fn main() -> Result<()> {
     } else { // if there is no argument, list frequent dirs
 
         let valid_dirs = get_valid_dirs(
-            &conn, Vec::new()).unwrap();
+            &conn, Vec::new(), get_current_seconds()).unwrap();
 
-        let dir_name = select_valid_dir(
-            &conn, valid_dirs).unwrap();
+        let dir_name = select_valid_dir(valid_dirs).unwrap();
 
         direct_cd(&conn, dir_name);
 

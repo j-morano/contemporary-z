@@ -10,10 +10,10 @@ const MAX_RESULTS: usize = 9;
 
 
 
-pub(crate) fn insert_dir(conn: &Connection, dir_str: &str) -> Result<usize> {
+pub(crate) fn insert_dir(conn: &Connection, dir_str: &str, current_seconds: i64) -> Result<usize> {
     return conn.execute(
-        "INSERT INTO directories (name, counter) values (?1, 1)",
-        params![dir_str],
+        "INSERT INTO directories (name, counter, last_access) values (?1, 1, ?2)",
+        params![dir_str, current_seconds], // TODO
     );
 }
 
@@ -28,7 +28,8 @@ pub(crate) fn drop_current_dir_table(conn: &Connection) -> Result<usize> {
 
 pub(crate) fn get_valid_dirs(
     conn: &Connection,
-    patterns: Vec<String>
+    patterns: Vec<String>,
+    current_seconds: i64
 ) -> Result<Vec<Directory>> {
     // Filter invalid dirs from the current path
     let mut valid_dirs: Vec<Directory> = Vec::new();
@@ -47,12 +48,17 @@ pub(crate) fn get_valid_dirs(
     while valid_dirs.len() != MAX_RESULTS {
         // println!("{}", pages);
         pages += 1;
-        let mut sql = format!("SELECT name, counter
+        let mut sql = format!(
+            "SELECT name, counter, last_access
             FROM directories
             --where
-            ORDER BY counter DESC
+            ORDER BY (
+                10000.0
+                * CAST(counter as REAL)
+                * (3.75 / ((0.0001 * ({} - CAST(last_access as REAL)) + 1.0) + 0.25))
+            ) DESC
             LIMIT {}
-            ;", MAX_RESULTS);
+            ;", current_seconds as f64, MAX_RESULTS);
 
         if pages > 1 {
             sql = sql.replace(
@@ -88,7 +94,8 @@ pub(crate) fn get_valid_dirs(
         let dirs = stmt.query_map([], |row| {
             Ok(Directory {
                 name: row.get(0)?,
-                counter: row.get(1)?
+                counter: row.get(1)?,
+                last_access: row.get(2)?
             })
         })?;
 
@@ -128,11 +135,14 @@ pub(crate) fn get_dir(conn: &Connection, name: &str) -> Result<String> {
 }
 
 
-pub(crate) fn update_dir_counter(conn: &Connection, dir_name: String) -> Result<usize> {
+pub(crate) fn update_dir_counter(conn: &Connection, dir_name: String, current_seconds: i64) -> Result<usize> {
     // Update dir accesses counter
     return conn.execute(
-        "UPDATE directories SET counter = counter + 1 where name = ?1",
-        params![dir_name],
+        "UPDATE directories SET
+             counter = counter + 1,
+             last_access = ?1
+             where name = ?2",
+        params![current_seconds, dir_name],
     );
 }
 
@@ -143,7 +153,8 @@ pub(crate) fn create_dirs_table_if_not_exist(conn: &Connection) -> Result<usize>
              /* id integer primary key,
              name text not null, */
              name primary key,
-             counter integer not null
+             counter integer not null,
+             last_access integer not null
          )",
         [],
     );
