@@ -51,29 +51,28 @@ pub(crate) fn get_valid_dirs(
         // println!("{}", pages);
         pages += 1;
         let mut sql = format!(
-            "SELECT name, counter, last_access, (
-                10000.0
-                * CAST(counter as REAL)
-                * (3.75 / ((0.0001 * ({} - CAST(last_access as REAL)) + 1.0) + 0.25))
-            )
+            "SELECT
+              name,
+              counter,
+              last_access,
+              (10000.0
+               * CAST(counter as REAL)
+               * (3.75 / ((0.0001 * ({} - CAST(last_access as REAL)) + 1.0) + 0.25))
+              ) as score
             FROM directories
-            --where
-            ORDER BY (
-                10000.0
-                * CAST(counter as REAL)
-                * (3.75 / ((0.0001 * ({} - CAST(last_access as REAL)) + 1.0) + 0.25))
-            ) DESC
+              --where
+            ORDER BY score DESC
             LIMIT {}
-            ;", current_seconds, current_seconds as f64, MAX_RESULTS);
+            ;", current_seconds as f64, MAX_RESULTS);
 
         if pages > 1 {
             sql = sql.replace(
                 "--where",
                 format!(
                     "WHERE
-                            (name NOT IN ( SELECT name FROM directories
-                            ORDER BY counter DESC LIMIT {} ))
-                        --pattern",
+                       (name NOT IN ( SELECT name FROM directories
+                       ORDER BY counter DESC LIMIT {} ))
+                       --pattern",
                     (pages-1)*MAX_RESULTS
                 ).as_str()
             );
