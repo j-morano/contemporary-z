@@ -85,6 +85,12 @@ fn show_exit_message(text: &str) {
     exit(0);
 }
 
+fn get_home_dir() -> String {
+    let current_home_dir = home_dir().unwrap();
+    return current_home_dir.into_os_string().into_string().unwrap();
+}
+
+
 fn select_valid_dir(valid_dirs: Vec<Directory>) -> Result<String> {
     // If there are no dirs, exit
     if valid_dirs.len() == 0 {
@@ -93,10 +99,16 @@ fn select_valid_dir(valid_dirs: Vec<Directory>) -> Result<String> {
 
     // Show valid dirs
     for (i, dir) in valid_dirs.iter().enumerate() {
+        let mut dir_name = dir.name.clone();
+        let current_home_dir = get_home_dir();
+        if dir_name.starts_with(current_home_dir.as_str()) {
+            dir_name = dir_name.replace(current_home_dir.as_str(), "~")
+        }
         println!(
-            "{}) {}",
+            "{}) {} {}",
             bold((i+1).to_string()),
-            bold_blue(dir.name.clone()),
+            bold_blue(dir_name),
+            (i+1).to_string(),
             // dir.score
         );
     }
@@ -163,12 +175,8 @@ fn main() -> Result<()> {
     // Collect command-line arguments 
     let args: Vec<_> = env::args().collect();
 
-    // Get user home dir
-    let home_dir_o = home_dir().unwrap();
-    let home_dir_d = home_dir_o.display();
-
     let database_dir_path = format!(
-        "{}{}", home_dir_d, "/.local/share/cz/");
+        "{}{}", get_home_dir(), "/.local/share/cz/");
 
     // Create application user-specific data dir if it does not exist
     fs::create_dir_all(&database_dir_path).unwrap_or_else(
