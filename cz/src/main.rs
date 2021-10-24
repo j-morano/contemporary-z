@@ -223,11 +223,12 @@ fn main() -> Result<()> {
         };
     }
 
-    // Command option: run command (detached)
+    // Command option: run command
     if args.len() > 1 && args[1] == "-c" {
         if args.len() < 3 {
             show_error("No command provided", "");
         }
+        // Run command in a child process
         match Command::new(&args[2])
             .args(&args[3..])
             .spawn() {
