@@ -18,7 +18,6 @@
 
 For the time being, `cz` is available for [fish shell](https://github.com/fish-shell/fish-shell), [Bash](https://www.gnu.org/software/bash/) and [Zsh](https://www.zsh.org/). Furthermore, since it is written in Rust and uses an SQLite database, it should be relatively easy to adapt it to more shells; it is only necessary to translate into the language of the new shell the installation and runtime scripts.
 
-
 ## Installation
 
 ### Availability
@@ -29,7 +28,7 @@ For the time being, `cz` is available for [fish shell](https://github.com/fish-s
 
 ### Install from source
 
-To install `cz` from source, it is required to have installed [Cargo](https://doc.rust-lang.org/cargo/), the Rust _package manager_.
+To install `cz` from source, it is required to have installed [Cargo](https://doc.rust-lang.org/cargo/), the Rust _package manager_. You can install rust, with rustc and cargo, following the instructions on [this](https://www.rust-lang.org/tools/install) page or from the official repositories of your distribution.
 
 If this requirement is met, it is only necessary to clone the repository and run the specific installation script for the desired shell.
 
@@ -45,7 +44,9 @@ Using HTTPS:
 git clone https://github.com/sonarom/contemporary-z.git
 ```
 
-#### Installation
+#### Run the installation script
+
+> You must be inside the repository folder (`contemporary-z`) to run them as shown below.
 
 ##### Fish
 
