@@ -89,5 +89,5 @@ z [options] [directory or substrings]
 
 * `--clear`: clear the directories database.
 * `-`: go to the previous directory.
-* `-s`: execute shell command in a child process.
+* `-b`: execute shell command in background.
 
