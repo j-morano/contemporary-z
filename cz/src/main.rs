@@ -20,7 +20,7 @@ use rusqlite::{Connection, Result};
 use std::env;
 use std::env::current_dir;
 use std::path::{Path, PathBuf};
-use std::process::{Command, exit};
+use std::process::exit;
 use std::fs;
 use home::home_dir;
 use std::fs::{File, metadata};
@@ -176,7 +176,15 @@ fn direct_cd(conn: &Connection, dir_name: String) {
         Err(_) => {}
     };
     set_current_dir(&conn);
-    write("direct_cd", dir_name.clone());
+    write("command", format!("cd {}", dir_name.clone()));
+}
+
+
+fn run_in_background(c_args: &[String]) {
+    // Build command string
+    let command = c_args.join(" ");
+
+    write("command", format!("nohup {} </dev/null >/dev/null 2>&1 &", command));
 }
 
 
@@ -224,24 +232,13 @@ fn main() -> Result<()> {
     }
 
     // Command option: run command
-    if args.len() > 1 && args[1] == "-s" {
+    if args.len() > 1 && args[1] == "-b" {
         if args.len() < 3 {
             show_error("No command provided", "");
         }
         // Run command in a child process
-        match Command::new(&args[2])
-            .args(&args[3..])
-            .spawn() {
-            Ok(_) => {
-                exit(0)
-            }
-            Err(error) => {
-                show_error(
-                    "Could not execute command",
-                    error.to_string().as_str()
-                )
-            }
-        };
+        run_in_background(&args[2..]);
+        exit(0);
     }
 
 
