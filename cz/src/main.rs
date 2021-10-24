@@ -184,7 +184,10 @@ fn run_in_background(c_args: &[String]) {
     // Build command string
     let command = c_args.join(" ");
 
-    write("command", format!("nohup {} </dev/null >/dev/null 2>&1 &", command));
+    write(
+        "command",
+        format!("nohup {} </dev/null >/dev/null 2>&1 & disown", command)
+    );
 }
 
 
