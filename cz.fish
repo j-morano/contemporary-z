@@ -1,6 +1,6 @@
 #!/usr/bin/env fish
 
-~/.cargo/bin/cz $argv
+$HOME/.cargo/bin/cz $argv
 set zout (cat "/tmp/cz_path")
 set zouts (string split '|' $zout)
 if test $zouts[1] = "command"
