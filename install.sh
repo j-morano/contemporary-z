@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-cargo install --path cz
+$HOME/.cargo/bin/cargo install --path cz
 mkdir -p ~/.local/share/cz/
 cp cz.sh ~/.local/share/cz/
 # If the alias has not already been added, add it
