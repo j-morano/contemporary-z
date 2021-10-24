@@ -224,7 +224,7 @@ fn main() -> Result<()> {
     }
 
     // Command option: run command
-    if args.len() > 1 && args[1] == "-c" {
+    if args.len() > 1 && args[1] == "-s" {
         if args.len() < 3 {
             show_error("No command provided", "");
         }
