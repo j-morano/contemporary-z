@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 
-~/.cargo/bin/cz "$@"
+$HOME/.cargo/bin/cz "$@"
 zout=$(cat "/tmp/cz_path")
 zouts=("${(@s/|/)zout}")
 if [ "${zouts[1]}" = "command" ]; then
