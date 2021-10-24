@@ -104,12 +104,14 @@ fn select_valid_dir(valid_dirs: Vec<Directory>) -> Result<String> {
         let mut dir_name = dir.name.clone();
         // Replace /home/<user> with '~'
         let current_home_dir = get_home_dir();
-        if dir_name.starts_with(current_home_dir.as_str()) {
-            dir_name = dir_name.replace(current_home_dir.as_str(), "~")
-        }
+        let re_h = Regex::new(
+            format!(r"^{}", current_home_dir.as_str()).as_str()
+        ).unwrap();
+        dir_name = re_h.replace(dir_name.as_str(), "~").parse().unwrap();
+
         // Replace /run/media/<user> with '>'
-        let re = Regex::new(r"^/run/media/([^/]+)").unwrap();
-        dir_name = re.replace(dir_name.as_str(), ">").parse().unwrap();
+        let re_m = Regex::new(r"^/run/media/([^/]+)").unwrap();
+        dir_name = re_m.replace(dir_name.as_str(), ">").parse().unwrap();
 
         println!(
             "{}) {} {}",
