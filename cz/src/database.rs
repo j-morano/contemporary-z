@@ -6,14 +6,11 @@ use std::path::Path;
 use rusqlite::{params, Connection, Result};
 
 
-const MAX_RESULTS: usize = 9;
-
-
 
 pub(crate) fn insert_dir(conn: &Connection, dir_str: &str, current_seconds: i64) -> Result<usize> {
     return conn.execute(
         "INSERT INTO directories (name, counter, last_access) values (?1, 1, ?2)",
-        params![dir_str, current_seconds], // TODO
+        params![dir_str, current_seconds],
     );
 }
 
@@ -29,7 +26,8 @@ pub(crate) fn drop_current_dir_table(conn: &Connection) -> Result<usize> {
 pub(crate) fn get_valid_dirs(
     conn: &Connection,
     patterns: Vec<String>,
-    current_seconds: i64
+    current_seconds: i64,
+    max_results: usize
 ) -> Result<Vec<Directory>> {
     // Filter invalid dirs from the current path
     let mut valid_dirs: Vec<Directory> = Vec::new();
@@ -47,7 +45,7 @@ pub(crate) fn get_valid_dirs(
     // 'Frecency' formula: https://github.com/rupa/z/blob/master/z.sh
 
     // Database pagination
-    while valid_dirs.len() != MAX_RESULTS {
+    while valid_dirs.len() != max_results {
         // println!("{}", pages);
         pages += 1;
         let mut sql = format!(
@@ -63,7 +61,7 @@ pub(crate) fn get_valid_dirs(
               --where
             ORDER BY score DESC
             LIMIT {}
-            ;", current_seconds as f64, MAX_RESULTS);
+            ;", current_seconds as f64, max_results);
 
         if pages > 1 {
             sql = sql.replace(
@@ -73,7 +71,7 @@ pub(crate) fn get_valid_dirs(
                        (name NOT IN ( SELECT name FROM directories
                        ORDER BY counter DESC LIMIT {} ))
                        --pattern",
-                    (pages-1)*MAX_RESULTS
+                    (pages-1)*max_results
                 ).as_str()
             );
             if !pattern.is_empty() {
@@ -117,13 +115,13 @@ pub(crate) fn get_valid_dirs(
                 valid_dirs.push(dir?);
             }
             // If there are enough results, do not add more
-            if valid_dirs.len() == MAX_RESULTS {
+            if valid_dirs.len() == max_results {
                 break;
             }
         }
 
         // Exit loop if this was the last page or if there are enough results.
-        if num_dirs < MAX_RESULTS || valid_dirs.len() == MAX_RESULTS {
+        if num_dirs < max_results || valid_dirs.len() == max_results {
             break;
         }
     }
@@ -174,7 +172,7 @@ pub(crate) fn update_current_dir(conn: &Connection, dir_name: String) -> Result<
     );
 }
 
-pub(crate) fn get_current_dir(conn: &Connection) -> Result<String> {
+pub(crate) fn obt_current_dir(conn: &Connection) -> Result<String> {
     conn.query_row(
         "SELECT name FROM current_directory",
         [],

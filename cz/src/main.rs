@@ -1,199 +1,44 @@
 mod database;
 mod data;
+mod app;
 
-use crate::data::Directory;
 use crate::database::{
     get_dir,
     get_valid_dirs,
     create_dirs_table_if_not_exist,
-    update_dir_counter,
     drop_directories_table,
     insert_dir,
-    update_current_dir,
     create_current_dir_table_if_not_exist,
-    get_current_dir,
+    obt_current_dir,
     drop_current_dir_table
 };
+
+use app::App;
+use app::{write};
 
 use std::borrow::Borrow;
 use rusqlite::{Connection, Result};
 use std::env;
-use std::env::current_dir;
 use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::fs;
-use home::home_dir;
-use std::fs::{File, metadata};
-use std::io::prelude::*;
-use std::io;
+use std::fs::{metadata};
 use regex::Regex;
-use std::time::{SystemTime, UNIX_EPOCH};
-
-// Use absolute paths
-const ABS_PATHS: bool = true;
-
-fn write(action:&str, text: String) {
-    // https://stackoverflow.com/questions/65782872/
-    let mut z_file = File::create(
-        "/tmp/cz_path"
-    ).expect("Could not open file");
-    z_file.write_all(
-        format!("{}|{}", action, text).as_bytes()
-    ).expect("Could not write to file");
-    // println!("{}", format!("{}|{}", action, text));
-}
-
-fn select_dir() -> String {
-    let mut line = String::new();
-    print!("Number: ");
-    io::stdout().flush().expect("Could not flush output");
-    std::io::stdin().read_line(&mut line).unwrap();
-    return line.replace('\n', "");
-}
-
-fn bold_blue(text: String) -> String {
-    return format!("\x1b[1;34m{}\x1b[0m", text);
-}
-
-fn bold(text: String) -> String {
-    return format!("\x1b[1m{}\x1b[0m", text);
-}
-
-fn bold_magenta(text: String) -> String {
-    return format!("\x1b[1;35m{}\x1b[0m", text);
-}
-
-fn bold_green(text: String) -> String {
-    return format!("\x1b[1;32m{}\x1b[0m", text);
-}
-
-fn show_error(text: &str, error: &str) {
-    write("error", text.to_string());
-    let mut joint = "";
-    if !error.is_empty() {
-        joint = ":";
-    }
-    println!(
-        "{}{} {}",
-        bold_magenta(text.to_string()),
-        joint,
-        error
-    );
-    exit(1);
-}
-
-fn show_exit_message(text: &str) {
-    println!("{}", bold_green(String::from(text)));
-    exit(0);
-}
-
-fn get_home_dir() -> String {
-    let current_home_dir = home_dir().unwrap();
-    return current_home_dir.into_os_string().into_string().unwrap();
-}
-
-
-fn select_valid_dir(valid_dirs: Vec<Directory>) -> Result<String> {
-    // If there are no dirs, exit
-    if valid_dirs.len() == 0 {
-        show_exit_message("No dirs");
-    }
-
-    // Show valid dirs
-    for (i, dir) in valid_dirs.iter().enumerate() {
-        let mut dir_name = dir.name.clone();
-        // Replace /home/<user> with '~'
-        let current_home_dir = get_home_dir();
-        let re_h = Regex::new(
-            format!(r"^{}", current_home_dir.as_str()).as_str()
-        ).unwrap();
-        dir_name = re_h.replace(dir_name.as_str(), "~").parse().unwrap();
-
-        // Replace /run/media/<user> with '>'
-        let re_m = Regex::new(r"^/run/media/([^/]+)").unwrap();
-        dir_name = re_m.replace(dir_name.as_str(), ">").parse().unwrap();
-
-        println!(
-            "{}) {} {}",
-            bold((i+1).to_string()),
-            bold_blue(dir_name),
-            (i+1).to_string(),
-            // dir.score
-        );
-    }
-    println!();
-
-    // Select dir by number
-    let selected_dir = match select_dir().parse::<usize>() {
-        Ok(number)  => number,
-        Err(error) => {
-            show_error("No dir selected", error.to_string().as_str());
-            1 as usize
-        },
-    };
-
-    // Check if the introduced number is valid
-    if selected_dir > valid_dirs.len() || selected_dir < 1{
-        show_error(
-            "Invalid number",
-            format!(
-                "{} > {}",
-                selected_dir, valid_dirs.len()
-            ).as_str()
-        );
-    }
-
-    // Get name of the selected dir
-    let dir_name =
-        format!("{}", valid_dirs[selected_dir-1].name);
-
-    // update_dir_counter(conn, dir_name.clone())?;
-    // println!("{}", dir_name);
-
-    return Ok(dir_name);
-}
-
-fn set_current_dir(conn: &Connection) {
-    let current_dir = current_dir().unwrap();
-    let current_dir_string = current_dir.into_os_string().into_string().expect("Error");
-    // println!("{}", current_dir_string);
-    match update_current_dir(conn, current_dir_string) {
-        Ok(_) => { }
-        Err(error) => {
-            show_error("Could not load current dir", error.to_string().as_str());
-        }
-    };
-}
-
-fn get_current_seconds() -> i64 {
-    return SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64;
-}
-
-fn direct_cd(conn: &Connection, dir_name: String) {
-    let current_seconds = get_current_seconds();
-    match update_dir_counter(&conn, String::from(dir_name.clone()), current_seconds) {
-        Ok(_) => {}
-        Err(_) => {}
-    };
-    set_current_dir(&conn);
-    write("command", format!("cd {}", dir_name.clone()));
-}
-
-
-fn run_in_background(c_args: &[String]) {
-    // Build command string
-    let command = c_args.join(" ");
-
-    write(
-        "command",
-        format!("nohup {} </dev/null >/dev/null 2>&1 & disown", command)
-    );
-}
+use crate::app::{current_seconds, get_home_dir};
 
 
 fn main() -> Result<()> {
     // Collect command-line arguments 
     let args: Vec<_> = env::args().collect();
+
+    // App configuration
+    let app = App{
+        // Color theme
+        theme: "dark".to_string(),
+        // Use absolute paths
+        abs_paths: true,
+        max_results: 9
+    };
 
     let database_dir_path = format!(
         "{}{}", get_home_dir(), "/.local/share/cz/");
@@ -216,19 +61,19 @@ fn main() -> Result<()> {
         // write(z_file, "clear#", "".to_string());
         drop_directories_table(&conn)?;
         drop_current_dir_table(&conn)?;
-        show_exit_message("Cleared database");
+        app.show_exit_message("Cleared database");
     }
 
     // Command option: go to previous directory
     if args.len() > 1 && args[1] == "-" {
         // write(z_file, "clear#", "".to_string());
-        match get_current_dir(&conn) {
+        match obt_current_dir(&conn) {
             Ok(current_dir) => {
-                direct_cd(&conn, current_dir);
+                app.direct_cd(&conn, current_dir);
                 exit(0);
             }
             Err(_) => {
-                show_error("No previous directory", "");
+                app.show_error("No previous directory", "");
                 "".to_string()
             }
         };
@@ -237,10 +82,10 @@ fn main() -> Result<()> {
     // Command option: run command
     if args.len() > 1 && args[1] == "-b" {
         if args.len() < 3 {
-            show_error("No command provided", "");
+            app.show_error("No command provided", "");
         }
         // Run command in a child process
-        run_in_background(&args[2..]);
+        App::run_in_background(&args[2..]);
         exit(0);
     }
 
@@ -258,7 +103,7 @@ fn main() -> Result<()> {
             && metadata(dir_str).unwrap().is_dir()
         {
             let dir_pathbuf;
-            if ABS_PATHS {
+            if app.abs_paths {
                 dir_pathbuf = PathBuf::from(dir_str).canonicalize().unwrap();
                 dir_str = dir_pathbuf.to_str().unwrap();
             }
@@ -285,12 +130,12 @@ fn main() -> Result<()> {
             if let Err(_err) = dir {
                 // Do not store '..' or '.' dirs
                 if !(dir_str == "." || dir_str == "..") {
-                    let current_seconds = get_current_seconds();
+                    let current_seconds = current_seconds();
                     insert_dir(&conn, dir_str, current_seconds)?;
                 }
                 // println!("{}", args[1]);
                 // write("direct_cd", dir_str.to_string());
-                direct_cd(&conn, dir_str.to_string());
+                app.direct_cd(&conn, dir_str.to_string());
 
 
             } else { // if it is already present in the table, update its
@@ -298,23 +143,24 @@ fn main() -> Result<()> {
                 // update_dir_counter(&conn, String::from(dir_str))?;
 
                 // write("direct_cd", dir?);
-                direct_cd(&conn, dir?);
+                app.direct_cd(&conn, dir?);
             }
         } else { // if arguments are substrings
 
             let valid_dirs = get_valid_dirs(
-                &conn, Vec::from(&args[1..]), get_current_seconds()).unwrap();
+                &conn, Vec::from(&args[1..]), current_seconds(),
+            app.max_results).unwrap();
 
             // if these is only one result, access it directly
             if valid_dirs.len() == 1 {
                 let dir = &valid_dirs[0].name;
                 // update_dir_counter(&conn, dir.to_string())?;
                 // write("direct_cd", dir.to_string());
-                direct_cd(&conn, dir.to_string());
+                app.direct_cd(&conn, dir.to_string());
             } else {
-                let dir_name = select_valid_dir(valid_dirs).unwrap();
+                let dir_name = app.select_valid_dir(valid_dirs).unwrap();
                 // write("direct_cd", dir_name);
-                direct_cd(&conn, dir_name.clone());
+                app.direct_cd(&conn, dir_name.clone());
             }
         }
 
@@ -323,11 +169,12 @@ fn main() -> Result<()> {
     } else { // if there is no argument, list frequent dirs
 
         let valid_dirs = get_valid_dirs(
-            &conn, Vec::new(), get_current_seconds()).unwrap();
+            &conn, Vec::new(), current_seconds(),
+        app.max_results).unwrap();
 
-        let dir_name = select_valid_dir(valid_dirs).unwrap();
+        let dir_name = app.select_valid_dir(valid_dirs).unwrap();
 
-        direct_cd(&conn, dir_name);
+        app.direct_cd(&conn, dir_name);
 
         Ok(())
     }
