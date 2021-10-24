@@ -20,7 +20,7 @@ use rusqlite::{Connection, Result};
 use std::env;
 use std::env::current_dir;
 use std::path::{Path, PathBuf};
-use std::process::exit;
+use std::process::{Command, exit};
 use std::fs;
 use home::home_dir;
 use std::fs::{File, metadata};
@@ -200,7 +200,7 @@ fn main() -> Result<()> {
     create_dirs_table_if_not_exist(&conn)?;
     create_current_dir_table_if_not_exist(&conn)?;
 
-    // Clear table command option
+    // Command option: clear table
     if args.len() > 1 && args[1] == "--clear" {
         // write(z_file, "clear#", "".to_string());
         drop_directories_table(&conn)?;
@@ -208,7 +208,7 @@ fn main() -> Result<()> {
         show_exit_message("Cleared database");
     }
 
-    // Clear table command option
+    // Command option: go to previous directory
     if args.len() > 1 && args[1] == "-" {
         // write(z_file, "clear#", "".to_string());
         match get_current_dir(&conn) {
@@ -222,6 +222,27 @@ fn main() -> Result<()> {
             }
         };
     }
+
+    // Command option: run command (detached)
+    if args.len() > 1 && args[1] == "-c" {
+        if args.len() < 3 {
+            show_error("No command provided", "");
+        }
+        match Command::new(&args[2])
+            .args(&args[3..])
+            .spawn() {
+            Ok(_) => {
+                exit(0)
+            }
+            Err(error) => {
+                show_error(
+                    "Could not execute command",
+                    error.to_string().as_str()
+                )
+            }
+        };
+    }
+
 
     write("empty", "".to_string());
 
