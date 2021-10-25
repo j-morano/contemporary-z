@@ -26,14 +26,6 @@ pub(crate) fn write(action:&str, text: String) {
     // println!("{}", format!("{}|{}", action, text));
 }
 
-pub(crate) fn select_dir() -> String {
-    let mut line = String::new();
-    print!("Number: ");
-    io::stdout().flush().expect("Could not flush output");
-    std::io::stdin().read_line(&mut line).unwrap();
-    return line.replace('\n', "");
-}
-
 pub(crate) fn current_seconds() -> i64 {
     return SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64;
 }
@@ -110,16 +102,29 @@ pub(crate) struct App {
 
 impl App {
     fn format(&self, sgr: &str, color: &str, text: String) -> String {
-        let full_color ;
+        let mut full_color ;
         if self.theme == "bright" {
             full_color = format!("bright_{}_fg", color);
+            // If a black fg is forced, replace it by white
+            full_color = full_color.replace("black", "white");
         } else {
             full_color = format!("{}_fg", color);
         }
-        return format!(
-            "\x1b[{};{}m{}\x1b[0m",
-            sgr_code(sgr), color_code(full_color.as_str()), text
-        );
+        if color.is_empty() {
+            return format!(
+                "\x1b[{}m{}\x1b[0m",
+                sgr_code(sgr), text
+            );
+        } else {
+            return format!(
+                "\x1b[{};{}m{}\x1b[0m",
+                sgr_code(sgr), color_code(full_color.as_str()), text
+            );
+        }
+    }
+
+    fn printf(&self, sgr: &str, color: &str, text: String) {
+        print!("{}", self.format(sgr, color, text));
     }
 
     pub(crate) fn show_error(&self, text: &str, error: &str) {
@@ -132,14 +137,22 @@ impl App {
             "{}{} {}",
             self.format("bold", "magenta", text.to_string()),
             joint,
-            error
+            error,
         );
         exit(1);
     }
 
     pub(crate) fn show_exit_message(&self, text: &str) {
-        println!("{}", self.format("bold", "green", String::from(text)));
+        self.printf("bold", "green", String::from(text));
         exit(0);
+    }
+
+    pub(crate) fn select_dir(&self) -> String {
+        let mut line = String::new();
+        print!("Number: ");
+        io::stdout().flush().expect("Could not flush output");
+        std::io::stdin().read_line(&mut line).unwrap();
+        return line.replace('\n', "");
     }
 
 
@@ -165,16 +178,16 @@ impl App {
 
             println!(
                 "{}) {} {}",
-                self.format("bold", "black", (i+1).to_string()),
+                self.format("bold", "", (i+1).to_string()),
                 self.format("bold", "blue", dir_name),
-                (i+1).to_string(),
+                (i+1),
                 // dir.score
             );
         }
         println!();
 
         // Select dir by number
-        let selected_dir = match select_dir().parse::<usize>() {
+        let selected_dir = match self.select_dir().parse::<usize>() {
             Ok(number)  => number,
             Err(error) => {
                 self.show_error("No dir selected", error.to_string().as_str());

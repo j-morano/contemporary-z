@@ -72,9 +72,8 @@ pub(crate) fn app_from_config() -> App {
         user_value.clone(), default_value.clone(), "max_results");
 
     App {
-        theme: theme.to_string(),
+        theme: theme.as_str().unwrap().to_string(),
         abs_paths: abs_paths.as_bool().unwrap(),
         max_results: max_results.as_integer().unwrap() as usize
     }
-
 }
