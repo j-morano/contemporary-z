@@ -7,5 +7,6 @@ edition = "2018"
 
 [dependencies]
 rusqlite = "0.26"
-home = "0.5.3"
+home = "0.5"
 regex = "1.5"
+toml = "0.5"
