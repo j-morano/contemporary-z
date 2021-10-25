@@ -2,6 +2,7 @@ mod database;
 mod data;
 mod app;
 mod config;
+mod colors;
 
 use crate::database::{
     get_dir,
