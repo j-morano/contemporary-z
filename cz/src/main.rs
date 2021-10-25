@@ -1,6 +1,7 @@
 mod database;
 mod data;
 mod app;
+mod config;
 
 use crate::database::{
     get_dir,
@@ -25,6 +26,7 @@ use std::fs;
 use std::fs::{metadata};
 use regex::Regex;
 use crate::app::{current_seconds, get_home_dir};
+use crate::config::app_from_config;
 
 
 fn main() -> Result<()> {
@@ -32,13 +34,7 @@ fn main() -> Result<()> {
     let args: Vec<_> = env::args().collect();
 
     // App configuration
-    let app = App{
-        // Color theme
-        theme: "dark".to_string(),
-        // Use absolute paths
-        abs_paths: true,
-        max_results: 9
-    };
+    let app = app_from_config();
 
     let database_dir_path = format!(
         "{}{}", get_home_dir(), "/.local/share/cz/");
