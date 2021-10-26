@@ -90,6 +90,7 @@ z [options] [directory or substrings]
 
 * `--clear`: clear the directories database.
 * `-`: go to the previous directory.
+* `=`: go to the current directory.
 * `-b`: execute shell command in background.
 * `-l [number]`: list a certain `number` of directories by 'frecency'; if no `number` is provided, the `max_results` number is used.
 

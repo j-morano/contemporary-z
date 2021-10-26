@@ -172,9 +172,25 @@ pub(crate) fn update_current_dir(conn: &Connection, dir_name: String) -> Result<
     );
 }
 
+pub(crate) fn update_target_dir(conn: &Connection, dir_name: String) -> Result<usize> {
+    // Update dir accesses counter
+    return conn.execute(
+        "INSERT OR REPLACE INTO current_directory (id, name) VALUES (1, ?1)",
+        params![dir_name],
+    );
+}
+
 pub(crate) fn obt_current_dir(conn: &Connection) -> Result<String> {
     conn.query_row(
-        "SELECT name FROM current_directory",
+        "SELECT name FROM current_directory WHERE id = 0",
+        [],
+        |row| row.get(0),
+    )
+}
+
+pub(crate) fn obt_target_dir(conn: &Connection) -> Result<String> {
+    conn.query_row(
+        "SELECT name FROM current_directory WHERE id = 1",
         [],
         |row| row.get(0),
     )

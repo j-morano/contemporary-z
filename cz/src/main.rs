@@ -4,16 +4,7 @@ mod app;
 mod config;
 mod colors;
 
-use crate::database::{
-    get_dir,
-    get_valid_dirs,
-    create_dirs_table_if_not_exist,
-    drop_directories_table,
-    insert_dir,
-    create_current_dir_table_if_not_exist,
-    obt_current_dir,
-    drop_current_dir_table
-};
+use crate::database::{get_dir, get_valid_dirs, create_dirs_table_if_not_exist, drop_directories_table, insert_dir, create_current_dir_table_if_not_exist, obt_current_dir, drop_current_dir_table, obt_target_dir};
 
 use app::App;
 use app::{write};
@@ -71,6 +62,21 @@ fn main() -> Result<()> {
             }
             Err(_) => {
                 app.show_error("No previous directory", "");
+                "".to_string()
+            }
+        };
+    }
+
+    // Command option: go to target directory
+    if args.len() > 1 && args[1] == "=" {
+        // write(z_file, "clear#", "".to_string());
+        match obt_target_dir(&conn) {
+            Ok(target_dir) => {
+                app.direct_cd(&conn, target_dir);
+                exit(0);
+            }
+            Err(_) => {
+                app.show_error("No current directory", "");
                 "".to_string()
             }
         };

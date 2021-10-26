@@ -1,7 +1,4 @@
-use crate::database::{
-    update_dir_counter,
-    update_current_dir,
-};
+use crate::database::{update_dir_counter, update_current_dir, update_target_dir};
 use crate::data::Directory;
 
 use rusqlite::{Connection, Result};
@@ -175,11 +172,19 @@ impl App {
         match update_current_dir(conn, current_dir_string) {
             Ok(_) => { }
             Err(error) => {
-                self.show_error("Could not load current dir", error.to_string().as_str());
+                self.show_error("Could not update current dir", error.to_string().as_str());
             }
         };
     }
 
+    pub(crate) fn post_target_dir(&self, conn: &Connection, dir_name: String) {
+        match update_target_dir(conn, dir_name) {
+            Ok(_) => { }
+            Err(error) => {
+                self.show_error("Could not update target dir", error.to_string().as_str());
+            }
+        };
+    }
 
     pub(crate) fn direct_cd(&self, conn: &Connection, dir_name: String) {
         let current_seconds = current_seconds();
@@ -188,6 +193,7 @@ impl App {
             Err(_) => {}
         };
         self.post_current_dir(&conn);
+        self.post_target_dir(&conn, dir_name.clone());
         write("command", format!("cd {}", dir_name.clone()));
     }
 
