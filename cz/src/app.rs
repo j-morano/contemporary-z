@@ -131,13 +131,13 @@ impl App {
                 // dir.score
             );
         }
-        println!();
     }
 
 
     pub(crate) fn select_valid_dir(&self, valid_dirs: Vec<Directory>) -> Result<String> {
 
         self.list_dirs(&valid_dirs);
+        println!();
 
         // Select dir by number
         let selected_dir = match self.select_dir().parse::<usize>() {
