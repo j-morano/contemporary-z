@@ -100,7 +100,7 @@ impl App {
     }
 
 
-    pub(crate) fn select_valid_dir(&self, valid_dirs: Vec<Directory>) -> Result<String> {
+    pub(crate) fn list_dirs(&self, valid_dirs: &Vec<Directory>) {
         // If there are no dirs, exit
         if valid_dirs.len() == 0 {
             self.show_exit_message("No dirs");
@@ -132,6 +132,12 @@ impl App {
             );
         }
         println!();
+    }
+
+
+    pub(crate) fn select_valid_dir(&self, valid_dirs: Vec<Directory>) -> Result<String> {
+
+        self.list_dirs(&valid_dirs);
 
         // Select dir by number
         let selected_dir = match self.select_dir().parse::<usize>() {
@@ -154,8 +160,7 @@ impl App {
         }
 
         // Get name of the selected dir
-        let dir_name =
-            format!("{}", valid_dirs[selected_dir-1].name);
+        let dir_name = format!("{}", valid_dirs[selected_dir-1].name);
 
         // update_dir_counter(conn, dir_name.clone())?;
         // println!("{}", dir_name);

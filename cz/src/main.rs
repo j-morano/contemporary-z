@@ -86,6 +86,28 @@ fn main() -> Result<()> {
         exit(0);
     }
 
+    // Command option: run command
+    if args.len() > 1 && args[1] == "-l" {
+        let mut num_results = app.max_results;
+        if args.len() > 2 {
+            // Select dir by number
+            num_results = match args[2].parse::<usize>() {
+                Ok(number)  => number,
+                Err(error) => {
+                    app.show_error("Invalid number", error.to_string().as_str());
+                    1 as usize
+                },
+            };
+        }
+
+        let valid_dirs = get_valid_dirs(
+            &conn, Vec::new(), current_seconds(),
+        num_results).unwrap();
+
+        app.list_dirs(&valid_dirs);
+        exit(0);
+    }
+    
 
     write("empty", "".to_string());
 
