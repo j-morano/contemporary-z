@@ -116,8 +116,9 @@ z [options] [directory or substrings]
 
 #### Default config
 
-`~/.config/cz.toml`
 ```toml
+# ~/.config/cz.toml
+
 theme = 'dark'
 max_results = 9
 abs_paths = true
