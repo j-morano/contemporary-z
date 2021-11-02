@@ -51,19 +51,28 @@ git clone https://github.com/sonarom/contemporary-z.git
 ##### Fish
 
 ```fish
-./install.fish
+./un_install/install.fish
 ```
 
 ##### Bash
 
 ```bash
-./install.sh
+./un_install/install.sh
 ```
 
 ##### Zsh
 
 ```zsh
-./install.zsh
+./un_install/install.zsh
+```
+
+
+#### Uninstallation
+
+To uninstall `contemporary-z`, ou can use the uninstallation scripts in `un_install/` folder the same way as installation ones:
+
+```sh
+./un_install/install.[fish,sh,zsh]
 ```
 
 

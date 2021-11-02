@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 
 $HOME/.cargo/bin/cargo install --path cz
 mkdir -p ~/.local/share/cz/
