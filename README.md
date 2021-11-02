@@ -28,7 +28,7 @@ For the time being, `cz` is available for [fish shell](https://github.com/fish-s
 
 ### Install from source
 
-To install `cz` from source, it is required to have installed [Cargo](https://doc.rust-lang.org/cargo/), the Rust _package manager_. You can install rust, with rustc and cargo, following the instructions on [this](https://www.rust-lang.org/tools/install) page or from the official repositories of your distribution.
+To install `cz` from source, it is required to have installed [Cargo](https://doc.rust-lang.org/cargo/), the Rust _package manager_. You can install Rust, with `rustc` and `cargo`, following the instructions on [this](https://www.rust-lang.org/tools/install) page or from the official repositories of your distribution.
 
 If this requirement is met, it is only necessary to clone the repository and run the specific installation script for the desired shell.
 
@@ -69,7 +69,7 @@ git clone https://github.com/sonarom/contemporary-z.git
 
 #### Uninstallation
 
-To uninstall `contemporary-z`, ou can use the uninstallation scripts in `un_install/` folder the same way as installation ones:
+To uninstall `contemporary-z`, you can use the uninstallation scripts under `un_install/` the same way as installation ones:
 
 ```sh
 ./un_install/install.[fish,sh,zsh]
@@ -87,12 +87,11 @@ The default alias of Contemporary-z is `z`. However, if a different alias is pre
 z [options] [directory or substrings]
 ```
 
-1. If no option nor directory or substrings are specified, `cz` prints a numbered list of the most frecent directories to select one of them by introducing its number.
+1. If no option nor directory or substrings are specified, `cz` prints a numbered list of the most 'frecent' directories to select one of them by introducing its number.
 
 2. If a directory name is introduced, `cz` jumps to the directory (if available) and adds it to the directories database (if it is not already added).
 
 3. If a substring or substrings are introduced, `cz` searches in the database for coincidences. If there is only one coincidence, `cz` accesses the directory directly. If there are 2 or more coincidences, `cz` outputs the list, as in the case 1.
-
 
 
 ### Options:
@@ -102,4 +101,26 @@ z [options] [directory or substrings]
 * `=`: go to the current directory.
 * `-b`: execute shell command in background.
 * `-l [number]`: list a certain `number` of directories by 'frecency'; if no `number` is provided, the `max_results` number is used.
+
+
+### Configuration
+
+`cz` supports some configuration options. These options must be set in TOML format in a file with the following path: `~/.config/cz.toml`.
+
+#### Options:
+
+* `theme`: `dark|bright`. Color theme.
+* `abs_paths`: `true|false`. Record directories using full paths or relative paths. With the latter option, shown directories will vary from one directory to another.
+* `compact_paths`: `true|false`. Replace `/home/<username>` by `~` and `/run/media/<username>` by `>`.
+* `max_results`: any number. Maximum results to show in the directory list.
+
+#### Default config
+
+`~/.config/cz.toml`
+```toml
+theme = 'dark'
+max_results = 9
+abs_paths = true
+compact_paths = true
+```
 
