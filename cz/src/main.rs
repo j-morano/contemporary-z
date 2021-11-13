@@ -4,7 +4,11 @@ mod app;
 mod config;
 mod colors;
 
-use crate::database::{get_dir, get_valid_dirs, create_dirs_table_if_not_exist, drop_directories_table, insert_dir, create_current_dir_table_if_not_exist, obt_current_dir, drop_current_dir_table, obt_target_dir};
+use crate::database::{
+    get_dir, get_valid_dirs, create_dirs_table_if_not_exist,
+    drop_directories_table, insert_dir, create_current_dir_table_if_not_exist,
+    obt_current_dir, drop_current_dir_table, obt_target_dir
+};
 
 use app::App;
 use app::{write};
@@ -43,6 +47,8 @@ fn main() -> Result<()> {
 
     create_dirs_table_if_not_exist(&conn)?;
     create_current_dir_table_if_not_exist(&conn)?;
+
+    write("empty", "".to_string());
 
     // Command option: clear table
     if args.len() > 1 && args[1] == "--clear" {
@@ -92,7 +98,7 @@ fn main() -> Result<()> {
         exit(0);
     }
 
-    // Command option: run command
+    // Command option: list folders
     if args.len() > 1 && args[1] == "-l" {
         let mut num_results = app.max_results;
         if args.len() > 2 {
@@ -107,15 +113,38 @@ fn main() -> Result<()> {
         }
 
         let valid_dirs = get_valid_dirs(
-            &conn, Vec::new(), current_seconds(),
-        num_results).unwrap();
+            &conn, Vec::new(), current_seconds(), num_results
+        ).unwrap();
 
         app.list_dirs(&valid_dirs);
         exit(0);
     }
-    
 
-    write("empty", "".to_string());
+    // Command option: go to the parent folder that matches a pattern
+    if args.len() > 1 && args[1] == "-p" {
+        if !(args.len() > 2) {
+            app.show_error("Invalid argument", "No pattern provided");
+        } else {
+            // Get shortest directory
+            let valid_dirs = get_valid_dirs(
+                &conn, Vec::from(&args[2..]), current_seconds(), 100000
+            ).unwrap();
+
+            if valid_dirs.is_empty() {
+                app.show_exit_message("No dirs");
+            } else {
+                let mut selected_dir = valid_dirs[0].name.as_str();
+                for dir in valid_dirs.iter() {
+                    if dir.name.len() < selected_dir.len() {
+                        selected_dir = dir.name.as_str();
+                    }
+                }
+                app.direct_cd(&conn, selected_dir.to_string());
+                exit(0);
+            }
+
+        }
+    }
 
     // If there is a dir argument, cd to the dir
     if args.len() > 1 {
@@ -173,8 +202,8 @@ fn main() -> Result<()> {
         } else { // if arguments are substrings
 
             let valid_dirs = get_valid_dirs(
-                &conn, Vec::from(&args[1..]), current_seconds(),
-            app.max_results).unwrap();
+                &conn, Vec::from(&args[1..]), current_seconds(), app.max_results
+            ).unwrap();
 
             // if these is only one result, access it directly
             if valid_dirs.len() == 1 {
@@ -194,8 +223,8 @@ fn main() -> Result<()> {
     } else { // if there is no argument, list frequent dirs
 
         let valid_dirs = get_valid_dirs(
-            &conn, Vec::new(), current_seconds(),
-        app.max_results).unwrap();
+            &conn, Vec::new(), current_seconds(), app.max_results
+        ).unwrap();
 
         let dir_name = app.select_valid_dir(valid_dirs).unwrap();
 
