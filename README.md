@@ -101,6 +101,8 @@ z [options] [directory or substrings]
 * `=`: go to the current directory.
 * `-b`: execute shell command in background.
 * `-l [number]`: list a certain `number` of directories by 'frecency'; if no `number` is provided, the `max_results` number is used.
+* `-p`: go to the parent folder that matches a pattern.
+* `-r`: remove directory. Works the same as regular `cz` but for removing.
 
 
 ### Configuration
