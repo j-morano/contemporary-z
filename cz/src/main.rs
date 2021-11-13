@@ -7,7 +7,7 @@ mod colors;
 use crate::database::{
     get_dir, get_valid_dirs, create_dirs_table_if_not_exist,
     drop_directories_table, insert_dir, create_current_dir_table_if_not_exist,
-    obt_current_dir, drop_current_dir_table, obt_target_dir
+    obt_current_dir, drop_current_dir_table, obt_target_dir, remove_dir
 };
 
 use app::App;
@@ -98,7 +98,7 @@ fn main() -> Result<()> {
         exit(0);
     }
 
-    // Command option: list folders
+    // Command option: list directories
     if args.len() > 1 && args[1] == "-l" {
         let mut num_results = app.max_results;
         if args.len() > 2 {
@@ -108,7 +108,7 @@ fn main() -> Result<()> {
                 Err(error) => {
                     app.show_error("Invalid number", error.to_string().as_str());
                     1 as usize
-                },
+                }
             };
         }
 
@@ -127,6 +127,7 @@ fn main() -> Result<()> {
         } else {
             // Get shortest directory
             let valid_dirs = get_valid_dirs(
+                // 100000 ~ no results limit
                 &conn, Vec::from(&args[2..]), current_seconds(), 100000
             ).unwrap();
 
@@ -144,6 +145,25 @@ fn main() -> Result<()> {
             }
 
         }
+    }
+
+    // Command option: remove directory
+    if args.len() > 1 && args[1] == "-r" {
+        let valid_dirs = get_valid_dirs(
+            &conn, Vec::from(&args[2..]), current_seconds(), app.max_results
+        ).unwrap();
+
+        let dir_name = app.select_valid_dir(valid_dirs).unwrap();
+
+        match remove_dir(&conn, dir_name.clone()) {
+            Ok(_)  => {
+                app.show_exit_message("Removed directory");
+            }
+            Err(error) => {
+                app.show_error("Could not remove directory", error.to_string().as_str());
+            }
+        };
+        exit(0);
     }
 
     // If there is a dir argument, cd to the dir

@@ -22,6 +22,12 @@ pub(crate) fn drop_current_dir_table(conn: &Connection) -> Result<usize> {
     return conn.execute("drop table if exists current_directory", []);
 }
 
+pub(crate) fn remove_dir(conn: &Connection, dir_name: String) -> Result<usize> {
+    return conn.execute(
+        "DELETE FROM directories WHERE name = ?", params![dir_name]
+    );
+}
+
 
 pub(crate) fn get_valid_dirs(
     conn: &Connection,
