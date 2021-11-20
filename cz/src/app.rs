@@ -194,7 +194,7 @@ impl App {
         };
         self.post_current_dir(&conn);
         self.post_target_dir(&conn, dir_name.clone());
-        write("command", format!("cd {}", dir_name.clone()));
+        write("command", format!("cd \"{}\"", dir_name.clone()));
     }
 
 
