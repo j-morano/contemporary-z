@@ -138,6 +138,7 @@ fn main() -> Result<()> {
             // write("direct_cd", dir_name);
             app.direct_cd(&conn, dir_name.clone());
         }
+        exit(0);
     }
 
     // Command option: remove directory
@@ -264,7 +265,13 @@ fn main() -> Result<()> {
 
         }
         let dir_name = app.select_valid_dir(valid_dirs).unwrap();
-        let dir_str = dir_name.as_str();
+        let mut dir_str = dir_name.as_str();
+
+        let dir_pathbuf;
+        if app.abs_paths {
+            dir_pathbuf = PathBuf::from(dir_str).canonicalize().unwrap();
+            dir_str = dir_pathbuf.to_str().unwrap();
+        }
 
         // TODO: repeated code
         // Check if dir is in the table
