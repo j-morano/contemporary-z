@@ -120,30 +120,25 @@ fn main() -> Result<()> {
         exit(0);
     }
 
-    // Command option: go to the parent folder that matches a pattern
-    if args.len() > 1 && args[1] == "-p" {
-        if !(args.len() > 2) {
-            app.show_error("Invalid argument", "No pattern provided");
+    // Command option: interactive selection
+    if args.len() > 1 && args[1] == "-i" {
+        if args.len() < 2 {
+            app.show_error("No pattern provided", ""); 
+        }
+        let valid_dirs = get_valid_dirs(
+            &conn, Vec::from(&args[2..]), current_seconds(), app.max_results
+        ).unwrap();
+
+        // if these is only one result, access it directly
+        if valid_dirs.len() == 1 {
+            let dir = &valid_dirs[0].name;
+            // update_dir_counter(&conn, dir.to_string())?;
+            // write("direct_cd", dir.to_string());
+            app.direct_cd(&conn, dir.to_string());
         } else {
-            // Get shortest directory
-            let valid_dirs = get_valid_dirs(
-                // 100000 ~ no results limit
-                &conn, Vec::from(&args[2..]), current_seconds(), 100000
-            ).unwrap();
-
-            if valid_dirs.is_empty() {
-                app.show_exit_message("No dirs");
-            } else {
-                let mut selected_dir = valid_dirs[0].name.as_str();
-                for dir in valid_dirs.iter() {
-                    if dir.name.len() < selected_dir.len() {
-                        selected_dir = dir.name.as_str();
-                    }
-                }
-                app.direct_cd(&conn, selected_dir.to_string());
-                exit(0);
-            }
-
+            let dir_name = app.select_valid_dir(valid_dirs).unwrap();
+            // write("direct_cd", dir_name);
+            app.direct_cd(&conn, dir_name.clone());
         }
     }
 
@@ -219,22 +214,25 @@ fn main() -> Result<()> {
                 // write("direct_cd", dir?);
                 app.direct_cd(&conn, dir?);
             }
-        } else { // if arguments are substrings
-
+        } else { // if arguments are substrings, go to the parent folder of the
+                 // top results that matches the substrings
+            // Get shortest directory
             let valid_dirs = get_valid_dirs(
-                &conn, Vec::from(&args[1..]), current_seconds(), app.max_results
+                // 100000 ~ no results limit
+                &conn, Vec::from(&args[1..]), current_seconds(), 9
             ).unwrap();
 
-            // if these is only one result, access it directly
-            if valid_dirs.len() == 1 {
-                let dir = &valid_dirs[0].name;
-                // update_dir_counter(&conn, dir.to_string())?;
-                // write("direct_cd", dir.to_string());
-                app.direct_cd(&conn, dir.to_string());
+            if valid_dirs.is_empty() {
+                app.show_exit_message("No dirs");
             } else {
-                let dir_name = app.select_valid_dir(valid_dirs).unwrap();
-                // write("direct_cd", dir_name);
-                app.direct_cd(&conn, dir_name.clone());
+                let mut selected_dir = valid_dirs[0].name.as_str();
+                for dir in valid_dirs.iter() {
+                    if dir.name.len() < selected_dir.len() {
+                        selected_dir = dir.name.as_str();
+                    }
+                }
+                app.direct_cd(&conn, selected_dir.to_string());
+                exit(0);
             }
         }
 

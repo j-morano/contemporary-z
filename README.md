@@ -91,7 +91,9 @@ z [options] [directory or substrings]
 
 2. If a directory name is introduced, `cz` jumps to the directory (if available) and adds it to the directories database (if it is not already added).
 
-3. If a substring or substrings are introduced, `cz` searches in the database for coincidences. If there is only one coincidence, `cz` accesses the directory directly. If there are 2 or more coincidences, `cz` outputs the list, as in the case 1.
+3. If a substring or substrings are introduced, `cz` searches in the database for coincidences, and `cd` to the most top directory.
+
+<!--- If there is only one coincidence, `cz` accesses the directory directly. If there are 2 or more coincidences, `cz` outputs the list, as in the case 1. -->
 
 
 ### Options:
@@ -101,7 +103,7 @@ z [options] [directory or substrings]
 * `=`: go to the current directory.
 * `-b`: execute shell command in background.
 * `-l [number]`: list a certain `number` of directories by 'frecency'; if no `number` is provided, the `max_results` number is used.
-* `-p`: go to the parent folder that matches a pattern.
+* `-i`: interactive selection (using a numbered list).
 * `-r`: remove directory. Works the same as regular `cz` but for removing.
 
 
