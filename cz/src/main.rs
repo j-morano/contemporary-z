@@ -219,7 +219,7 @@ fn main() -> Result<()> {
             // Get shortest directory
             let valid_dirs = get_valid_dirs(
                 // 100000 ~ no results limit
-                &conn, Vec::from(&args[1..]), current_seconds(), 9
+                &conn, Vec::from(&args[1..]), current_seconds(), app.max_results
             ).unwrap();
 
             if valid_dirs.is_empty() {
