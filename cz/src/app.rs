@@ -120,9 +120,15 @@ impl App {
                 dir_name = re_m.replace(dir_name.as_str(), ">").parse().unwrap();
             }
 
+            let mut alias = String::new();
+            if !dir.alias.is_empty() {
+                alias = format!("{}:", dir.alias);
+            }
+
             println!(
-                "{}) {} {}",
+                "{}) {}{} {}",
                 self.format("bold", "", (i+1).to_string()),
+                alias,
                 self.format("bold", "blue", dir_name),
                 (i+1),
                 // dir.score

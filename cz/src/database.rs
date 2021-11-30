@@ -9,7 +9,7 @@ use rusqlite::{params, Connection, Result};
 
 pub(crate) fn insert_dir(conn: &Connection, dir_str: &str, current_seconds: i64) -> Result<usize> {
     return conn.execute(
-        "INSERT INTO directories (name, counter, last_access) values (?1, 1, ?2)",
+        "INSERT INTO directories (name, counter, last_access, alias) values (?1, 1, ?2, '')",
         params![dir_str, current_seconds],
     );
 }
@@ -91,7 +91,8 @@ pub(crate) fn get_valid_dirs(
               (10000.0
                * CAST(counter as REAL)
                * (3.75 / ((0.0001 * ({} - CAST(last_access as REAL)) + 1.0) + 0.25))
-              ) as score
+              ) as score,
+              alias
             FROM directories
               --where
             ORDER BY score DESC
@@ -134,7 +135,8 @@ pub(crate) fn get_valid_dirs(
                 name: row.get(0)?,
                 counter: row.get(1)?,
                 last_access: row.get(2)?,
-                score: row.get(3)?
+                score: row.get(3)?,
+                alias: row.get(4)?
             })
         })?;
 

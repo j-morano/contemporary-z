@@ -166,7 +166,8 @@ fn main() -> Result<()> {
                         name: filename.clone(),
                         counter: 0,
                         last_access: 0,
-                        score: 0.0
+                        score: 0.0,
+                        alias: String::new()
                     };
                     valid_dirs.push(directory);
                     // println!("Name: {}", filename);
@@ -229,11 +230,18 @@ fn main() -> Result<()> {
     if args.len() > 1 && args[1] == "-a" {
         if args.len() < 3 {
             app.show_error("No alias nor directory provided", "");
-        } else if args.len() < 4 {
-            app.show_error("No directory provided", "");
+        // } else if args.len() < 4 {
+        //     app.show_error("No directory provided", "");
         } else {
-            let alias = &args[2];
-            let mut dir_str = args[3].as_str();
+            let mut alias = &String::from("");
+            let mut dir_str;
+            if args.len() < 4 {
+                // Remove alias
+                dir_str = args[2].as_str();
+            } else {
+                alias = &args[2];
+                dir_str = args[3].as_str();
+            }
             let canonical_dir = canonicalize_dir_str(dir_str);
             dir_str = canonical_dir.as_str();
             
@@ -268,10 +276,12 @@ fn main() -> Result<()> {
         // If string is an alias, then cd to the directory, if exists
         match get_dir_by_alias(&conn, dir_str) {
             Ok(dir) => {
+                let dir_str = dir.as_str();
                 if Path::new(dir_str).exists()
                     && metadata(dir_str).unwrap().is_dir()
                 {
-                    app.direct_cd(&conn, dir); 
+                    app.direct_cd(&conn, dir);
+                    exit(0);
                 }
             },
             Err(_) => {},
