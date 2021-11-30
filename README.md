@@ -90,9 +90,11 @@ z [options] [directory or substrings]
 1. If no option nor directory or substrings are specified, `cz` prints a numbered list of the most 'frecent' directories to select one of them by introducing its number.
 <!--- the most 'frecent' directories -->
 
-2. If a directory name is introduced, `cz` jumps to the directory (if available) and adds it to the directories database (if it is not already added).
+2. If a directory alias is introduced, `cz` does `cd` to the directory.
 
-3. If a substring or substrings are introduced, `cz` searches in the database for coincidences, and `cd` to the uppermost directory.
+3. If a directory name is introduced, `cz` jumps to the directory (if available) and adds it to the directories database (if it is not already added).
+
+4. If a substring or substrings are introduced, `cz` searches in the database for coincidences, and does `cd` to the uppermost directory.
 
 <!--- If there is only one coincidence, `cz` accesses the directory directly. If there are 2 or more coincidences, `cz` outputs the list, as in the case 1. -->
 
@@ -106,6 +108,7 @@ z [options] [directory or substrings]
 * `-l [number]`: list a certain `number` of directories by 'frecency'; if no `number` is provided, the `max_results` number is used.
 * `-i`: interactive selection (using a numbered list) of the subdirectories of the current directory.
 * `-r`: remove directory. Works the same as regular `cz` but for removing.
+* `-a`: add directory alias.
 
 
 ### Configuration
