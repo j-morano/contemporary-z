@@ -261,6 +261,9 @@ fn main() -> Result<()> {
                     }
                 } else {
                     add_alias_to_directory(&conn, dir_str, alias.as_str())?;
+                    if args.len() < 4 {
+                        app.show_exit_message("Removed directory alias");
+                    }
                 }
             }
         }

@@ -108,7 +108,7 @@ z [options] [directory or substrings]
 * `-l [number]`: list a certain `number` of directories by 'frecency'; if no `number` is provided, the `max_results` number is used.
 * `-i`: interactive selection (using a numbered list) of the subdirectories of the current directory.
 * `-r`: remove directory. Works the same as regular `cz` but for removing.
-* `-a`: add directory alias.
+* `-a`: add directory alias. If only the directory is introduced, its alias is removed.
 
 
 ### Configuration
