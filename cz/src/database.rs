@@ -14,6 +14,35 @@ pub(crate) fn insert_dir(conn: &Connection, dir_str: &str, current_seconds: i64)
     );
 }
 
+
+pub(crate) fn insert_dir_alias(
+    conn: &Connection,
+    dir_str: &str,
+    current_seconds: i64,
+    alias: &str
+) -> Result<usize> {
+    return conn.execute(
+        "INSERT INTO directories (name, counter, last_access, alias) values (?1, 1, ?2, ?3)",
+        params![dir_str, current_seconds, alias],
+    );
+}
+
+
+pub(crate) fn add_alias_to_directory(
+    conn: &Connection,
+    dir_str: &str,
+    alias: &str
+) -> Result<usize> {
+    // Update dir accesses counter
+    return conn.execute(
+        "UPDATE directories SET
+             alias = ?1
+             where name = ?2",
+        params![alias, dir_str],
+    );
+}
+
+
 pub(crate) fn drop_directories_table(conn: &Connection) -> Result<usize> {
     return conn.execute("drop table if exists directories", []);
 }
@@ -145,6 +174,16 @@ pub(crate) fn get_dir(conn: &Connection, name: &str) -> Result<String> {
 }
 
 
+
+pub(crate) fn get_dir_by_alias(conn: &Connection, alias: &str) -> Result<String> {
+    conn.query_row(
+        "SELECT name FROM directories WHERE alias = ?",
+        params![alias],
+        |row| row.get(0),
+    )
+}
+
+
 pub(crate) fn update_dir_counter(conn: &Connection, dir_name: String, current_seconds: i64) -> Result<usize> {
     // Update dir accesses counter
     return conn.execute(
@@ -164,7 +203,8 @@ pub(crate) fn create_dirs_table_if_not_exist(conn: &Connection) -> Result<usize>
              name text not null, */
              name primary key,
              counter integer not null,
-             last_access integer not null
+             last_access integer not null,
+             alias varchar(64)
          )",
         [],
     );

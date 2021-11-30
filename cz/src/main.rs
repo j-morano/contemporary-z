@@ -13,6 +13,7 @@ use crate::database::{
 
 use app::App;
 use app::{write};
+use database::{get_dir_by_alias, insert_dir_alias, add_alias_to_directory};
 
 use std::borrow::Borrow;
 use rusqlite::{Connection, Result};
@@ -24,6 +25,32 @@ use std::fs::{metadata};
 use regex::Regex;
 use crate::app::{current_seconds, get_home_dir};
 use crate::config::app_from_config;
+
+
+fn canonicalize_dir_str(dir_str_name: &str) -> String {
+
+    let mut dir_str = dir_str_name;
+
+    // Canonicalize path
+    let dir_pathbuf;
+    dir_pathbuf = PathBuf::from(dir_str).canonicalize().unwrap();
+    dir_str = dir_pathbuf.to_str().unwrap();
+
+    // If dir name ends with '/', remove it, in order to avoid
+    //   having duplicated dirs (with and without '/' versions)
+    if dir_str.len() > 1
+        && dir_str.chars().last().unwrap() == '/'
+    {
+        dir_str = &dir_str[..dir_str.len() - 1];
+    }
+
+    // Replace multiple contiguous slashes by a single slash
+    let re = Regex::new(r"/(/)+").unwrap();
+    let result = re.replace_all(dir_str, "/");
+
+    dir_str = result.borrow();
+    String::from(dir_str)
+}
 
 
 fn main() -> Result<()> {
@@ -197,35 +224,65 @@ fn main() -> Result<()> {
         exit(0);
     }
 
+
+    // Command option: add alias
+    if args.len() > 1 && args[1] == "-a" {
+        if args.len() < 3 {
+            app.show_error("No alias nor directory provided", "");
+        } else if args.len() < 4 {
+            app.show_error("No directory provided", "");
+        } else {
+            let alias = &args[2];
+            let mut dir_str = args[3].as_str();
+            let canonical_dir = canonicalize_dir_str(dir_str);
+            dir_str = canonical_dir.as_str();
+            
+            if Path::new(dir_str).exists()
+                && metadata(dir_str).unwrap().is_dir()
+            {
+                // Check if dir is in the table
+                let dir = get_dir(&conn, dir_str);
+
+                // If the dir is not in the table and it does exists in the
+                //   FS, add it
+                if let Err(_err) = dir {
+                    // Do not store '..' or '.' dirs
+                    if !(dir_str == "." || dir_str == "..") {
+                        let current_seconds = current_seconds();
+                        insert_dir_alias(&conn, dir_str, current_seconds, alias.as_str())?;
+                    }
+                } else {
+                    add_alias_to_directory(&conn, dir_str, alias.as_str())?;
+                }
+            }
+        }
+        exit(0);
+    }
+
     // If there is a dir argument, cd to the dir
     if args.len() > 1 {
 
         // Directory argument
         let mut dir_str = args[1].as_str();
+        
+        // If string is an alias, then cd to the directory, if exists
+        match get_dir_by_alias(&conn, dir_str) {
+            Ok(dir) => {
+                if Path::new(dir_str).exists()
+                    && metadata(dir_str).unwrap().is_dir()
+                {
+                    app.direct_cd(&conn, dir); 
+                }
+            },
+            Err(_) => {},
+        };
 
         // If it is a dir AND exists in the FS
         if Path::new(dir_str).exists()
             && metadata(dir_str).unwrap().is_dir()
         {
-            let dir_pathbuf;
-            if app.abs_paths {
-                dir_pathbuf = PathBuf::from(dir_str).canonicalize().unwrap();
-                dir_str = dir_pathbuf.to_str().unwrap();
-            }
-
-            // If dir name ends with '/', remove it, in order to avoid
-            //   having duplicated dirs (with and without '/' versions)
-            if dir_str.len() > 1
-                && dir_str.chars().last().unwrap() == '/'
-            {
-                dir_str = &dir_str[..dir_str.len() - 1];
-            }
-
-            // Replace multiple contiguous slashes by a single slash
-            let re = Regex::new(r"/(/)+").unwrap();
-            let result = re.replace_all(dir_str, "/");
-
-            dir_str = result.borrow();
+            let canonical_dir = canonicalize_dir_str(dir_str);
+            dir_str = canonical_dir.as_str();
 
             // Check if dir is in the table
             let dir = get_dir(&conn, dir_str);
