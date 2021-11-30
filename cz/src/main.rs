@@ -258,6 +258,7 @@ fn main() -> Result<()> {
                     if !(dir_str == "." || dir_str == "..") {
                         let current_seconds = current_seconds();
                         insert_dir_alias(&conn, dir_str, current_seconds, alias.as_str())?;
+                        app.show_exit_message("Added directory alias");
                     }
                 } else {
                     add_alias_to_directory(&conn, dir_str, alias.as_str())?;
