@@ -87,7 +87,7 @@ The default alias of Contemporary-z is `z`. However, if a different alias is pre
 z [options] [directory or substrings]
 ```
 
-1. If no option nor directory or substrings are specified, `cz` prints a numbered list of the subdirectories of the current directory to select one of them by introducing its number.
+1. If no option nor directory or substrings are specified, `cz` prints a numbered list of the most 'frecent' directories to select one of them by introducing its number.
 <!--- the most 'frecent' directories -->
 
 2. If a directory name is introduced, `cz` jumps to the directory (if available) and adds it to the directories database (if it is not already added).
@@ -104,7 +104,7 @@ z [options] [directory or substrings]
 * `=`: go to the current directory.
 * `-b`: execute shell command in background.
 * `-l [number]`: list a certain `number` of directories by 'frecency'; if no `number` is provided, the `max_results` number is used.
-* `-i`: interactive selection (using a numbered list) of the most 'frecent' directories.
+* `-i`: interactive selection (using a numbered list) of the subdirectories of the current directory.
 * `-r`: remove directory. Works the same as regular `cz` but for removing.
 
 
