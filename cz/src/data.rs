@@ -1,9 +1,8 @@
 
-#[derive(Debug)]
 pub(crate) struct Directory {
-    pub(crate) name: String,
-    pub(crate) counter: i64,
-    pub(crate) last_access: i64,
-    pub(crate) score: f64,
-    pub(crate) alias: String,
+    pub name: String,
+    pub counter: i64,
+    pub last_access: i64,
+    pub score: f64,
+    pub alias: String,
 }

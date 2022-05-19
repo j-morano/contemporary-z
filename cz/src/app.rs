@@ -5,7 +5,7 @@ use rusqlite::{Connection, Result};
 use std::env::current_dir;
 use std::process::exit;
 use home::home_dir;
-use std::fs::{File};
+use std::fs::File;
 use std::io::prelude::*;
 use std::io;
 use regex::Regex;
@@ -116,7 +116,7 @@ impl App {
                 dir_name = re_h.replace(dir_name.as_str(), "~").parse().unwrap();
 
                 // Replace /run/media/<user> with '>'
-                let re_m = Regex::new(r"^/run/media/([^/]+)").unwrap();
+                let re_m = Regex::new(r"^/(run/)?media/([^/]+)").unwrap();
                 dir_name = re_m.replace(dir_name.as_str(), ">").parse().unwrap();
             }
 

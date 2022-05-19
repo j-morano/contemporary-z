@@ -4,13 +4,18 @@ use crate::data::Directory;
 use std::path::Path;
 
 use rusqlite::{params, Connection, Result};
+use crate::utils::canonicalize_dir_str;
 
 
 
 pub(crate) fn insert_dir(conn: &Connection, dir_str: &str, current_seconds: i64) -> Result<usize> {
+    // Ensure that a canonical dir is inserted
+    let canonical_dir = canonicalize_dir_str(dir_str);
+    let canonical_dir_str = canonical_dir.as_str();
+    // Execute query
     return conn.execute(
         "INSERT INTO directories (name, counter, last_access, alias) values (?1, 1, ?2, '')",
-        params![dir_str, current_seconds],
+        params![canonical_dir_str, current_seconds],
     );
 }
 

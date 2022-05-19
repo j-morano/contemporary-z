@@ -3,6 +3,7 @@ mod data;
 mod app;
 mod config;
 mod colors;
+mod utils;
 
 use crate::data::Directory;
 use crate::database::{
@@ -12,45 +13,19 @@ use crate::database::{
 };
 
 use app::App;
-use app::{write};
+use app::write;
 use database::{get_dir_by_alias, insert_dir_alias, add_alias_to_directory};
 
-use std::borrow::Borrow;
 use rusqlite::{Connection, Result};
 use std::env;
 use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::fs;
-use std::fs::{metadata};
-use regex::Regex;
+use std::fs::metadata;
 use crate::app::{current_seconds, get_home_dir};
 use crate::config::app_from_config;
+use crate::utils::canonicalize_dir_str;
 
-
-fn canonicalize_dir_str(dir_str_name: &str) -> String {
-
-    let mut dir_str = dir_str_name;
-
-    // Canonicalize path
-    let dir_pathbuf;
-    dir_pathbuf = PathBuf::from(dir_str).canonicalize().unwrap();
-    dir_str = dir_pathbuf.to_str().unwrap();
-
-    // If dir name ends with '/', remove it, in order to avoid
-    //   having duplicated dirs (with and without '/' versions)
-    if dir_str.len() > 1
-        && dir_str.chars().last().unwrap() == '/'
-    {
-        dir_str = &dir_str[..dir_str.len() - 1];
-    }
-
-    // Replace multiple contiguous slashes by a single slash
-    let re = Regex::new(r"/(/)+").unwrap();
-    let result = re.replace_all(dir_str, "/");
-
-    dir_str = result.borrow();
-    String::from(dir_str)
-}
 
 
 fn main() -> Result<()> {
@@ -354,17 +329,10 @@ fn main() -> Result<()> {
             &conn, Vec::from(&args[1..]), current_seconds(), app.max_results
         ).unwrap();
 
-        // if these is only one result, access it directly
-        if valid_dirs.len() == 1 {
-            let dir = &valid_dirs[0].name;
-            // update_dir_counter(&conn, dir.to_string())?;
-            // write("direct_cd", dir.to_string());
-            app.direct_cd(&conn, dir.to_string());
-        } else {
-            let dir_name = app.select_valid_dir(valid_dirs).unwrap();
-            // write("direct_cd", dir_name);
-            app.direct_cd(&conn, dir_name.clone());
-        }
+        // Always list dirs
+        let dir_name = app.select_valid_dir(valid_dirs).unwrap();
+        // write("direct_cd", dir_name);
+        app.direct_cd(&conn, dir_name.clone());
 
         Ok(())
     }
