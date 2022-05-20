@@ -32,12 +32,22 @@ To install `cz` from source, it is required to have installed [Cargo](https://do
 
 If this requirement is met, it is only necessary to clone the repository and run the specific installation script for the desired shell.
 
+
 #### Debian-based distros:
 
 In Debian-based distros, it is necessary to install the developer package of the `sqlite3` library:
 ```shell
 sudo apt install libsqlite3-dev
 ```
+
+##### Ubuntu
+
+To install `cz` in Ubuntu, it is necessary to install the developer package of the sqlite3 library:
+
+```
+sudo apt install libsqlite3-dev
+```
+
 
 #### Repository cloning
 
