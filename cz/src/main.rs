@@ -151,6 +151,9 @@ fn main() -> Result<()> {
                     }
                 }
             }
+            // Sort dirs by name
+            valid_dirs.sort_by_key(|dir| dir.name.clone());
+
             if valid_dirs.is_empty() {
                 break;
             }
