@@ -33,6 +33,20 @@ pub(crate) fn get_home_dir() -> String {
     return current_home_dir.into_os_string().into_string().unwrap();
 }
 
+#[derive(Debug, Clone)]
+pub struct SelectionError;
+
+// Generation of an error is completely separate from how it is displayed.
+// There's no need to be concerned about cluttering complex logic with the display style.
+//
+// Note that we don't store any extra info about the errors. This means we can't state
+// which string failed to parse without modifying our types to carry that information.
+//impl fmt::Display for SelectionError {
+//    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+//        write!(f, "invalid first item to double")
+//    }
+//}
+
 
 pub(crate) struct App {
     pub(crate) theme: String,
@@ -134,6 +148,33 @@ impl App {
                 // dir.score
             );
         }
+    }
+
+    pub(crate) fn select_valid_dir_no_exit(&self, valid_dirs: Vec<Directory>) -> Result<String, SelectionError> {
+
+        self.list_dirs(&valid_dirs);
+        println!();
+
+        // Select dir by number
+        let selected_dir = match self.select_dir().parse::<usize>() {
+            Ok(number)  => number,
+            Err(_) => {
+                return Err(SelectionError);
+            },
+        };
+
+        // Check if the introduced number is valid
+        if selected_dir > valid_dirs.len() || selected_dir < 1{
+            return Err(SelectionError);
+        }
+
+        // Get name of the selected dir
+        let dir_name = format!("{}", valid_dirs[selected_dir-1].name);
+
+        // update_dir_counter(conn, dir_name.clone())?;
+        // println!("{}", dir_name);
+
+        return Ok(dir_name);
     }
 
 

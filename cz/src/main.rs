@@ -125,60 +125,93 @@ fn main() -> Result<()> {
 
     // Command option: interactive subdir selection
     if args.len() > 1 && args[1] == "-i" {
-        let paths = fs::read_dir(".").unwrap();
-        let mut valid_dirs: Vec<Directory> = Vec::new();
+        let mut dir_to_read = String::from(".");
+        loop {
+            let paths = fs::read_dir(dir_to_read.as_str()).unwrap();
+            let mut valid_dirs: Vec<Directory> = Vec::new();
 
-        for result_path in paths {
-            let dir_path = result_path.unwrap().path();
-            if dir_path.exists()
-                && dir_path.is_dir()
-            {
-                let filename = String::from(
-                    dir_path.file_name().unwrap().to_str().unwrap()
-                );
-                if !filename.starts_with(".") {
-                    let directory = Directory{
-                        name: filename.clone(),
-                        counter: 0,
-                        last_access: 0,
-                        score: 0.0,
-                        alias: String::new()
-                    };
-                    valid_dirs.push(directory);
-                    // println!("Name: {}", filename);
+            for result_path in paths {
+                let dir_path = result_path.unwrap().path();
+                if dir_path.exists()
+                    && dir_path.is_dir()
+                {
+                    let filename = String::from(
+                        dir_path.file_name().unwrap().to_str().unwrap()
+                    );
+                    if !filename.starts_with(".") {
+                        let directory = Directory{
+                            name: filename.clone(),
+                            counter: 0,
+                            last_access: 0,
+                            score: 0.0,
+                            alias: String::new()
+                        };
+                        valid_dirs.push(directory);
+                        // println!("Name: {}", filename);
+                    }
                 }
             }
-
-        }
-        let dir_name = app.select_valid_dir(valid_dirs).unwrap();
-        let mut dir_str = dir_name.as_str();
-
-        let dir_pathbuf;
-        if app.abs_paths {
-            dir_pathbuf = PathBuf::from(dir_str).canonicalize().unwrap();
-            dir_str = dir_pathbuf.to_str().unwrap();
-        }
-
-        // TODO: repeated code
-        // Check if dir is in the table
-        let dir = get_dir(&conn, dir_str);
-
-        // If the dir is not in the table and it does exists in the
-        //   FS, add it
-        if let Err(_err) = dir {
-            // Do not store '..' or '.' dirs
-            if !(dir_str == "." || dir_str == "..") {
-                let current_seconds = current_seconds();
-                insert_dir(&conn, dir_str, current_seconds)?;
+            if valid_dirs.is_empty() {
+                break;
             }
-            // println!("{}", args[1]);
-            app.direct_cd(&conn, dir_str.to_string());
 
-        } else { // if it is already present in the table, update its
-                 // counter
+            let dir_name: String; //= String::new();
+            match app.select_valid_dir_no_exit(valid_dirs) {
+                Ok(dir_string)  => {
+                    dir_name = dir_string
+                }
+                Err(_error) => {
+                    break;
+                }
+            };
+            println!();
 
-            app.direct_cd(&conn, dir?);
+            let dir_name_str = dir_name.as_str();
+            let base_dir_str = dir_to_read.as_str();
+            let dir_path = Path::new(base_dir_str);
+            let dir_path_buf = dir_path.join(dir_name_str);
+            let mut dir_str = dir_path_buf.to_str().unwrap();
+
+            let dir_pathbuf;
+            if app.abs_paths {
+                dir_pathbuf = PathBuf::from(dir_str).canonicalize().unwrap();
+                dir_str = dir_pathbuf.to_str().unwrap();
+            }
+
+            // TODO: repeated code
+            // Check if dir is in the table
+            let dir = get_dir(&conn, dir_str);
+
+            // If the dir is not in the table and it does exists in the
+            //   FS, add it
+            if let Err(_err) = dir {
+                // Do not store '..' or '.' dirs
+                if !(dir_str == "." || dir_str == "..") {
+                    let current_seconds = current_seconds();
+                    insert_dir(&conn, dir_str, current_seconds)?;
+                }
+                // println!("{}", args[1]);
+                //app.direct_cd(&conn, dir_str.to_string());
+                dir_to_read = String::from(dir_str);
+
+            } else { // if it is already present in the table, update its
+                     // counter
+
+                match dir {
+                    Ok(dir_string)  => {
+                        dir_to_read = dir_string;
+                        //app.show_exit_message("cd");
+                    }
+                    Err(error) => {
+                        app.show_error("Directory does not exist", error.to_string().as_str());
+                    }
+                };
+                //app.direct_cd(&conn, dir?);
+            }
+            println!("{}", dir_to_read);
         }
+        app.direct_cd(&conn, dir_to_read);
+        exit(0);
     }
 
     // Command option: remove directory
