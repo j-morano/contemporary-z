@@ -47,6 +47,13 @@ pub struct SelectionError;
 //    }
 //}
 
+pub(crate) struct AppDefaults {
+    pub(crate) theme: String,
+    pub(crate) abs_paths: bool,
+    pub(crate) compact_paths: bool,
+    pub(crate) max_results: usize,
+    pub(crate) database_path: String,
+}
 
 pub(crate) struct App {
     pub(crate) theme: String,

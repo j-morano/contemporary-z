@@ -1,7 +1,7 @@
 use std::fs;
 use toml::Value;
 use crate::get_home_dir;
-use crate::app::App;
+use crate::app::{App, AppDefaults};
 
 
 const DEFAULT_CONFIG: &str = "
@@ -55,6 +55,27 @@ fn get_option(user_value: Value, default_value: Value, option: &str) -> Value {
     }
     value.unwrap().clone()
 }
+
+
+pub(crate) fn app_defaults_from_config() -> AppDefaults {
+    let default_value = DEFAULT_CONFIG.to_string().parse::<Value>().unwrap();
+
+
+    let theme = default_value.get("theme").unwrap().clone();
+    let abs_paths = default_value.get("abs_paths").unwrap().clone(); 
+    let max_results = default_value.get("max_results").unwrap().clone(); 
+    let compact_paths = default_value.get("compact_paths").unwrap().clone(); 
+    let database_path = default_value.get("database_path").unwrap().clone(); 
+
+    AppDefaults {
+        theme: theme.as_str().unwrap().to_string(),
+        abs_paths: abs_paths.as_bool().unwrap(),
+        compact_paths: compact_paths.as_bool().unwrap(),
+        max_results: max_results.as_integer().unwrap() as usize,
+        database_path: database_path.as_str().unwrap().to_string()
+    }
+}
+
 
 pub(crate) fn app_from_config() -> App {
     let path = format!("{}/.config/cz.toml", get_home_dir());

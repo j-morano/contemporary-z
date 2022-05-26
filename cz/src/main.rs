@@ -14,6 +14,7 @@ use crate::database::{
 
 use app::App;
 use app::write;
+use config::app_defaults_from_config;
 use database::{get_dir_by_alias, insert_dir_alias, add_alias_to_directory};
 
 use regex::Regex;
@@ -34,6 +35,7 @@ fn main() -> Result<()> {
     let args: Vec<_> = env::args().collect();
 
     // App configuration
+    let app_defaults = app_defaults_from_config();
     let app = app_from_config();
 
     let mut database_dir_path = app.database_path.clone();//format!(
@@ -43,6 +45,12 @@ fn main() -> Result<()> {
     database_dir_path = String::from(
         re.replace_all(database_dir_path.as_str(), get_home_dir())
         );
+    if !Path::new(database_dir_path.as_str()).exists() {
+        database_dir_path = app_defaults.database_path.clone();
+        database_dir_path = String::from(
+            re.replace_all(database_dir_path.as_str(), get_home_dir())
+            );
+    }
 
     // Create application user-specific data dir if it does not exist
     fs::create_dir_all(&database_dir_path).unwrap_or_else(
