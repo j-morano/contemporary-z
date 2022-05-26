@@ -1,6 +1,6 @@
 use std::fs;
 use toml::Value;
-use crate::{get_home_dir};
+use crate::get_home_dir;
 use crate::app::App;
 
 
@@ -9,6 +9,7 @@ theme = 'dark'
 max_results = 9
 abs_paths = true
 compact_paths = true
+database_path = '$HOME/.local/share/cz/'
 ";
 
 
@@ -73,11 +74,14 @@ pub(crate) fn app_from_config() -> App {
         user_value.clone(), default_value.clone(), "max_results");
     let compact_paths = get_option(
         user_value.clone(), default_value.clone(), "compact_paths");
+    let database_path = get_option(
+        user_value.clone(), default_value.clone(), "database_path");
 
     App {
         theme: theme.as_str().unwrap().to_string(),
         abs_paths: abs_paths.as_bool().unwrap(),
         compact_paths: compact_paths.as_bool().unwrap(),
-        max_results: max_results.as_integer().unwrap() as usize
+        max_results: max_results.as_integer().unwrap() as usize,
+        database_path: database_path.as_str().unwrap().to_string()
     }
 }

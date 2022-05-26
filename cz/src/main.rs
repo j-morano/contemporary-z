@@ -16,6 +16,7 @@ use app::App;
 use app::write;
 use database::{get_dir_by_alias, insert_dir_alias, add_alias_to_directory};
 
+use regex::Regex;
 use rusqlite::{Connection, Result};
 use std::env;
 use std::path::{Path, PathBuf};
@@ -35,8 +36,13 @@ fn main() -> Result<()> {
     // App configuration
     let app = app_from_config();
 
-    let database_dir_path = format!(
-        "{}{}", get_home_dir(), "/.local/share/cz/");
+    let mut database_dir_path = app.database_path.clone();//format!(
+        //"{}{}", get_home_dir(), "/.local/share/cz/");
+    // Replace multiple contiguous slashes by a single slash
+    let re = Regex::new(r"\$HOME").unwrap();
+    database_dir_path = String::from(
+        re.replace_all(database_dir_path.as_str(), get_home_dir())
+        );
 
     // Create application user-specific data dir if it does not exist
     fs::create_dir_all(&database_dir_path).unwrap_or_else(

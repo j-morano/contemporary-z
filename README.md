@@ -138,6 +138,7 @@ z [options] [directory or substrings]
 * `abs_paths`: `true|false`. Record directories using full paths or relative paths. With the latter option, shown directories will vary from one directory to another.
 * `compact_paths`: `true|false`. Replace `/home/<username>` by `~` and `/run/media/<username>` by `>`.
 * `max_results`: any number. Maximum results to show in the directory list.
+* `database_path`: any string. Directory where the directories database is/will be located.
 
 #### Default config
 
@@ -148,5 +149,6 @@ theme = 'dark'
 max_results = 9
 abs_paths = true
 compact_paths = true
+database_path = '$HOME/.local/share/cz/'
 ```
 
