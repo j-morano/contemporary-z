@@ -1,5 +1,7 @@
 #!/usr/bin/env zsh
 
+set -e
+
 $HOME/.cargo/bin/cargo install --path cz
 mkdir -p ~/.local/share/cz/
 cp cz.zsh ~/.local/share/cz/
