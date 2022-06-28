@@ -48,6 +48,11 @@ To install `cz` in Ubuntu, it is necessary to install the developer package of t
 sudo apt install libsqlite3-dev
 ```
 
+#### Arch Linux
+
+```
+sudo pacman -S sqlite3
+```
 
 #### Repository cloning
 
