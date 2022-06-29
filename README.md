@@ -35,23 +35,17 @@ If this requirement is met, it is only necessary to clone the repository and run
 
 #### Debian-based distros:
 
-In Debian-based distros, it is necessary to install the developer package of the `sqlite3` library:
+In Debian-based distros (like Ubuntu), it is necessary to install the `build-essential` meta-package: 
+
 ```shell
-sudo apt install libsqlite3-dev
-```
-
-##### Ubuntu
-
-To install `cz` in Ubuntu, it is necessary to install the developer package of the sqlite3 library:
-
-```
-sudo apt install libsqlite3-dev
+sudo apt install build-essential
 ```
 
 #### Arch Linux
 
+In Arch-based distros, it is necessary to install the `base-devel` meta-package:
 ```
-sudo pacman -S sqlite3
+sudo pacman -S base-devel
 ```
 
 #### Repository cloning
