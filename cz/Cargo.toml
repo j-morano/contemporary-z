@@ -1,12 +1,11 @@
 [package]
 name = "cz"
-version = "0.2.0"
-edition = "2018"
+version = "0.2.1"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rusqlite = "0.26"
+rusqlite = { version = "0.26", features = ["bundled"] }
 home = "0.5"
 regex = "1.5"
 toml = "0.5"
