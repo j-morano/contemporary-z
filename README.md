@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="doc/contemporary-z_header.png" alt="contemporary z"><br>
+  <img src="assets/contemporary-z_header.png" alt="contemporary z"><br>
   A contemporary version of  <tt>z - jump around</tt>.
 </p>
 
