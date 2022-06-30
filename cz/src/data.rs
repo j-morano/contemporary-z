@@ -1,4 +1,4 @@
-
+#[allow(dead_code)]
 pub(crate) struct Directory {
     pub name: String,
     pub counter: i64,

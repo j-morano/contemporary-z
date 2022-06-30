@@ -47,6 +47,7 @@ pub struct SelectionError;
 //    }
 //}
 
+#[allow(dead_code)]
 pub(crate) struct AppDefaults {
     pub(crate) theme: String,
     pub(crate) abs_paths: bool,
@@ -55,6 +56,7 @@ pub(crate) struct AppDefaults {
     pub(crate) database_path: String,
 }
 
+#[allow(dead_code)]
 pub(crate) struct App {
     pub(crate) theme: String,
     pub(crate) abs_paths: bool,
