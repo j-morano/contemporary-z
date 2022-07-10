@@ -142,7 +142,10 @@ pub(crate) fn interactive_select_dir(app: &App, conn: &Connection) {
                 match insert_dir(&conn, dir_str, current_seconds) {
                     Ok(_size)  => { }
                     Err(error) => {
-                        app.show_error("Could not inser dir", error.to_string().as_str());
+                        app.show_error(
+                            "Could not inser dir",
+                            error.to_string().as_str()
+                        );
                     }
                 };
             }

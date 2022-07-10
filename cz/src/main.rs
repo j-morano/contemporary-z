@@ -32,17 +32,18 @@ fn main() -> Result<()> {
     let app_defaults = app_defaults_from_config();
     let app = app_from_config();
 
-    let mut database_dir_path = app.database_path.clone();//format!(
-        //"{}{}", get_home_dir(), "/.local/share/cz/");
-    // Replace multiple contiguous slashes by a single slash
+    let mut database_dir_path = app.database_path.clone();
+    // Replace typical environment variables
     let re = Regex::new(r"\$HOME").unwrap();
+    let home_dir = env::var("HOME").unwrap();
     database_dir_path = String::from(
-        re.replace_all(database_dir_path.as_str(), get_home_dir())
+        re.replace_all(database_dir_path.as_str(), home_dir.clone())
         );
+    // If config database not available, use default
     if !Path::new(database_dir_path.as_str()).exists() {
         database_dir_path = app_defaults.database_path.clone();
         database_dir_path = String::from(
-            re.replace_all(database_dir_path.as_str(), get_home_dir())
+            re.replace_all(database_dir_path.as_str(), home_dir.clone())
             );
     }
 

@@ -1,4 +1,4 @@
-pub(crate) const DEFAULT_CONFIG: &str = "
+pub(crate) const DEFAULT_CONFIG: &str = "\
 theme = 'dark'
 max_results = 9
 abs_paths = true
@@ -7,7 +7,7 @@ database_path = '$HOME/.local/share/cz/'
 ";
 
 
-pub(crate) const HELP: &str = "
+pub(crate) const HELP: &str = "\
 Usage: z [OPTION]... [DIRECTORY]...
 
 Mandatory arguments to long options are mandatory for short options too.
