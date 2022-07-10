@@ -13,41 +13,6 @@ database_path = '$HOME/.local/share/cz/'
 ";
 
 
-// fn config(option: &str) -> Value {
-//     let path = format!("{}/.config/cz.toml", get_home_dir());
-//     let config_string = match fs::read_to_string(path) {
-//         Ok(contents) => {contents}
-//         Err(_) => { DEFAULT_CONFIG.to_string() }
-//     };
-//     let user_value = config_string.parse::<Value>().unwrap();
-//     let default_value = DEFAULT_CONFIG.to_string().parse::<Value>().unwrap();
-//
-//     let mut value = user_value.get(option);
-//     if value == None {
-//         value = default_value.get(option);
-//     }
-//
-//     if value == None {
-//         show_error("Invalid option", option);
-//         Value::String("".to_string())
-//     } else {
-//         value.unwrap().clone()
-//     }
-// }
-
-// pub(crate) fn max_results() -> usize {
-//     config("max_results").as_integer().unwrap() as usize
-// }
-//
-// pub(crate) fn theme() -> String {
-//     config("theme").to_string()
-// }
-//
-// pub(crate) fn abs_paths() -> bool {
-//     config("abs_paths").as_bool().unwrap()
-// }
-//
-
 fn get_option(user_value: Value, default_value: Value, option: &str) -> Value {
     let mut value = user_value.get(option);
     if value == None {

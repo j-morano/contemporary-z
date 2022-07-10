@@ -105,6 +105,14 @@ fn main() -> Result<()> {
         };
     }
 
+    // Command option: help
+    if args.len() > 1 && (args[1] == "--help" || args[1] == "-h") {
+        // Run command in a child process
+        let help = fs::read_to_string("help.txt").expect("Unable to read file");
+        println!("{}", help);
+        exit(0);
+    }
+
     // Command option: run command
     if args.len() > 1 && args[1] == "-b" {
         if args.len() < 3 {
