@@ -14,7 +14,8 @@ pub(crate) fn insert_dir(conn: &Connection, dir_str: &str, current_seconds: i64)
     let canonical_dir_str = canonical_dir.as_str();
     // Execute query
     return conn.execute(
-        "INSERT INTO directories (name, counter, last_access, alias) values (?1, 1, ?2, '')",
+        "INSERT INTO directories (name, counter, last_access, alias)
+        VALUES (?1, 1, ?2, '')",
         params![canonical_dir_str, current_seconds],
     );
 }
@@ -27,7 +28,8 @@ pub(crate) fn insert_dir_alias(
     alias: &str
 ) -> Result<usize> {
     return conn.execute(
-        "INSERT INTO directories (name, counter, last_access, alias) values (?1, 1, ?2, ?3)",
+        "INSERT INTO directories (name, counter, last_access, alias)
+        VALUES (?1, 1, ?2, ?3)",
         params![dir_str, current_seconds, alias],
     );
 }
@@ -207,7 +209,7 @@ pub(crate) fn create_dirs_table_if_not_exist(conn: &Connection) -> Result<usize>
     return conn.execute(
         "create table if not exists directories (
              /* id integer primary key,
-             name text not null, */
+             name varchar(256) not null, */
              name primary key,
              counter integer not null,
              last_access integer not null,
@@ -220,7 +222,8 @@ pub(crate) fn create_dirs_table_if_not_exist(conn: &Connection) -> Result<usize>
 pub(crate) fn update_current_dir(conn: &Connection, dir_name: String) -> Result<usize> {
     // Update dir accesses counter
     return conn.execute(
-        "INSERT OR REPLACE INTO current_directory (id, name) VALUES (0, ?1)",
+        "INSERT OR REPLACE INTO current_directory (id, name)
+        VALUES ('current_dir', ?1)",
         params![dir_name],
     );
 }
@@ -228,14 +231,15 @@ pub(crate) fn update_current_dir(conn: &Connection, dir_name: String) -> Result<
 pub(crate) fn update_target_dir(conn: &Connection, dir_name: String) -> Result<usize> {
     // Update dir accesses counter
     return conn.execute(
-        "INSERT OR REPLACE INTO current_directory (id, name) VALUES (1, ?1)",
+        "INSERT OR REPLACE INTO current_directory (id, name)
+        VALUES ('target_dir', ?1)",
         params![dir_name],
     );
 }
 
 pub(crate) fn obt_current_dir(conn: &Connection) -> Result<String> {
     conn.query_row(
-        "SELECT name FROM current_directory WHERE id = 0",
+        "SELECT name FROM current_directory WHERE id = 'current_dir'",
         [],
         |row| row.get(0),
     )
@@ -243,7 +247,7 @@ pub(crate) fn obt_current_dir(conn: &Connection) -> Result<String> {
 
 pub(crate) fn obt_target_dir(conn: &Connection) -> Result<String> {
     conn.query_row(
-        "SELECT name FROM current_directory WHERE id = 1",
+        "SELECT name FROM current_directory WHERE id = 'target_dir'",
         [],
         |row| row.get(0),
     )
@@ -253,8 +257,8 @@ pub(crate) fn create_current_dir_table_if_not_exist(conn: &Connection) -> Result
     // Create dirs table if it does not exist
     return conn.execute(
         "create table if not exists current_directory (
-             id integer primary key,
-             name text not null
+             id varchar(256) primary key,
+             name varchar(256) not null
          )",
         [],
     );

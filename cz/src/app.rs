@@ -36,16 +36,6 @@ pub(crate) fn get_home_dir() -> String {
 #[derive(Debug, Clone)]
 pub struct SelectionError;
 
-// Generation of an error is completely separate from how it is displayed.
-// There's no need to be concerned about cluttering complex logic with the display style.
-//
-// Note that we don't store any extra info about the errors. This means we can't state
-// which string failed to parse without modifying our types to carry that information.
-//impl fmt::Display for SelectionError {
-//    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//        write!(f, "invalid first item to double")
-//    }
-//}
 
 #[allow(dead_code)]
 pub(crate) struct AppDefaults {
@@ -89,7 +79,7 @@ impl App {
     }
 
     fn printf(&self, sgr: &str, color: &str, text: String) {
-        print!("{}", self.format(sgr, color, text));
+        println!("{}", self.format(sgr, color, text));
     }
 
     pub(crate) fn show_error(&self, text: &str, error: &str) {

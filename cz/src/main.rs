@@ -32,6 +32,161 @@ use crate::utils::canonicalize_dir_str;
 
 
 
+fn cmd_clear_database(app: &App, conn: &Connection) -> Result<()> {
+    // write(z_file, "clear#", "".to_string());
+    drop_directories_table(&conn)?;
+    drop_current_dir_table(&conn)?;
+    app.show_exit_message("Cleared database");
+    Ok(())
+}
+
+fn cmd_go_to_previous_dir(app: &App, conn: &Connection) {
+    match obt_current_dir(&conn) {
+        Ok(current_dir) => {
+            app.direct_cd(&conn, current_dir);
+            exit(0);
+        }
+        Err(_) => {
+            app.show_error("No previous directory", "");
+            "".to_string()
+        }
+    };
+}
+
+fn cmd_go_to_target_dir(app: &App, conn: &Connection) {
+    // write(z_file, "clear#", "".to_string());
+    match obt_target_dir(&conn) {
+        Ok(target_dir) => {
+            app.direct_cd(&conn, target_dir);
+            exit(0);
+        }
+        Err(_) => {
+            app.show_error("No current directory", "");
+            "".to_string()
+        }
+    };
+}
+
+fn cmd_list_dirs(app: &App, conn: &Connection, args: &[String]) {
+    let mut num_results = app.max_results;
+    if args.len() > 2 {
+        // Select dir by number
+        num_results = match args[2].parse::<usize>() {
+            Ok(number)  => number,
+            Err(error) => {
+                app.show_error("Invalid number", error.to_string().as_str());
+                1 as usize
+            }
+        };
+    }
+
+    let valid_dirs = get_valid_dirs(
+        &conn, Vec::new(), current_seconds(), num_results
+    ).unwrap();
+
+    app.list_dirs(&valid_dirs);
+    exit(0);
+}
+
+fn cmd_interactive_select_dir(app: &App, conn: &Connection) {
+    let mut dir_to_read = String::from(".");
+    loop {
+        let paths = fs::read_dir(dir_to_read.as_str()).unwrap();
+        let mut valid_dirs: Vec<Directory> = Vec::new();
+
+        for result_path in paths {
+            let dir_path = result_path.unwrap().path();
+            if dir_path.exists()
+                && dir_path.is_dir()
+            {
+                let filename = String::from(
+                    dir_path.file_name().unwrap().to_str().unwrap()
+                );
+                if !filename.starts_with(".") {
+                    let directory = Directory{
+                        name: filename.clone(),
+                        counter: 0,
+                        last_access: 0,
+                        score: 0.0,
+                        alias: String::new()
+                    };
+                    valid_dirs.push(directory);
+                    // println!("Name: {}", filename);
+                }
+            }
+        }
+        // Sort dirs by name
+        valid_dirs.sort_by_key(|dir| dir.name.clone());
+
+        if valid_dirs.is_empty() {
+            break;
+        }
+
+        let dir_name: String; //= String::new();
+        match app.select_valid_dir_no_exit(valid_dirs) {
+            Ok(dir_string)  => {
+                dir_name = dir_string
+            }
+            Err(_error) => {
+                break;
+            }
+        };
+        println!();
+
+        let dir_name_str = dir_name.as_str();
+        let base_dir_str = dir_to_read.as_str();
+        let dir_path = Path::new(base_dir_str);
+        let dir_path_buf = dir_path.join(dir_name_str);
+        let mut dir_str = dir_path_buf.to_str().unwrap();
+
+        let dir_pathbuf;
+        if app.abs_paths {
+            dir_pathbuf = PathBuf::from(dir_str).canonicalize().unwrap();
+            dir_str = dir_pathbuf.to_str().unwrap();
+        }
+
+        // TODO: repeated code
+        // Check if dir is in the table
+        let dir = get_dir(&conn, dir_str);
+
+        // If the dir is not in the table and it does exists in the
+        //   FS, add it
+        if let Err(_err) = dir {
+            // Do not store '..' or '.' dirs
+            if !(dir_str == "." || dir_str == "..") {
+                let current_seconds = current_seconds();
+                match insert_dir(&conn, dir_str, current_seconds) {
+                    Ok(_size)  => { }
+                    Err(error) => {
+                        app.show_error("Could not inser dir", error.to_string().as_str());
+                    }
+                };
+            }
+            // println!("{}", args[1]);
+            //app.direct_cd(&conn, dir_str.to_string());
+            dir_to_read = String::from(dir_str);
+
+        } else { // if it is already present in the table, update its
+                 // counter
+
+            match dir {
+                Ok(dir_string)  => {
+                    dir_to_read = dir_string;
+                    //app.show_exit_message("cd");
+                }
+                Err(error) => {
+                    app.show_error("Directory does not exist", error.to_string().as_str());
+                }
+            };
+            //app.direct_cd(&conn, dir?);
+        }
+        println!("{}", dir_to_read);
+    }
+    app.direct_cd(&conn, dir_to_read);
+    exit(0);
+}
+
+
 fn main() -> Result<()> {
     // Collect command-line arguments 
     let args: Vec<_> = env::args().collect();
@@ -71,40 +226,17 @@ fn main() -> Result<()> {
 
     // Command option: clear table
     if args.len() > 1 && args[1] == "--clear" {
-        // write(z_file, "clear#", "".to_string());
-        drop_directories_table(&conn)?;
-        drop_current_dir_table(&conn)?;
-        app.show_exit_message("Cleared database");
+        cmd_clear_database(&app, &conn)?;
     }
 
     // Command option: go to previous directory
     if args.len() > 1 && args[1] == "-" {
-        // write(z_file, "clear#", "".to_string());
-        match obt_current_dir(&conn) {
-            Ok(current_dir) => {
-                app.direct_cd(&conn, current_dir);
-                exit(0);
-            }
-            Err(_) => {
-                app.show_error("No previous directory", "");
-                "".to_string()
-            }
-        };
+        cmd_go_to_previous_dir(&app, &conn);
     }
 
     // Command option: go to target directory
     if args.len() > 1 && args[1] == "=" {
-        // write(z_file, "clear#", "".to_string());
-        match obt_target_dir(&conn) {
-            Ok(target_dir) => {
-                app.direct_cd(&conn, target_dir);
-                exit(0);
-            }
-            Err(_) => {
-                app.show_error("No current directory", "");
-                "".to_string()
-            }
-        };
+        cmd_go_to_target_dir(&app, &conn);
     }
 
     // Command option: help
@@ -125,118 +257,12 @@ fn main() -> Result<()> {
 
     // Command option: list directories
     if args.len() > 1 && args[1] == "-l" {
-        let mut num_results = app.max_results;
-        if args.len() > 2 {
-            // Select dir by number
-            num_results = match args[2].parse::<usize>() {
-                Ok(number)  => number,
-                Err(error) => {
-                    app.show_error("Invalid number", error.to_string().as_str());
-                    1 as usize
-                }
-            };
-        }
-
-        let valid_dirs = get_valid_dirs(
-            &conn, Vec::new(), current_seconds(), num_results
-        ).unwrap();
-
-        app.list_dirs(&valid_dirs);
-        exit(0);
+        cmd_list_dirs(&app, &conn, &args);
     }
 
     // Command option: interactive subdir selection
     if args.len() > 1 && args[1] == "-i" {
-        let mut dir_to_read = String::from(".");
-        loop {
-            let paths = fs::read_dir(dir_to_read.as_str()).unwrap();
-            let mut valid_dirs: Vec<Directory> = Vec::new();
-
-            for result_path in paths {
-                let dir_path = result_path.unwrap().path();
-                if dir_path.exists()
-                    && dir_path.is_dir()
-                {
-                    let filename = String::from(
-                        dir_path.file_name().unwrap().to_str().unwrap()
-                    );
-                    if !filename.starts_with(".") {
-                        let directory = Directory{
-                            name: filename.clone(),
-                            counter: 0,
-                            last_access: 0,
-                            score: 0.0,
-                            alias: String::new()
-                        };
-                        valid_dirs.push(directory);
-                        // println!("Name: {}", filename);
-                    }
-                }
-            }
-            // Sort dirs by name
-            valid_dirs.sort_by_key(|dir| dir.name.clone());
-
-            if valid_dirs.is_empty() {
-                break;
-            }
-
-            let dir_name: String; //= String::new();
-            match app.select_valid_dir_no_exit(valid_dirs) {
-                Ok(dir_string)  => {
-                    dir_name = dir_string
-                }
-                Err(_error) => {
-                    break;
-                }
-            };
-            println!();
-
-            let dir_name_str = dir_name.as_str();
-            let base_dir_str = dir_to_read.as_str();
-            let dir_path = Path::new(base_dir_str);
-            let dir_path_buf = dir_path.join(dir_name_str);
-            let mut dir_str = dir_path_buf.to_str().unwrap();
-
-            let dir_pathbuf;
-            if app.abs_paths {
-                dir_pathbuf = PathBuf::from(dir_str).canonicalize().unwrap();
-                dir_str = dir_pathbuf.to_str().unwrap();
-            }
-
-            // TODO: repeated code
-            // Check if dir is in the table
-            let dir = get_dir(&conn, dir_str);
-
-            // If the dir is not in the table and it does exists in the
-            //   FS, add it
-            if let Err(_err) = dir {
-                // Do not store '..' or '.' dirs
-                if !(dir_str == "." || dir_str == "..") {
-                    let current_seconds = current_seconds();
-                    insert_dir(&conn, dir_str, current_seconds)?;
-                }
-                // println!("{}", args[1]);
-                //app.direct_cd(&conn, dir_str.to_string());
-                dir_to_read = String::from(dir_str);
-
-            } else { // if it is already present in the table, update its
-                     // counter
-
-                match dir {
-                    Ok(dir_string)  => {
-                        dir_to_read = dir_string;
-                        //app.show_exit_message("cd");
-                    }
-                    Err(error) => {
-                        app.show_error("Directory does not exist", error.to_string().as_str());
-                    }
-                };
-                //app.direct_cd(&conn, dir?);
-            }
-            println!("{}", dir_to_read);
-        }
-        app.direct_cd(&conn, dir_to_read);
-        exit(0);
+        cmd_interactive_select_dir(&app, &conn);
     }
 
     // Command option: remove directory
