@@ -13,7 +13,7 @@ Usage: z [OPTION]... [DIRECTORY]...
 Mandatory arguments to long options are mandatory for short options too.
   -                          go to the previous directory
   =                          go to the current directory
-  -a ALIAS [DIRECTORY]       add directory alias; if only the directory is
+  -a [ALIAS] DIRECTORY       add directory alias; if only the directory is
                                introduced, its alias is removed
   -b COMMAND                 execute shell COMMAND in background
       --clear                clear the directories database

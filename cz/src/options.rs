@@ -214,12 +214,13 @@ pub(crate) fn add_alias(app: &App, conn: &Connection, args: &[String]) {
             alias = &args[2];
             dir_str = args[3].as_str();
         }
-        let canonical_dir = canonicalize_dir_str(dir_str);
-        dir_str = canonical_dir.as_str();
         
         if Path::new(dir_str).exists()
             && metadata(dir_str).unwrap().is_dir()
         {
+            let canonical_dir = canonicalize_dir_str(dir_str);
+            dir_str = canonical_dir.as_str();
+
             // Check if dir is in the table
             let dir = get_dir(&conn, dir_str);
 
@@ -240,6 +241,9 @@ pub(crate) fn add_alias(app: &App, conn: &Connection, args: &[String]) {
                     app.show_exit_message("Added directory alias");
                 }
             }
+        } else {
+            app.show_error("The provided directory does not exist", "");
+            // TODO: select directory to alias interactively
         }
     }
     exit(0);
