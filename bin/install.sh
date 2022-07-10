@@ -3,10 +3,9 @@
 set -e
 
 $HOME/.cargo/bin/cargo install --path cz
-mkdir -p ~/.local/share/cz/
-cp cz.sh ~/.local/share/cz/
+mkdir -p $HOME/.local/share/cz/
+cp cz.sh $HOME/.local/share/cz/
 # If the alias has not already been added, add it
-if ! grep -q "Contemporary-z" ~/.bashrc; then
-    printf "\n# Alias for the Contemporary-z program\n" >> ~/.bashrc
-    printf "alias z='. ~/.local/share/cz/cz.sh'\n" >> ~/.bashrc
+if ! grep -Eq "alias z\s*=\s*.*" $HOME/.bashrc; then
+    printf "\nalias z='. $HOME/.local/share/cz/cz.sh'\n" >> $HOME/.bashrc
 fi

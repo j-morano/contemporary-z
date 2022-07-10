@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
+sed -n -i "/alias z\s*=\s*.*/!p" $HOME/.bashrc
 $HOME/.cargo/bin/cargo uninstall cz
-rm -r ~/.local/share/cz/
-awk '!/^([.] ~/[.]local/share/cz/cz[.]sh|# Alias for the Contemporary-z program)/' ~/.bashrc > ~/.bashrc
-
+rm -r $HOME/.local/share/cz/
