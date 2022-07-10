@@ -2,15 +2,7 @@ use std::fs;
 use toml::Value;
 use crate::get_home_dir;
 use crate::app::{App, AppDefaults};
-
-
-const DEFAULT_CONFIG: &str = "
-theme = 'dark'
-max_results = 9
-abs_paths = true
-compact_paths = true
-database_path = '$HOME/.local/share/cz/'
-";
+use crate::strings::DEFAULT_CONFIG;
 
 
 fn get_option(user_value: Value, default_value: Value, option: &str) -> Value {

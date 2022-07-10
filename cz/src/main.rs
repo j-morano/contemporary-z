@@ -4,6 +4,7 @@ mod app;
 mod config;
 mod colors;
 mod utils;
+mod strings;
 
 use crate::data::Directory;
 use crate::database::{
@@ -16,6 +17,7 @@ use app::App;
 use app::write;
 use config::app_defaults_from_config;
 use database::{get_dir_by_alias, insert_dir_alias, add_alias_to_directory};
+use strings::HELP;
 
 use regex::Regex;
 use rusqlite::{Connection, Result};
@@ -107,9 +109,7 @@ fn main() -> Result<()> {
 
     // Command option: help
     if args.len() > 1 && (args[1] == "--help" || args[1] == "-h") {
-        // Run command in a child process
-        let help = fs::read_to_string("help.txt").expect("Unable to read file");
-        println!("{}", help);
+        println!("{}", HELP);
         exit(0);
     }
 
