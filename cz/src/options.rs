@@ -27,12 +27,15 @@ pub(crate) fn clear_database(app: &App, conn: &Connection) -> Result<()> {
 pub(crate) fn go_to_previous_dir(app: &App, conn: &Connection) {
     match obt_current_dir(&conn) {
         Ok(current_dir) => {
-            app.direct_cd(&conn, current_dir);
-            exit(0);
+            if Path::new(current_dir.as_str()).exists() {
+                app.direct_cd(&conn, current_dir);
+                exit(0);
+            } else {
+                app.show_error("No valid previous directory", "");
+            }
         }
         Err(_) => {
             app.show_error("No previous directory", "");
-            "".to_string()
         }
     };
 }
@@ -41,12 +44,15 @@ pub(crate) fn go_to_target_dir(app: &App, conn: &Connection) {
     // write(z_file, "clear#", "".to_string());
     match obt_target_dir(&conn) {
         Ok(target_dir) => {
-            app.direct_cd(&conn, target_dir);
-            exit(0);
+            if Path::new(target_dir.as_str()).exists() {
+                app.direct_cd(&conn, target_dir);
+                exit(0);
+            } else {
+                app.show_error("No valid current directory", "");
+            }
         }
         Err(_) => {
             app.show_error("No current directory", "");
-            "".to_string()
         }
     };
 }
