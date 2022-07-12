@@ -105,6 +105,15 @@ pub(crate) fn interactive_select_dir(app: &App, conn: &Connection) {
                 }
             }
         }
+        // Parent directory
+        let directory = Directory{
+            name: "..".to_string(),
+            counter: 0,
+            last_access: 0,
+            score: 0.0,
+            alias: String::new()
+        };
+        valid_dirs.push(directory);
         // Sort dirs by name
         valid_dirs.sort_by_key(|dir| dir.name.clone());
 
