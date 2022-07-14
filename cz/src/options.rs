@@ -17,7 +17,6 @@ use crate::database::{get_dir_by_alias, insert_dir_alias, add_alias_to_directory
 
 
 pub(crate) fn clear_database(app: &App, conn: &Connection) -> Result<()> {
-    // write(z_file, "clear#", "".to_string());
     drop_directories_table(&conn)?;
     drop_current_dir_table(&conn)?;
     app.show_exit_message("Cleared database");
@@ -41,7 +40,6 @@ pub(crate) fn go_to_previous_dir(app: &App, conn: &Connection) {
 }
 
 pub(crate) fn go_to_target_dir(app: &App, conn: &Connection) {
-    // write(z_file, "clear#", "".to_string());
     match obt_target_dir(&conn) {
         Ok(target_dir) => {
             if Path::new(target_dir.as_str()).exists() {
@@ -165,7 +163,6 @@ pub(crate) fn interactive_select_dir(app: &App, conn: &Connection) {
                 };
             }
             // println!("{}", args[1]);
-            //app.direct_cd(&conn, dir_str.to_string());
             dir_to_read = String::from(dir_str);
 
         } else { // if it is already present in the table, update its
@@ -174,13 +171,11 @@ pub(crate) fn interactive_select_dir(app: &App, conn: &Connection) {
             match dir {
                 Ok(dir_string)  => {
                     dir_to_read = dir_string;
-                    //app.show_exit_message("cd");
                 }
                 Err(error) => {
                     app.show_error("Directory does not exist", error.to_string().as_str());
                 }
             };
-            //app.direct_cd(&conn, dir?);
         }
         println!("{}", dir_to_read);
     }
@@ -211,8 +206,6 @@ pub(crate) fn opt_remove_dir(app: &App, conn: &Connection, args: &[String]) {
 pub(crate) fn add_alias(app: &App, conn: &Connection, args: &[String]) {
     if args.len() < 3 {
         app.show_error("No alias nor directory provided", "");
-    // } else if args.len() < 4 {
-    //     app.show_error("No directory provided", "");
     } else {
         let mut alias = &String::from("");
         let mut dir_str;
@@ -296,15 +289,11 @@ pub(crate) fn do_cd(app: &App, conn: &Connection, args: &[String]) {
                 insert_dir(&conn, dir_str, current_seconds).unwrap();
             }
             // println!("{}", args[1]);
-            // write("direct_cd", dir_str.to_string());
             app.direct_cd(&conn, dir_str.to_string());
 
 
         } else { // if it is already present in the table, update its
                  // counter
-            // update_dir_counter(&conn, String::from(dir_str))?;
-
-            // write("direct_cd", dir?);
             app.direct_cd(&conn, dir.unwrap());
         }
     } else { // if arguments are substrings, go to the parent folder of the
@@ -338,7 +327,6 @@ pub(crate) fn interactive_cd(app: &App, conn: &Connection, args: &[String]) {
 
     // Always list dirs
     let dir_name = app.select_valid_dir(valid_dirs).unwrap();
-    // write("direct_cd", dir_name);
     app.direct_cd(&conn, dir_name.clone());
 }
 
