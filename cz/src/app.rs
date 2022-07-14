@@ -213,7 +213,14 @@ impl App {
     }
 
     pub(crate) fn post_current_dir(&self, conn: &Connection) {
-        let current_dir = current_dir().unwrap();
+        let current_dir = match current_dir() {
+            Ok(current_dir) => { current_dir }
+            Err(_) => {
+                // If the current dir has been deleted, do not update current
+                //  dir
+                return
+            }
+        };
         let current_dir_string = current_dir.into_os_string().into_string().expect("Error");
         // println!("{}", current_dir_string);
         match update_current_dir(conn, current_dir_string) {
