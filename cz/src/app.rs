@@ -13,7 +13,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::colors::{color_code, sgr_code};
 
 
-pub(crate) fn write(action:&str, text: String) {
+pub(crate) fn write_action(action:&str, text: String) {
     // https://stackoverflow.com/questions/65782872/
     let mut z_file = File::create(
         "/tmp/cz_path"
@@ -83,7 +83,7 @@ impl App {
     }
 
     pub(crate) fn show_error(&self, text: &str, error: &str) {
-        write("error", text.to_string());
+        write_action("error", text.to_string());
         let mut joint = "";
         if !error.is_empty() {
             joint = ":";
@@ -248,7 +248,7 @@ impl App {
         };
         self.post_current_dir(&conn);
         self.post_target_dir(&conn, dir_name.clone());
-        write("command", format!("cd \"{}\"", dir_name.clone()));
+        write_action("command", format!("cd \"{}\"", dir_name.clone()));
     }
 
 
@@ -256,7 +256,7 @@ impl App {
         // Build command string
         let command = c_args.join(" ");
 
-        write(
+        write_action(
             "command",
             format!("nohup {} </dev/null >/dev/null 2>&1 & disown", command)
         );

@@ -11,7 +11,7 @@ use crate::database::{
     create_dirs_table_if_not_exist, create_current_dir_table_if_not_exist
 };
 
-use app::write;
+use app::write_action;
 use config::app_defaults_from_config;
 
 use regex::Regex;
@@ -60,7 +60,7 @@ fn main() -> Result<()> {
     create_dirs_table_if_not_exist(&conn)?;
     create_current_dir_table_if_not_exist(&conn)?;
 
-    write("empty", "".to_string());
+    write_action("empty", "".to_string());
 
     // If there is a dir argument, cd to the dir
     if args.len() > 1 {
