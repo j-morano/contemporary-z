@@ -22,7 +22,10 @@ Mandatory arguments to long options are mandatory for short options too.
   -l[=NUMBER]                list a certain NUMBER of directories by 'frecency';
                                if no NUMBER is provided, the max_results number
                                from configuration is used.
+      --list-all             list all the directories of the database
   -r                         remove a directory from the database, interactively
+      --sync                 sync directories (remove all non-existent
+                                directories)
       --help     display this help and exit
 
 Exit status:

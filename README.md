@@ -125,7 +125,9 @@ z [options] [directory or substrings]
 * `-i`: interactive selection (using a numbered list) of the subdirectories of the current directory.
 * `-r`: remove directory. Works the same as regular `cz` but for removing.
 * `-a`: add directory alias. If only the directory is introduced, its alias is removed.
-* `-h, --help`: show help
+* `-h, --help`: show help.
+* `--list-all`: list all the directories of the database.
+* `--sync`: sync directories (remove all non-existent directories).
 
 
 ### Configuration
