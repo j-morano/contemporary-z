@@ -101,6 +101,15 @@ fn main() -> Result<()> {
         else if args[1] == "-a" {
             options::add_alias(&app, &conn, &args);
         }
+        // Command option: sync
+        //  Remove directories which do not exist.
+        else if args[1] == "--sync" {
+            options::opt_sync_dirs(&app, &conn);
+        }
+        // Command option: list all dirs
+        else if args[1] == "--list-all" {
+            options::opt_list_all_dirs(&app, &conn);
+        }
         else {
             options::do_cd(&app, &conn, &args);
         }

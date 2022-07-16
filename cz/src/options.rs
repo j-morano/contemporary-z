@@ -8,7 +8,8 @@ use crate::utils::canonicalize_dir_str;
 use crate::data::Directory;
 use crate::database::{
     get_dir, get_valid_dirs, drop_directories_table, insert_dir,
-    obt_current_dir, drop_current_dir_table, obt_target_dir, remove_dir
+    obt_current_dir, drop_current_dir_table, obt_target_dir, remove_dir,
+    get_all_dirs, remove_non_existent_dirs
 };
 
 use crate::strings::HELP;
@@ -206,6 +207,7 @@ pub(crate) fn opt_remove_dir(app: &App, conn: &Connection, args: &[String]) {
 pub(crate) fn add_alias(app: &App, conn: &Connection, args: &[String]) {
     if args.len() < 3 {
         app.show_error("No alias nor directory provided", "");
+        // TODO: select only among directories with alias
     } else {
         let mut alias = &String::from("");
         let mut dir_str;
@@ -342,5 +344,20 @@ pub(crate) fn opt_run_in_background(app: &App, args: &[String]) {
     }
     // Run command in a child process
     App::run_in_background(&args[2..]);
+    exit(0);
+}
+
+
+pub(crate) fn opt_sync_dirs(app: &App, conn: &Connection) {
+    // Remove directories which do not exist
+    remove_non_existent_dirs(&conn).unwrap();
+    app.show_exit_message("Synced directories.");
+    exit(0);
+}
+
+
+pub(crate) fn opt_list_all_dirs(app: &App, conn: &Connection) {
+    let all_dirs = get_all_dirs(&conn).unwrap();
+    app.list_dirs(&all_dirs);
     exit(0);
 }

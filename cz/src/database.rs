@@ -174,6 +174,88 @@ pub(crate) fn get_valid_dirs(
 }
 
 
+pub(crate) fn get_all_dirs(conn: &Connection,) -> Result<Vec<Directory>> {
+    // Filter invalid dirs from the current path
+    let mut valid_dirs: Vec<Directory> = Vec::new();
+
+        // println!("{}", pages);
+        let sql = "\
+            SELECT
+              name,
+              counter,
+              last_access,
+              counter as score,
+              alias
+            FROM directories
+            ;";
+
+        // println!("{}", sql);
+
+        // Return most common dirs ordered by counter (descending)
+        let mut stmt = conn.prepare(sql,)?;
+
+        let dirs = stmt.query_map([], |row| {
+            Ok(Directory {
+                name: row.get(0)?,
+                counter: row.get(1)?,
+                last_access: row.get(2)?,
+                score: row.get(3)?,
+                alias: row.get(4)?
+            })
+        })?;
+
+        let dirs_collection: Vec<_> = dirs.collect();
+
+        // Add collected dirs to valid dirs, if appropriate
+        for dir in dirs_collection {
+            valid_dirs.push(dir?);
+        }
+
+
+    return Ok(valid_dirs);
+}
+
+
+pub(crate) fn remove_non_existent_dirs(conn: &Connection) -> Result<()> {
+    // Filter invalid dirs from the current path
+
+    let sql = "\
+        SELECT
+          name,
+          counter,
+          last_access,
+          counter as score,
+          alias
+        FROM directories
+        ;";
+
+    // Return dirs ordered by counter (descending)
+    let mut stmt = conn.prepare(sql,)?;
+
+    let dirs = stmt.query_map([], |row| {
+        Ok(Directory {
+            name: row.get(0)?,
+            counter: row.get(1)?,
+            last_access: row.get(2)?,
+            score: row.get(3)?,
+            alias: row.get(4)?
+        })
+    })?;
+
+    let dirs_collection: Vec<_> = dirs.collect();
+
+    for dir in dirs_collection {
+        let dir_info = dir.as_ref().expect("Error");
+        let dir_name = &dir_info.name;
+        if !Path::new(dir_name).exists() {
+            remove_dir(conn, dir_name.to_string())?;
+        }
+    }
+
+    Ok(())
+}
+
+
 pub(crate) fn get_dir(conn: &Connection, name: &str) -> Result<String> {
     conn.query_row(
         "SELECT name FROM directories WHERE name = ?",
