@@ -70,7 +70,7 @@ pub(crate) fn list_dirs(app: &App, conn: &Connection, args: &[String]) {
     }
 
     let valid_dirs = get_valid_dirs(
-        &conn, Vec::new(), current_seconds(), num_results
+        &conn, Vec::new(), current_seconds(), num_results, false
     ).unwrap();
 
     app.list_dirs(&valid_dirs);
@@ -187,7 +187,7 @@ pub(crate) fn interactive_select_dir(app: &App, conn: &Connection) {
 
 pub(crate) fn opt_remove_dir(app: &App, conn: &Connection, args: &[String]) {
     let valid_dirs = get_valid_dirs(
-        &conn, Vec::from(&args[2..]), current_seconds(), app.max_results
+        &conn, Vec::from(&args[2..]), current_seconds(), app.max_results, false
     ).unwrap();
 
     let dir_name = app.select_valid_dir(valid_dirs).unwrap();
@@ -206,8 +206,13 @@ pub(crate) fn opt_remove_dir(app: &App, conn: &Connection, args: &[String]) {
 
 pub(crate) fn add_alias(app: &App, conn: &Connection, args: &[String]) {
     if args.len() < 3 {
-        app.show_error("No alias nor directory provided", "");
-        // TODO: select only among directories with alias
+        let valid_dirs = get_valid_dirs(
+            &conn, Vec::new(), current_seconds(), app.max_results, true
+        ).unwrap();
+
+        // Always list dirs
+        let dir_name = app.select_valid_dir(valid_dirs).unwrap();
+        app.direct_cd(&conn, dir_name.clone());
     } else {
         let mut alias = &String::from("");
         let mut dir_str;
@@ -303,7 +308,7 @@ pub(crate) fn do_cd(app: &App, conn: &Connection, args: &[String]) {
         // Get shortest directory
         let valid_dirs = get_valid_dirs(
             // 100000 ~ no results limit
-            &conn, Vec::from(&args[1..]), current_seconds(), app.max_results
+            &conn, Vec::from(&args[1..]), current_seconds(), app.max_results, false
         ).unwrap();
 
         if valid_dirs.is_empty() {
@@ -324,7 +329,7 @@ pub(crate) fn do_cd(app: &App, conn: &Connection, args: &[String]) {
 
 pub(crate) fn interactive_cd(app: &App, conn: &Connection, args: &[String]) {
     let valid_dirs = get_valid_dirs(
-        &conn, Vec::from(&args[1..]), current_seconds(), app.max_results
+        &conn, Vec::from(&args[1..]), current_seconds(), app.max_results, false
     ).unwrap();
 
     // Always list dirs

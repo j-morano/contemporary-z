@@ -69,7 +69,8 @@ pub(crate) fn get_valid_dirs(
     conn: &Connection,
     patterns: Vec<String>,
     current_seconds: i64,
-    max_results: usize
+    max_results: usize,
+    alias_only: bool,
 ) -> Result<Vec<Directory>> {
     // Filter invalid dirs from the current path
     let mut valid_dirs: Vec<Directory> = Vec::new();
@@ -102,6 +103,7 @@ pub(crate) fn get_valid_dirs(
               alias
             FROM directories
               --where
+              --alias_only
             ORDER BY score DESC
             LIMIT {}
             ;", current_seconds as f64, max_results);
@@ -130,6 +132,17 @@ pub(crate) fn get_valid_dirs(
                     format!("WHERE (name GLOB '{}')", pattern).as_str()
                 );
             }
+        }
+
+        if alias_only {
+            let mut operator = "WHERE";
+            if sql.contains("WHERE") {
+                operator = "AND";
+            }
+            sql = sql.replace(
+                "--alias_only",
+                format!("{} alias != ''", operator).as_str()
+            );
         }
 
         // println!("{}", sql);
