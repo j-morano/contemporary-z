@@ -5,7 +5,7 @@ use rusqlite::{Connection, Result};
 use std::env::current_dir;
 use std::process::exit;
 use home::home_dir;
-use std::fs::File;
+use std::fs;
 use std::io::prelude::*;
 use std::io;
 use regex::Regex;
@@ -14,13 +14,33 @@ use crate::colors::{color_code, sgr_code};
 
 
 pub(crate) fn write_action(action:&str, text: String) {
-    // https://stackoverflow.com/questions/65782872/
-    let mut z_file = File::create(
-        "/tmp/cz_path"
-    ).expect("Could not open file");
+    // Open file in read mode
+    let z_file = fs::OpenOptions::new()
+        .read(true)
+        .write(false)
+        .open("/tmp/cz_path") 
+        .expect("Could not open file");
+    // Set writeable
+    let mut permissions = z_file.metadata().expect(
+        "Could not get metadata"
+        ).permissions();
+    permissions.set_readonly(false);
+    z_file.set_permissions(permissions.clone()).expect(
+        "Could not set permissions."
+        );
+    // Open file in write mode
+    let mut z_file = fs::OpenOptions::new()
+        .read(false)
+        .write(true)
+        .open("/tmp/cz_path") 
+        .expect("Could not open file");
+    // Write action
     z_file.write_all(
         format!("{}|{}", action, text).as_bytes()
-    ).expect("Could not write to file");
+        ).expect("Could not write to file");
+    // Set read-only
+    permissions.set_readonly(true);
+    z_file.set_permissions(permissions).expect("Could not set permissions.");
     // println!("{}", format!("{}|{}", action, text));
 }
 
