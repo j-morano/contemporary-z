@@ -15,12 +15,43 @@ use crate::colors::{color_code, sgr_code};
 
 pub(crate) fn write_action(action:&str, text: String) {
     // Open file in read mode
-    let z_file = fs::OpenOptions::new()
+    let mut z_file = match fs::OpenOptions::new()
         .read(true)
         .write(false)
-        .open("/tmp/cz_path") 
-        .expect("Could not open file");
-    // Set writeable
+        .open("/tmp/cz_path") {
+            Err(_) => {
+                // Open file in write mode
+                fs::OpenOptions::new()
+                    .read(true)
+                    .write(true)
+                    .create(true)
+                    .truncate(true)
+                    .open("/tmp/cz_path")
+                    .expect("Could not open file")
+            },
+            Ok(file) => {
+                // Set writeable
+                let mut permissions = file.metadata().expect(
+                    "Could not get metadata"
+                    ).permissions();
+                permissions.set_readonly(false);
+                file.set_permissions(permissions.clone()).expect(
+                    "Could not set permissions."
+                    );
+                // Open file in write mode
+                fs::OpenOptions::new()
+                    .read(true)
+                    .write(true)
+                    .truncate(true)
+                    .open("/tmp/cz_path")
+                    .expect("Could not open file")
+            }
+        };
+    // Write action
+    z_file.write_all(
+        format!("{}|{}", action, text).as_bytes()
+        ).expect("Could not write to file");
+    // Set read-only again
     let mut permissions = z_file.metadata().expect(
         "Could not get metadata"
         ).permissions();
@@ -28,17 +59,6 @@ pub(crate) fn write_action(action:&str, text: String) {
     z_file.set_permissions(permissions.clone()).expect(
         "Could not set permissions."
         );
-    // Open file in write mode
-    let mut z_file = fs::OpenOptions::new()
-        .read(false)
-        .write(true)
-        .open("/tmp/cz_path") 
-        .expect("Could not open file");
-    // Write action
-    z_file.write_all(
-        format!("{}|{}", action, text).as_bytes()
-        ).expect("Could not write to file");
-    // Set read-only
     permissions.set_readonly(true);
     z_file.set_permissions(permissions).expect("Could not set permissions.");
     // println!("{}", format!("{}|{}", action, text));
