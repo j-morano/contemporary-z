@@ -45,11 +45,10 @@ fn main() -> Result<()> {
         database_dir_path = String::from(
             re.replace_all(database_dir_path.as_str(), home_dir.clone())
             );
+        // Create application user-specific data dir if it does not exist
+        fs::create_dir_all(&database_dir_path).unwrap_or_else(
+            |e| panic!("Error creating dir: {}", e));
     }
-
-    // Create application user-specific data dir if it does not exist
-    fs::create_dir_all(&database_dir_path).unwrap_or_else(
-        |e| panic!("Error creating dir: {}", e));
 
     let database_file_path = format!(
         "{}{}", &database_dir_path, "directories.db");
