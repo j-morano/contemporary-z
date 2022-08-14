@@ -1,6 +1,5 @@
 use rusqlite::{Connection, Result};
 use std::path::{Path, PathBuf};
-use std::process::exit;
 use std::fs;
 use std::fs::metadata;
 use crate::app::current_seconds;
@@ -29,7 +28,6 @@ pub(crate) fn go_to_previous_dir(app: &App, conn: &Connection) {
         Ok(current_dir) => {
             if Path::new(current_dir.as_str()).exists() {
                 app.direct_cd(&conn, current_dir);
-                exit(0);
             } else {
                 app.show_error("No valid previous directory", "");
             }
@@ -45,7 +43,6 @@ pub(crate) fn go_to_target_dir(app: &App, conn: &Connection) {
         Ok(target_dir) => {
             if Path::new(target_dir.as_str()).exists() {
                 app.direct_cd(&conn, target_dir);
-                exit(0);
             } else {
                 app.show_error("No valid current directory", "");
             }
@@ -74,7 +71,6 @@ pub(crate) fn list_dirs(app: &App, conn: &Connection, args: &[String]) {
     ).unwrap();
 
     app.list_dirs(&valid_dirs);
-    exit(0);
 }
 
 pub(crate) fn interactive_select_dir(app: &App, conn: &Connection) {
@@ -100,7 +96,6 @@ pub(crate) fn interactive_select_dir(app: &App, conn: &Connection) {
                         alias: String::new()
                     };
                     valid_dirs.push(directory);
-                    // println!("Name: {}", filename);
                 }
             }
         }
@@ -163,7 +158,6 @@ pub(crate) fn interactive_select_dir(app: &App, conn: &Connection) {
                     }
                 };
             }
-            // println!("{}", args[1]);
             dir_to_read = String::from(dir_str);
 
         } else { // if it is already present in the table, update its
@@ -181,7 +175,6 @@ pub(crate) fn interactive_select_dir(app: &App, conn: &Connection) {
         println!("{}", dir_to_read);
     }
     app.direct_cd(&conn, dir_to_read);
-    exit(0);
 }
 
 
@@ -200,7 +193,6 @@ pub(crate) fn opt_remove_dir(app: &App, conn: &Connection, args: &[String]) {
             app.show_error("Could not remove directory", error.to_string().as_str());
         }
     };
-    exit(0);
 }
 
 
@@ -255,7 +247,6 @@ pub(crate) fn add_alias(app: &App, conn: &Connection, args: &[String]) {
             // TODO: select directory to alias interactively
         }
     }
-    exit(0);
 }
 
 
@@ -271,59 +262,56 @@ pub(crate) fn do_cd(app: &App, conn: &Connection, args: &[String]) {
                 && metadata(dir_str).unwrap().is_dir()
             {
                 app.direct_cd(&conn, dir);
-                exit(0);
             }
         },
-        Err(_) => {},
-    };
+        Err(_) => {
+            // If it is a dir AND exists in the FS
+            if Path::new(dir_str).exists()
+                && metadata(dir_str).unwrap().is_dir()
+            {
+                let canonical_dir = canonicalize_dir_str(dir_str);
+                dir_str = canonical_dir.as_str();
 
-    // If it is a dir AND exists in the FS
-    if Path::new(dir_str).exists()
-        && metadata(dir_str).unwrap().is_dir()
-    {
-        let canonical_dir = canonicalize_dir_str(dir_str);
-        dir_str = canonical_dir.as_str();
+                // Check if dir is in the table
+                let dir = get_dir(&conn, dir_str);
 
-        // Check if dir is in the table
-        let dir = get_dir(&conn, dir_str);
-
-        // If the dir is not in the table and it does exists in the
-        //   FS, add it
-        if let Err(_err) = dir {
-            // Do not store '..' or '.' dirs
-            if !(dir_str == "." || dir_str == "..") {
-                let current_seconds = current_seconds();
-                insert_dir(&conn, dir_str, current_seconds).unwrap();
-            }
-            // println!("{}", args[1]);
-            app.direct_cd(&conn, dir_str.to_string());
+                // If the dir is not in the table and it does exists in the
+                //   FS, add it
+                if let Err(_err) = dir {
+                    // Do not store '..' or '.' dirs
+                    if !(dir_str == "." || dir_str == "..") {
+                        let current_seconds = current_seconds();
+                        insert_dir(&conn, dir_str, current_seconds).unwrap();
+                    }
+                    app.direct_cd(&conn, dir_str.to_string());
 
 
-        } else { // if it is already present in the table, update its
-                 // counter
-            app.direct_cd(&conn, dir.unwrap());
-        }
-    } else { // if arguments are substrings, go to the parent folder of the
-             // top results that matches the substrings
-        // Get shortest directory
-        let valid_dirs = get_valid_dirs(
-            // 100000 ~ no results limit
-            &conn, Vec::from(&args[1..]), current_seconds(), app.max_results, false
-        ).unwrap();
+                } else { // if it is already present in the table, update its
+                         // counter
+                    app.direct_cd(&conn, dir.unwrap());
+                }
+            } else { // if arguments are substrings, go to the parent folder of the
+                     // top results that matches the substrings
+                // Get shortest directory
+                let valid_dirs = get_valid_dirs(
+                    // 100000 ~ no results limit
+                    &conn, Vec::from(&args[1..]), current_seconds(), app.max_results, false
+                ).unwrap();
 
-        if valid_dirs.is_empty() {
-            app.show_exit_message("No dirs");
-        } else {
-            let mut selected_dir = valid_dirs[0].name.as_str();
-            for dir in valid_dirs.iter() {
-                if dir.name.len() < selected_dir.len() {
-                    selected_dir = dir.name.as_str();
+                if valid_dirs.is_empty() {
+                    app.show_exit_message("No dirs");
+                } else {
+                    let mut selected_dir = valid_dirs[0].name.as_str();
+                    for dir in valid_dirs.iter() {
+                        if dir.name.len() < selected_dir.len() {
+                            selected_dir = dir.name.as_str();
+                        }
+                    }
+                    app.direct_cd(&conn, selected_dir.to_string());
                 }
             }
-            app.direct_cd(&conn, selected_dir.to_string());
-            exit(0);
-        }
-    }
+        },
+    };
 }
 
 
@@ -340,7 +328,6 @@ pub(crate) fn interactive_cd(app: &App, conn: &Connection, args: &[String]) {
 
 pub(crate) fn show_help() {
     println!("{}", HELP);
-    exit(0);
 }
 
 pub(crate) fn opt_run_in_background(app: &App, args: &[String]) {
@@ -349,7 +336,6 @@ pub(crate) fn opt_run_in_background(app: &App, args: &[String]) {
     }
     // Run command in a child process
     App::run_in_background(&args[2..]);
-    exit(0);
 }
 
 
@@ -357,12 +343,10 @@ pub(crate) fn opt_sync_dirs(app: &App, conn: &Connection) {
     // Remove directories which do not exist
     remove_non_existent_dirs(&conn).unwrap();
     app.show_exit_message("Synced directories.");
-    exit(0);
 }
 
 
 pub(crate) fn opt_list_all_dirs(app: &App, conn: &Connection) {
     let all_dirs = get_all_dirs(&conn).unwrap();
     app.list_dirs(&all_dirs);
-    exit(0);
 }

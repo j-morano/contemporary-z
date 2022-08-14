@@ -51,7 +51,7 @@ pub(crate) fn add_alias_to_directory(
 
 
 pub(crate) fn drop_directories_table(conn: &Connection) -> Result<usize> {
-    return conn.execute("drop table if exists directories", []);
+    return conn.execute("DROP TABLE IF EXISTS directories", []);
 }
 
 pub(crate) fn drop_current_dir_table(conn: &Connection) -> Result<usize> {
@@ -89,7 +89,6 @@ pub(crate) fn get_valid_dirs(
 
     // Database pagination
     while valid_dirs.len() != max_results {
-        // println!("{}", pages);
         pages += 1;
         let mut sql = format!(
             "SELECT
@@ -145,8 +144,6 @@ pub(crate) fn get_valid_dirs(
             );
         }
 
-        // println!("{}", sql);
-
         // Return most common dirs ordered by counter (descending)
         let mut stmt = conn.prepare(sql.as_str(),)?;
 
@@ -191,7 +188,6 @@ pub(crate) fn get_all_dirs(conn: &Connection,) -> Result<Vec<Directory>> {
     // Filter invalid dirs from the current path
     let mut valid_dirs: Vec<Directory> = Vec::new();
 
-        // println!("{}", pages);
         let sql = "\
             SELECT
               name,
@@ -201,8 +197,6 @@ pub(crate) fn get_all_dirs(conn: &Connection,) -> Result<Vec<Directory>> {
               alias
             FROM directories
             ;";
-
-        // println!("{}", sql);
 
         // Return most common dirs ordered by counter (descending)
         let mut stmt = conn.prepare(sql,)?;

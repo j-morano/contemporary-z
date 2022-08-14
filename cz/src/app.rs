@@ -61,7 +61,6 @@ pub(crate) fn write_action(action:&str, text: String) {
         );
     permissions.set_readonly(true);
     z_file.set_permissions(permissions).expect("Could not set permissions.");
-    // println!("{}", format!("{}|{}", action, text));
 }
 
 pub(crate) fn current_seconds() -> i64 {
@@ -139,7 +138,6 @@ impl App {
 
     pub(crate) fn show_exit_message(&self, text: &str) {
         self.printf("bold", "green", String::from(text));
-        exit(0);
     }
 
     pub(crate) fn select_dir(&self) -> String {
@@ -155,42 +153,46 @@ impl App {
         // If there are no dirs, exit
         if valid_dirs.len() == 0 {
             self.show_exit_message("No dirs");
-        }
+        } else {
+            // Show valid dirs
+            for (i, dir) in valid_dirs.iter().enumerate() {
+                let mut dir_name = dir.name.clone();
 
-        // Show valid dirs
-        for (i, dir) in valid_dirs.iter().enumerate() {
-            let mut dir_name = dir.name.clone();
+                if self.compact_paths {
+                    // Replace /home/<user> with '~'
+                    let current_home_dir = get_home_dir();
+                    let re_h = Regex::new(
+                        format!(r"^{}", current_home_dir.as_str()).as_str()
+                        ).unwrap();
+                    dir_name = re_h.replace(dir_name.as_str(), "~").parse().unwrap();
 
-            if self.compact_paths {
-                // Replace /home/<user> with '~'
-                let current_home_dir = get_home_dir();
-                let re_h = Regex::new(
-                    format!(r"^{}", current_home_dir.as_str()).as_str()
-                ).unwrap();
-                dir_name = re_h.replace(dir_name.as_str(), "~").parse().unwrap();
+                    // Replace (/run)/media/<user> with '>'
+                    let re_m = Regex::new(r"^/(run/)?media/([^/]+)").unwrap();
+                    dir_name = re_m.replace(dir_name.as_str(), ">").parse().unwrap();
+                }
 
-                // Replace /run/media/<user> with '>'
-                let re_m = Regex::new(r"^/(run/)?media/([^/]+)").unwrap();
-                dir_name = re_m.replace(dir_name.as_str(), ">").parse().unwrap();
+                let mut alias = String::new();
+                if !dir.alias.is_empty() {
+                    alias = format!("{}:", dir.alias);
+                }
+
+                println!(
+                    "{}) {}{} {}",
+                    self.format("bold", "", (i+1).to_string()),
+                    alias,
+                    self.format("bold", "blue", dir_name),
+                    (i+1),
+                    // dir.score
+                    );
             }
-
-            let mut alias = String::new();
-            if !dir.alias.is_empty() {
-                alias = format!("{}:", dir.alias);
-            }
-
-            println!(
-                "{}) {}{} {}",
-                self.format("bold", "", (i+1).to_string()),
-                alias,
-                self.format("bold", "blue", dir_name),
-                (i+1),
-                // dir.score
-            );
         }
     }
 
-    pub(crate) fn select_valid_dir_no_exit(&self, valid_dirs: Vec<Directory>) -> Result<String, SelectionError> {
+    pub(crate) fn select_valid_dir_no_exit(
+        &self,
+        valid_dirs: Vec<Directory>
+    ) -> Result<String, SelectionError>
+    {
 
         self.list_dirs(&valid_dirs);
         println!();
@@ -210,9 +212,6 @@ impl App {
 
         // Get name of the selected dir
         let dir_name = format!("{}", valid_dirs[selected_dir-1].name);
-
-        // update_dir_counter(conn, dir_name.clone())?;
-        // println!("{}", dir_name);
 
         return Ok(dir_name);
     }
@@ -246,9 +245,6 @@ impl App {
         // Get name of the selected dir
         let dir_name = format!("{}", valid_dirs[selected_dir-1].name);
 
-        // update_dir_counter(conn, dir_name.clone())?;
-        // println!("{}", dir_name);
-
         return Ok(dir_name);
     }
 
@@ -262,7 +258,6 @@ impl App {
             }
         };
         let current_dir_string = current_dir.into_os_string().into_string().expect("Error");
-        // println!("{}", current_dir_string);
         match update_current_dir(conn, current_dir_string) {
             Ok(_) => { }
             Err(error) => {

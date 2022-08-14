@@ -37,7 +37,7 @@ pub(crate) fn app_defaults_from_config() -> AppDefaults {
 pub(crate) fn app_from_config() -> App {
     let path = format!("{}/.config/cz.toml", get_home_dir());
     let config_string = match fs::read_to_string(path) {
-        Ok(contents) => {contents}
+        Ok(contents) => { contents }
         Err(_) => { DEFAULT_CONFIG.to_string() }
     };
     let user_value = config_string.parse::<Value>().unwrap();
