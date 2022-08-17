@@ -29,7 +29,7 @@ pub(crate) fn insert_dir_alias(
 ) -> Result<usize> {
     return conn.execute(
         "INSERT INTO directories (name, counter, last_access, alias)
-        VALUES (?1, 1, ?2, ?3)",
+            VALUES (?1, 1, ?2, ?3)",
         params![dir_str, current_seconds, alias],
     );
 }
@@ -43,8 +43,8 @@ pub(crate) fn add_alias_to_directory(
     // Update dir accesses counter
     return conn.execute(
         "UPDATE directories SET
-             alias = ?1
-             where name = ?2",
+            alias = ?1
+            where name = ?2",
         params![alias, dir_str],
     );
 }
@@ -82,103 +82,75 @@ pub(crate) fn get_valid_dirs(
         pattern = format!("*{}*", pattern);
     }
 
-    // Results pages
-    let mut pages = 0;
-
     // 'Frecency' formula: https://github.com/rupa/z/blob/master/z.sh
 
-    // Database pagination
-    while valid_dirs.len() != max_results {
-        pages += 1;
-        let mut sql = format!(
-            "SELECT
-              name,
-              counter,
-              last_access,
-              (10000.0
-               * CAST(counter as REAL)
-               * (3.75 / ((0.0001 * ({} - CAST(last_access as REAL)) + 1.0) + 0.25))
-              ) as score,
-              alias
-            FROM directories
-              --where
-              --alias_only
-            ORDER BY score DESC
-            LIMIT {}
-            ;", current_seconds as f64, max_results);
+    let mut sql = format!(
+        "SELECT
+            name,
+            counter,
+            last_access,
+            (
+                10000.0
+                * CAST(counter as REAL)
+                * (
+                    3.75
+                    / ((0.0001 * ({} - CAST(last_access as REAL)) + 1.0) + 0.25)
+                )
+            ) as score,
+            alias
+        FROM directories
+            --where
+            --alias_only
+        ORDER BY score DESC
+        ;",
+        current_seconds as f64
+    );
 
-        if pages > 1 {
-            sql = sql.replace(
-                "--where",
-                format!(
-                    "WHERE
-                       (name NOT IN ( SELECT name FROM directories
-                       ORDER BY counter DESC LIMIT {} ))
-                       --pattern",
-                    (pages-1)*max_results
-                ).as_str()
+    if !pattern.is_empty() {
+        sql = sql.replace(
+            "--where",
+            format!("WHERE (name GLOB '{}')", pattern).as_str()
             );
-            if !pattern.is_empty() {
-                sql = sql.replace(
-                    "--pattern",
-                    format!("AND (name GLOB '{}')", pattern).as_str()
-                );
-            }
-        } else {
-            if !pattern.is_empty() {
-                sql = sql.replace(
-                    "--where",
-                    format!("WHERE (name GLOB '{}')", pattern).as_str()
-                );
-            }
-        }
+    }
 
-        if alias_only {
-            let mut operator = "WHERE";
-            if sql.contains("WHERE") {
-                operator = "AND";
-            }
-            sql = sql.replace(
-                "--alias_only",
-                format!("{} alias != ''", operator).as_str()
+    if alias_only {
+        let mut operator = "WHERE";
+        if sql.contains("WHERE") {
+            operator = "AND";
+        }
+        sql = sql.replace(
+            "--alias_only",
+            format!("{} alias != ''", operator).as_str()
             );
+    }
+
+    // Return most common dirs ordered by counter (descending)
+    let mut stmt = conn.prepare(sql.as_str(),)?;
+
+    let dirs = stmt.query_map([], |row| {
+        Ok(Directory {
+            name: row.get(0)?,
+            counter: row.get(1)?,
+            last_access: row.get(2)?,
+            score: row.get(3)?,
+            alias: row.get(4)?
+        })
+    })?;
+
+    let dirs_collection: Vec<_> = dirs.collect();
+
+    // Add collected dirs to valid dirs, if appropriate
+    for dir in dirs_collection {
+        let dir_info = dir.as_ref().expect("Could not get directory information.");
+        if Path::new(&dir_info.name).exists() {
+            valid_dirs.push(dir?);
         }
-
-        // Return most common dirs ordered by counter (descending)
-        let mut stmt = conn.prepare(sql.as_str(),)?;
-
-        let dirs = stmt.query_map([], |row| {
-            Ok(Directory {
-                name: row.get(0)?,
-                counter: row.get(1)?,
-                last_access: row.get(2)?,
-                score: row.get(3)?,
-                alias: row.get(4)?
-            })
-        })?;
-
-        let dirs_collection: Vec<_> = dirs.collect();
-
-        // Number of dirs collected
-        let num_dirs = dirs_collection.len();
-
-        // Add collected dirs to valid dirs, if appropriate
-        for dir in dirs_collection {
-            let dir_info = dir.as_ref().expect("Error");
-            if Path::new(&dir_info.name).exists() {
-                valid_dirs.push(dir?);
-            }
-            // If there are enough results, do not add more
-            if valid_dirs.len() == max_results {
-                break;
-            }
-        }
-
-        // Exit loop if this was the last page or if there are enough results.
-        if num_dirs < max_results || valid_dirs.len() == max_results {
+        // If there are enough results, do not add more
+        if valid_dirs.len() == max_results {
             break;
         }
     }
+
 
     return Ok(valid_dirs);
 }
@@ -190,11 +162,11 @@ pub(crate) fn get_all_dirs(conn: &Connection,) -> Result<Vec<Directory>> {
 
         let sql = "\
             SELECT
-              name,
-              counter,
-              last_access,
-              counter as score,
-              alias
+                name,
+                counter,
+                last_access,
+                counter as score,
+                alias
             FROM directories
             ;";
 
@@ -228,11 +200,11 @@ pub(crate) fn remove_non_existent_dirs(conn: &Connection) -> Result<()> {
 
     let sql = "\
         SELECT
-          name,
-          counter,
-          last_access,
-          counter as score,
-          alias
+            name,
+            counter,
+            last_access,
+            counter as score,
+            alias
         FROM directories
         ;";
 
@@ -296,13 +268,13 @@ pub(crate) fn update_dir_counter(conn: &Connection, dir_name: String, current_se
 pub(crate) fn create_dirs_table_if_not_exist(conn: &Connection) -> Result<usize>{
     // Create dirs table if it does not exist
     return conn.execute(
-        "create table if not exists directories (
-             /* id integer primary key,
-             name varchar(256) not null, */
-             name primary key,
-             counter integer not null,
-             last_access integer not null,
-             alias varchar(64)
+        "CREATE TABLE IF NOT EXISTS directories (
+            /* id integer primary key,
+            name varchar(256) not null, */
+            name primary key,
+            counter integer not null,
+            last_access integer not null,
+            alias varchar(64)
          )",
         [],
     );
@@ -312,7 +284,7 @@ pub(crate) fn update_current_dir(conn: &Connection, dir_name: String) -> Result<
     // Update dir accesses counter
     return conn.execute(
         "INSERT OR REPLACE INTO current_directory (id, name)
-        VALUES ('current_dir', ?1)",
+            VALUES ('current_dir', ?1)",
         params![dir_name],
     );
 }
@@ -345,7 +317,7 @@ pub(crate) fn obt_target_dir(conn: &Connection) -> Result<String> {
 pub(crate) fn create_current_dir_table_if_not_exist(conn: &Connection) -> Result<usize>{
     // Create dirs table if it does not exist
     return conn.execute(
-        "create table if not exists current_directory (
+        "CREATE TABLE IF NOT EXISTS current_directory (
              id varchar(256) primary key,
              name varchar(256) not null
          )",
