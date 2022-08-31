@@ -110,9 +110,7 @@ z [options] [directory or substrings]
 
 3. If a directory name is introduced, `cz` jumps to the directory (if available) and adds it to the directories database (if it is not already added).
 
-4. If a substring or substrings are introduced, `cz` searches in the database for coincidences, and does `cd` to the uppermost directory.
-
-<!--- If there is only one coincidence, `cz` accesses the directory directly. If there are 2 or more coincidences, `cz` outputs the list, as in the case 1. -->
+4. If a substring or substrings are introduced, `cz` searches in the database for coincidences. Then, if `substring_shortest` is `true` ir the number of matches is equal to 1, it `cd`s to the directory with the shortest pathname. Else, if there are more than 1 match and `substring_shortest` is `false`, `cz` prints the interative selection menu.
 
 
 ### Options:
@@ -136,11 +134,13 @@ z [options] [directory or substrings]
 
 #### Options:
 
-* `theme`: `dark|bright`. Color theme.
-* `abs_paths`: `true|false`. Record directories using full paths or relative paths. With the latter option, shown directories will vary from one directory to another.
-* `compact_paths`: `true|false`. Replace `/home/<username>` by `~` and `/run/media/<username>` by `>`.
-* `max_results`: any number. Maximum results to show in the directory list.
-* `database_path`: any string. Directory where the directories database is/will be located.
+* `theme`: `string`. Color theme.
+    + Allowed values: `dark`, `bright`
+* `abs_paths`: `bool`. Record directories using full paths or relative paths. With the latter option, shown directories will vary from one directory to another.
+* `compact_paths`: `bool`. Replace `/home/<username>` by `~` and `/run/media/<username>` by `>`.
+* `max_results`: `int`. Maximum results to show in the directory list.
+* `database_path`: `string`. Directory where the directories database is/will be located.
+* `substring_shortest`: `bool`. Directly access the dir with the shortest pathname that matches the substring(s).
 
 #### Default config
 
@@ -152,5 +152,6 @@ max_results = 9
 abs_paths = true
 compact_paths = true
 database_path = '$HOME/.local/share/cz/'
+substring_shortest = true
 ```
 
