@@ -145,6 +145,7 @@ impl App {
         // If there are no dirs, exit
         if valid_dirs.len() == 0 {
             self.show_exit_message("No dirs");
+            exit(0);
         } else {
             // Show valid dirs
             for (i, dir) in valid_dirs.iter().enumerate() {
