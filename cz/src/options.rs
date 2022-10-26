@@ -73,7 +73,11 @@ pub(crate) fn list_dirs(app: &App, conn: &Connection, args: &[String]) {
     app.list_dirs(&valid_dirs);
 }
 
-pub(crate) fn interactive_select_dir(app: &App, conn: &Connection) {
+pub(crate) fn interactive_select_dir(
+    app: &App,
+    conn: &Connection,
+    hidden: bool
+) {
     let mut dir_to_read = String::from(".");
     loop {
         let paths = fs::read_dir(dir_to_read.as_str()).unwrap();
@@ -87,7 +91,9 @@ pub(crate) fn interactive_select_dir(app: &App, conn: &Connection) {
                 let filename = String::from(
                     dir_path.file_name().unwrap().to_str().unwrap()
                 );
-                if !filename.starts_with(".") {
+                if (hidden && filename != ".")
+                    || (!hidden  && !filename.starts_with("."))
+                {
                     let directory = Directory{
                         name: filename.clone(),
                         counter: 0,

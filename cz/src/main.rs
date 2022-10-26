@@ -90,7 +90,11 @@ fn main() -> Result<()> {
         }
         // Command option: interactive subdir selection
         else if args[1] == "-i" {
-            options::interactive_select_dir(&app, &conn);
+            options::interactive_select_dir(&app, &conn, false);
+        }
+        // Command option: interactive subdir selection (including hidden)
+        else if args[1] == "-ih" {
+            options::interactive_select_dir(&app, &conn, true);
         }
         // Command option: remove directory
         else if args[1] == "-r" {
