@@ -99,33 +99,52 @@ The default alias of Contemporary-z is `z`. However, if a different alias is pre
 
 ### Usage:
 
-```fish
-z [options] [directory or substrings]
+
 ```
+Usage: z [OPTION]... [DIRECTORY|SUBSTRING]...
 
-1. If no option nor directory or substrings are specified, `cz` prints a numbered list of the most 'frecent' directories to select one of them by introducing its number.
-<!--- the most 'frecent' directories -->
+FUNCTIONALITY:
+  * If no option nor directory or substrings are specified, 'cz' prints a
+    numbered list of the most 'frecent' directories to select one of them by
+    introducing its number.
+  * If a directory alias is introduced, 'cz' does 'cd' to the directory.
+  * If a directory name is introduced, 'cz' jumps to the directory (if
+    available) and adds it to the directories database (if it is not already
+    added).
+  * If a substring or substrings are introduced, 'cz' searches in the database
+    for coincidences. Then, if 'substring_shortest' is 'true' ir the number of
+    matches is equal to 1, it 'cd's to the directory with the shortest pathname.
+    Else, if there are more than 1 match and 'substring_shortest' is 'false',
+    'cz' prints the interative selection menu.
 
-2. If a directory alias is introduced, `cz` does `cd` to the directory.
+OPTIONS:
+Mandatory arguments to long options are mandatory for short options too.
+  -                          go to the previous directory
+  =                          go to the current directory
+  -a [ALIAS] DIRECTORY       add directory alias; if only the directory is
+                               introduced, its alias is removed
+  -b COMMAND                 execute shell COMMAND in background
+      --clear                clear the directories database
+  -f SUBSTRING               force substring match list for SUBSTRING
+  -i                         interactive selection (using a numbered list) of
+                               the subdirectories of the current directory.
+  -ih                        interactive selection, but including hidden
+                               directories
+  -l [NUMBER]                list a certain NUMBER of directories by 'frecency';
+                               if no NUMBER is provided, the max_results number
+                               from configuration is used.
+      --list-all             list all the directories of the database
+  -r                         remove a directory from the database, interactively
+      --sync                 sync directories (remove all non-existent
+                                directories)
+      --help     display this help and exit
 
-3. If a directory name is introduced, `cz` jumps to the directory (if available) and adds it to the directories database (if it is not already added).
+Exit status:
+ 0  if OK,
+ 1  if minor problems (e.g., cannot access subdirectory)
 
-4. If a substring or substrings are introduced, `cz` searches in the database for coincidences. Then, if `substring_shortest` is `true` ir the number of matches is equal to 1, it `cd`s to the directory with the shortest pathname. Else, if there are more than 1 match and `substring_shortest` is `false`, `cz` prints the interative selection menu.
-
-
-### Options:
-
-* `--clear`: clear the directories database.
-* `-`: go to the previous directory.
-* `=`: go to the current directory.
-* `-b`: execute shell command in background.
-* `-l [number]`: list a certain `number` of directories by 'frecency'; if no `number` is provided, the `max_results` number is used.
-* `-i`: interactive selection (using a numbered list) of the subdirectories of the current directory.
-* `-r`: remove directory. Works the same as regular `cz` but for removing.
-* `-a`: add directory alias. If only the directory is introduced, its alias is removed.
-* `-h, --help`: show help.
-* `--list-all`: list all the directories of the database.
-* `--sync`: sync directories (remove all non-existent directories).
+Full documentation <https://github.com/sonarom/contemporary-z>
+```
 
 
 ### Configuration

@@ -221,7 +221,7 @@ pub(crate) fn add_alias(app: &App, conn: &Connection, args: &[String]) {
             alias = &args[2];
             dir_str = args[3].as_str();
         }
-        
+
         if Path::new(dir_str).exists()
             && metadata(dir_str).unwrap().is_dir()
         {
@@ -255,6 +255,25 @@ pub(crate) fn add_alias(app: &App, conn: &Connection, args: &[String]) {
     }
 }
 
+pub(crate) fn list_matching_dirs(app: &App, conn: &Connection, args: &[String]) {
+
+    if args.len() < 3 {
+        app.show_error("No substring provided", "");
+    } else {
+        let valid_dirs = get_valid_dirs(
+            // 100000 ~ no results limit
+            &conn, Vec::from(&args[2..]), current_seconds(), app.max_results, false
+            ).unwrap();
+        if valid_dirs.is_empty() {
+            app.show_exit_message("No dirs");
+        } else {
+            // Interactively select dir among all the dirs that
+            // match the substring(s)
+            let dir_name = app.select_valid_dir(valid_dirs).unwrap();
+            app.direct_cd(&conn, dir_name.clone());
+        }
+    }
+}
 
 pub(crate) fn do_cd(app: &App, conn: &Connection, args: &[String]) {
     // Directory argument

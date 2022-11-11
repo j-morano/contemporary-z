@@ -25,7 +25,7 @@ use crate::config::app_from_config;
 
 
 fn main() -> Result<()> {
-    // Collect command-line arguments 
+    // Collect command-line arguments
     let args: Vec<_> = env::args().collect();
 
     // App configuration
@@ -113,13 +113,16 @@ fn main() -> Result<()> {
         else if args[1] == "--list-all" {
             options::opt_list_all_dirs(&app, &conn);
         }
+        else if args[1] == "-f" {
+            options::list_matching_dirs(&app, &conn, &args);
+        }
         else {
             options::do_cd(&app, &conn, &args);
         }
 
     } else { // if there is no argument, list stored dirs to select one
-             //  interactively 
-        
+             //  interactively
+
         options::interactive_cd(&app, &conn, &args);
     }
     Ok(())
