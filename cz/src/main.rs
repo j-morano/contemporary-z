@@ -80,10 +80,6 @@ fn main() -> Result<()> {
         else if args[1] == "--help" || args[1] == "-h" {
             options::show_help();
         }
-        // Command option: run command
-        else if args[1] == "-b" {
-            options::opt_run_in_background(&app, &args);
-        }
         // Command option: list directories
         else if args[1] == "-l" {
             options::list_dirs(&app, &conn, &args);

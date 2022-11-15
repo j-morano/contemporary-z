@@ -363,14 +363,6 @@ pub(crate) fn show_help() {
     println!("{}", HELP);
 }
 
-pub(crate) fn opt_run_in_background(app: &App, args: &[String]) {
-    if args.len() < 3 {
-        app.show_error("No command provided", "");
-    }
-    // Run command in a child process
-    App::run_in_background(&args[2..]);
-}
-
 
 pub(crate) fn opt_sync_dirs(app: &App, conn: &Connection) {
     // Remove directories which do not exist

@@ -279,15 +279,4 @@ impl App {
         write_action("command", format!("cd \"{}\"", dir_name.clone()));
     }
 
-
-    pub(crate) fn run_in_background(c_args: &[String]) {
-        // Build command string
-        let command = c_args.join(" ");
-
-        write_action(
-            "command",
-            format!("nohup {} </dev/null >/dev/null 2>&1 & disown", command)
-        );
-    }
-
 }

@@ -123,7 +123,6 @@ Mandatory arguments to long options are mandatory for short options too.
   =                          go to the current directory
   -a [ALIAS] DIRECTORY       add directory alias; if only the directory is
                                introduced, its alias is removed
-  -b COMMAND                 execute shell COMMAND in background
       --clear                clear the directories database
   -f SUBSTRING               force substring match list for SUBSTRING
   -i                         interactive selection (using a numbered list) of
