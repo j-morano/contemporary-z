@@ -275,7 +275,7 @@ impl App {
         let mut starting_index = 0;
 
         loop {
-            println!("[{}/{}]", i+1, (valid_dirs.len()/self.max_results)+1);
+            println!("[{}/{}]", i+1, ((valid_dirs.len()-1)/self.max_results)+1);
             self.list_dirs(&dirs_to_show.to_vec());
             println!();
 
