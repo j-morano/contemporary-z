@@ -17,7 +17,6 @@ fn get_option(user_value: Value, default_value: Value, option: &str) -> Value {
 pub(crate) fn app_defaults_from_config() -> App {
     let default_value = DEFAULT_CONFIG.to_string().parse::<Value>().unwrap();
 
-
     let theme = default_value.get("theme").unwrap().clone();
     let abs_paths = default_value.get("abs_paths").unwrap().clone();
     let max_results = default_value.get("max_results").unwrap().clone();
@@ -37,14 +36,13 @@ pub(crate) fn app_defaults_from_config() -> App {
 
 
 pub(crate) fn app_from_config() -> App {
-    let path = format!("{}/.config/cz.toml", get_home_dir());
+    let path = format!("{}/.config/cz/cz.toml", get_home_dir());
     let config_string = match fs::read_to_string(path) {
         Ok(contents) => { contents }
         Err(_) => { DEFAULT_CONFIG.to_string() }
     };
     let user_value = config_string.parse::<Value>().unwrap();
     let default_value = DEFAULT_CONFIG.to_string().parse::<Value>().unwrap();
-
 
     let theme = get_option(
         user_value.clone(), default_value.clone(), "theme");

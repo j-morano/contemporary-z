@@ -63,9 +63,12 @@ fn main() -> Result<()> {
 
     // If there is a dir argument, cd to the dir
     if args.len() > 1 {
-
+        // Command option: show version
+        if args[1] == "-v" || args[1] == "--version" {
+            println!("{} {}", "Version:", env!("CARGO_PKG_VERSION"));
+        }
         // Command option: clear table
-        if args[1] == "--clear" {
+        else if args[1] == "--clear" {
             options::clear_database(&app, &conn)?;
         }
         // Command option: go to previous directory

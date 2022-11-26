@@ -137,6 +137,7 @@ Mandatory arguments to long options are mandatory for short options too.
       --sync                 sync directories (remove all non-existent
                                 directories)
       --help     display this help and exit
+  -v, --version              display version information and exit
 
 Exit status:
  0  if OK,
