@@ -176,7 +176,7 @@ impl App {
                     self.format("bold", "blue", dir_name),
                     (i+1),
                     // dir.score
-                    );
+                );
             }
         }
     }
@@ -209,14 +209,39 @@ impl App {
         return Ok(dir_name);
     }
 
-
-    pub(crate) fn select_valid_dir(&self, valid_dirs: Vec<Directory>) -> Result<String> {
+    pub(crate) fn select_valid_dirs(&self, valid_dirs: Vec<Directory>) -> Result<Vec<String>> {
 
         self.list_dirs(&valid_dirs);
         println!();
 
+        // Select dirs by numbers
+        let selected_dirs_string = self.select_dir();
+        // parse list of numbers separated by spaces
+        let selected_dirs_nums_str: Vec<&str> = selected_dirs_string.split(' ').collect();
+        // selected dirs names strs
+        let mut selected_dirs_strings: Vec<String> = Vec::new();
+
+        for selected_dir_num_str in selected_dirs_nums_str {
+             
+            let selected_dir_num = self.parse_and_validate_dir_number(&selected_dir_num_str, valid_dirs.len()).unwrap();
+
+            // Get name of the selected dir and add it to the list
+            selected_dirs_strings.push(valid_dirs[selected_dir_num-1].name.clone());
+            // let dir_name = format!("{}", valid_dirs[selected_dir_num-1].name);
+        }
+
+        return Ok(selected_dirs_strings);
+    }
+
+    fn parse_and_validate_dir_number(
+        &self,
+        selected_dir: &str,
+        max_num: usize
+    ) -> Result<usize, SelectionError> 
+    {
+
         // Select dir by number
-        let selected_dir = match self.select_dir().parse::<usize>() {
+        let selected_dir = match selected_dir.parse::<usize>() {
             Ok(number)  => number,
             Err(error) => {
                 self.show_error("No dir selected", error.to_string().as_str());
@@ -225,18 +250,31 @@ impl App {
         };
 
         // Check if the introduced number is valid
-        if selected_dir > valid_dirs.len() || selected_dir < 1{
+        if selected_dir > max_num || selected_dir < 1 {
             self.show_error(
                 "Invalid number",
                 format!(
                     "{} > {}",
-                    selected_dir, valid_dirs.len()
+                    selected_dir, max_num
                 ).as_str()
             );
+            return Err(SelectionError);
+        } else {
+            return Ok(selected_dir);
         }
+    }
+
+    pub(crate) fn select_valid_dir(&self, valid_dirs: Vec<Directory>) -> Result<String> {
+
+        self.list_dirs(&valid_dirs);
+        println!();
+
+        let selected_dir = self.select_dir();
+
+        let selected_dir_num = self.parse_and_validate_dir_number(&selected_dir, valid_dirs.len()).unwrap();
 
         // Get name of the selected dir
-        let dir_name = format!("{}", valid_dirs[selected_dir-1].name);
+        let dir_name = format!("{}", valid_dirs[selected_dir_num-1].name);
 
         return Ok(dir_name);
     }

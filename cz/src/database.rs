@@ -151,7 +151,6 @@ pub(crate) fn get_valid_dirs(
         }
     }
 
-
     return Ok(valid_dirs);
 }
 

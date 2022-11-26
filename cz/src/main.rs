@@ -97,7 +97,7 @@ fn main() -> Result<()> {
         }
         // Command option: remove directory
         else if args[1] == "-r" {
-            options::opt_remove_dir(&app, &conn, &args);
+            options::opt_remove_dirs(&app, &conn, &args);
         }
         // Command option: add alias
         else if args[1] == "-a" {

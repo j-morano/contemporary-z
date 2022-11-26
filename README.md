@@ -133,7 +133,9 @@ Mandatory arguments to long options are mandatory for short options too.
                                if no NUMBER is provided, the max_results number
                                from configuration is used.
       --list-all             list all the directories of the database
-  -r                         remove a directory from the database, interactively
+  -r                         remove directories from the database, by
+                               introducing, interactively, its numbers separated
+                               by spaces.
       --sync                 sync directories (remove all non-existent
                                 directories)
       --help     display this help and exit

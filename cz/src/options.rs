@@ -184,21 +184,27 @@ pub(crate) fn interactive_select_dir(
 }
 
 
-pub(crate) fn opt_remove_dir(app: &App, conn: &Connection, args: &[String]) {
+pub(crate) fn opt_remove_dirs(app: &App, conn: &Connection, args: &[String]) {
     let valid_dirs = get_valid_dirs(
         &conn, Vec::from(&args[2..]), current_seconds(), app.max_results, false
     ).unwrap();
 
-    let dir_name = app.select_valid_dir(valid_dirs).unwrap();
+    let dir_names = app.select_valid_dirs(valid_dirs).unwrap();
 
-    match remove_dir(&conn, dir_name.clone()) {
-        Ok(_)  => {
-            app.show_exit_message("Removed directory");
-        }
-        Err(error) => {
-            app.show_error("Could not remove directory", error.to_string().as_str());
-        }
-    };
+    let mut all_dirs_removed = true;
+    for dir_name in dir_names {
+        match remove_dir(&conn, dir_name.clone()) {
+            Ok(_)  => { }
+            Err(_error) => {
+                all_dirs_removed = false;
+            }
+        };
+    }
+    if all_dirs_removed {
+        app.show_exit_message("Removed all directories");
+    } else {
+        app.show_error("Could not remove all directories", "");
+    }
 }
 
 
@@ -319,7 +325,6 @@ pub(crate) fn do_cd(app: &App, conn: &Connection, args: &[String]) {
                      // top results that matches the substrings
                 // Get shortest directory
                 let valid_dirs = get_valid_dirs(
-                    // 100000 ~ no results limit
                     &conn, Vec::from(&args[1..]), current_seconds(), app.max_results, false
                 ).unwrap();
 
