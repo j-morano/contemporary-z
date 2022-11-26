@@ -106,7 +106,8 @@ Usage: z [OPTION]... [DIRECTORY|SUBSTRING]...
 FUNCTIONALITY:
   * If no option nor directory or substrings are specified, 'cz' prints a
     numbered list of the most 'frecent' directories to select one of them by
-    introducing its number.
+    introducing its number. The list of results can be expanded by introduccing
+    the letter 'e' instead of a number.
   * If a directory alias is introduced, 'cz' does 'cd' to the directory.
   * If a directory name is introduced, 'cz' jumps to the directory (if
     available) and adds it to the directories database (if it is not already
@@ -116,6 +117,8 @@ FUNCTIONALITY:
     matches is equal to 1, it 'cd's to the directory with the shortest pathname.
     Else, if there are more than 1 match and 'substring_shortest' is 'false',
     'cz' prints the interative selection menu.
+  * For the sake of efficiency, the directories last accessed more than a month
+    ago are removed from the database.
 
 OPTIONS:
 Mandatory arguments to long options are mandatory for short options too.

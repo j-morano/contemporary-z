@@ -177,6 +177,9 @@ impl App {
                     (i+1),
                     // dir.score
                 );
+                if i == (self.max_results - 1) {
+                    break;
+                }
             }
         }
     }
@@ -266,15 +269,31 @@ impl App {
 
     pub(crate) fn select_valid_dir(&self, valid_dirs: Vec<Directory>) -> Result<String> {
 
-        self.list_dirs(&valid_dirs);
-        println!();
+        let mut i = 0;
+        let mut selected_dir: String;
+        let mut dirs_to_show = &valid_dirs[0..];
+        let mut starting_index = 0;
 
-        let selected_dir = self.select_dir();
+        loop {
+            println!("[{}/{}]", i+1, (valid_dirs.len()/self.max_results)+1);
+            self.list_dirs(&dirs_to_show.to_vec());
+            println!();
+
+            selected_dir = self.select_dir();
+            if selected_dir != "e" { break; }
+            i = i + 1;
+            starting_index = i * self.max_results;
+            if starting_index >= valid_dirs.len() {
+                starting_index = 0;
+                i = 0;
+            }
+            dirs_to_show = &valid_dirs[starting_index..];
+        }
 
         let selected_dir_num = self.parse_and_validate_dir_number(&selected_dir, valid_dirs.len()).unwrap();
 
         // Get name of the selected dir
-        let dir_name = format!("{}", valid_dirs[selected_dir_num-1].name);
+        let dir_name = format!("{}", valid_dirs[starting_index+selected_dir_num-1].name);
 
         return Ok(dir_name);
     }

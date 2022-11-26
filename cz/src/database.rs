@@ -6,6 +6,7 @@ use std::path::Path;
 use rusqlite::{params, Connection, Result};
 use crate::utils::canonicalize_dir_str;
 
+use crate::app::current_seconds;
 
 
 pub(crate) fn insert_dir(conn: &Connection, dir_str: &str, current_seconds: i64) -> Result<usize> {
@@ -69,7 +70,7 @@ pub(crate) fn get_valid_dirs(
     conn: &Connection,
     patterns: Vec<String>,
     current_seconds: i64,
-    max_results: usize,
+    _max_results: usize,  // Deprecated
     alias_only: bool,
 ) -> Result<Vec<Directory>> {
     // Filter invalid dirs from the current path
@@ -146,9 +147,9 @@ pub(crate) fn get_valid_dirs(
             valid_dirs.push(dir?);
         }
         // If there are enough results, do not add more
-        if valid_dirs.len() == max_results {
-            break;
-        }
+        // if valid_dirs.len() == max_results {
+        //     break;
+        // }
     }
 
     return Ok(valid_dirs);
@@ -321,6 +322,16 @@ pub(crate) fn create_current_dir_table_if_not_exist(conn: &Connection) -> Result
              name varchar(256) not null
          )",
         [],
+    );
+}
+
+pub(crate) fn remove_old_dirs(conn: &Connection) -> Result<usize>{
+    let current_seconds = current_seconds();
+    let seconds_in_a_month = 60 * 60 * 24 * 30;
+    let limit = current_seconds - seconds_in_a_month;
+    // Create dirs table if it does not exist
+    return conn.execute(
+        "DELETE FROM directories WHERE last_access < ?", params![limit]
     );
 }
 

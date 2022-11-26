@@ -8,7 +8,9 @@ mod strings;
 mod options;
 
 use crate::database::{
-    create_dirs_table_if_not_exist, create_current_dir_table_if_not_exist
+    create_dirs_table_if_not_exist,
+    create_current_dir_table_if_not_exist,
+    remove_old_dirs
 };
 
 use app::write_action;
@@ -58,6 +60,7 @@ fn main() -> Result<()> {
 
     create_dirs_table_if_not_exist(&conn)?;
     create_current_dir_table_if_not_exist(&conn)?;
+    remove_old_dirs(&conn)?;
 
     write_action("empty", "".to_string());
 
