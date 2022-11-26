@@ -273,9 +273,12 @@ impl App {
         let mut selected_dir: String;
         let mut dirs_to_show = &valid_dirs[0..];
         let mut starting_index = 0;
+        let number_of_pages = (valid_dirs.len() + self.max_results - 1) / self.max_results;
 
         loop {
-            println!("[{}/{}]", i+1, ((valid_dirs.len()-1)/self.max_results)+1);
+            if number_of_pages > 0 {
+                println!("[{}/{}]", i+1, number_of_pages);
+            }
             self.list_dirs(&dirs_to_show.to_vec());
             println!();
 
