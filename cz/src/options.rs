@@ -70,7 +70,7 @@ pub(crate) fn list_dirs(app: &App, conn: &Connection, args: &[String]) {
         &conn, Vec::new(), current_seconds(), num_results, false
     ).unwrap();
 
-    app.list_dirs(&valid_dirs);
+    app.list_dirs(&valid_dirs, 0);
 }
 
 pub(crate) fn interactive_select_dir(
@@ -122,7 +122,7 @@ pub(crate) fn interactive_select_dir(
         }
 
         let dir_name: String; //= String::new();
-        match app.select_valid_dir_no_exit(valid_dirs) {
+        match app.select_valid_dir_no_exit(valid_dirs, usize::MAX) {
             Ok(dir_string)  => {
                 dir_name = dir_string
             }
@@ -189,7 +189,7 @@ pub(crate) fn opt_remove_dirs(app: &App, conn: &Connection, args: &[String]) {
         &conn, Vec::from(&args[2..]), current_seconds(), app.max_results, false
     ).unwrap();
 
-    let dir_names = app.select_valid_dirs(valid_dirs).unwrap();
+    let dir_names = app.select_valid_dirs(valid_dirs, 0).unwrap();
 
     let mut all_dirs_removed = true;
     for dir_name in dir_names {
@@ -215,7 +215,7 @@ pub(crate) fn add_alias(app: &App, conn: &Connection, args: &[String]) {
         ).unwrap();
 
         // Always list dirs
-        let dir_name = app.select_valid_dir(valid_dirs).unwrap();
+        let dir_name = app.select_valid_dir(valid_dirs, 0).unwrap();
         app.direct_cd(&conn, dir_name.clone());
     } else {
         let mut alias = &String::from("");
@@ -275,7 +275,7 @@ pub(crate) fn list_matching_dirs(app: &App, conn: &Connection, args: &[String]) 
         } else {
             // Interactively select dir among all the dirs that
             // match the substring(s)
-            let dir_name = app.select_valid_dir(valid_dirs).unwrap();
+            let dir_name = app.select_valid_dir(valid_dirs, 0).unwrap();
             app.direct_cd(&conn, dir_name.clone());
         }
     }
@@ -343,7 +343,7 @@ pub(crate) fn do_cd(app: &App, conn: &Connection, args: &[String]) {
                     } else {
                         // Interactively select dir among all the dirs that
                         // match the substring(s)
-                        let dir_name = app.select_valid_dir(valid_dirs).unwrap();
+                        let dir_name = app.select_valid_dir(valid_dirs, 0).unwrap();
                         app.direct_cd(&conn, dir_name.clone());
                     }
                 }
@@ -359,7 +359,7 @@ pub(crate) fn interactive_cd(app: &App, conn: &Connection, args: &[String]) {
     ).unwrap();
 
     // Always list dirs
-    let dir_name = app.select_valid_dir(valid_dirs).unwrap();
+    let dir_name = app.select_valid_dir(valid_dirs, 0).unwrap();
     app.direct_cd(&conn, dir_name.clone());
 }
 
@@ -378,5 +378,5 @@ pub(crate) fn opt_sync_dirs(app: &App, conn: &Connection) {
 
 pub(crate) fn opt_list_all_dirs(app: &App, conn: &Connection) {
     let all_dirs = get_all_dirs(&conn).unwrap();
-    app.list_dirs(&all_dirs);
+    app.list_dirs(&all_dirs, 0);
 }

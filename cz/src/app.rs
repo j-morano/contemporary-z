@@ -141,7 +141,11 @@ impl App {
     }
 
 
-    pub(crate) fn list_dirs(&self, valid_dirs: &Vec<Directory>) {
+    pub(crate) fn list_dirs(&self, valid_dirs: &Vec<Directory>, max_num: usize) {
+        let mut max_results = max_num;
+        if max_num == 0 {
+            max_results = self.max_results;
+        }
         // If there are no dirs, exit
         if valid_dirs.len() == 0 {
             self.show_exit_message("No dirs");
@@ -177,7 +181,7 @@ impl App {
                     (i+1),
                     // dir.score
                 );
-                if i == (self.max_results - 1) {
+                if i == (max_results - 1) {
                     break;
                 }
             }
@@ -186,11 +190,12 @@ impl App {
 
     pub(crate) fn select_valid_dir_no_exit(
         &self,
-        valid_dirs: Vec<Directory>
+        valid_dirs: Vec<Directory>,
+        max_num: usize,
     ) -> Result<String, SelectionError>
     {
 
-        self.list_dirs(&valid_dirs);
+        self.list_dirs(&valid_dirs, max_num);
         println!();
 
         // Select dir by number
@@ -212,9 +217,9 @@ impl App {
         return Ok(dir_name);
     }
 
-    pub(crate) fn select_valid_dirs(&self, valid_dirs: Vec<Directory>) -> Result<Vec<String>> {
+    pub(crate) fn select_valid_dirs(&self, valid_dirs: Vec<Directory>, max_num: usize) -> Result<Vec<String>> {
 
-        self.list_dirs(&valid_dirs);
+        self.list_dirs(&valid_dirs, max_num);
         println!();
 
         // Select dirs by numbers
@@ -267,7 +272,7 @@ impl App {
         }
     }
 
-    pub(crate) fn select_valid_dir(&self, valid_dirs: Vec<Directory>) -> Result<String> {
+    pub(crate) fn select_valid_dir(&self, valid_dirs: Vec<Directory>, max_num: usize) -> Result<String> {
 
         let mut i = 0;
         let mut selected_dir: String;
@@ -279,7 +284,7 @@ impl App {
             if number_of_pages > 0 {
                 println!("[{}/{}]", i+1, number_of_pages);
             }
-            self.list_dirs(&dirs_to_show.to_vec());
+            self.list_dirs(&dirs_to_show.to_vec(), max_num);
             println!();
 
             selected_dir = self.select_dir();
