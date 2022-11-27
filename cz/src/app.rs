@@ -13,7 +13,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::colors::{color_code, sgr_code};
 
 
-pub(crate) fn write_action(action:&str, text: String) {
+pub(crate) fn write_dir(path: String) {
     // Open file in read mode
     let mut z_file = match fs::OpenOptions::new()
         .read(true)
@@ -49,7 +49,7 @@ pub(crate) fn write_action(action:&str, text: String) {
         };
     // Write action
     z_file.write_all(
-        format!("{}|{}", action, text).as_bytes()
+        format!("{}", path).as_bytes()
         ).expect("Could not write to file");
     // Set read-only again
     let mut permissions = z_file.metadata().expect(
@@ -114,7 +114,7 @@ impl App {
     }
 
     pub(crate) fn show_error(&self, text: &str, error: &str) {
-        write_action("error", text.to_string());
+        write_dir("".to_string());
         let mut joint = "";
         if !error.is_empty() {
             joint = ":";
@@ -336,7 +336,7 @@ impl App {
         };
         self.post_current_dir(&conn);
         self.post_target_dir(&conn, dir_name.clone());
-        write_action("command", format!("cd \"{}\"", dir_name.clone()));
+        write_dir(dir_name.clone());
     }
 
 }

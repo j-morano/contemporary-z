@@ -13,7 +13,7 @@ use crate::database::{
     remove_old_dirs
 };
 
-use app::write_action;
+use app::write_dir;
 use config::app_defaults_from_config;
 
 use regex::Regex;
@@ -62,7 +62,7 @@ fn main() -> Result<()> {
     create_current_dir_table_if_not_exist(&conn)?;
     remove_old_dirs(&conn)?;
 
-    write_action("empty", "".to_string());
+    write_dir("".to_string());
 
     // If there is a dir argument, cd to the dir
     if args.len() > 1 {

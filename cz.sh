@@ -1,8 +1,7 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 $HOME/.cargo/bin/cz "$@"
 zout=$(cat "/tmp/cz_path")
-IFS='|'; zouts=($zout); unset IFS
-if [ "${zouts[0]}" = "command" ]; then
-    eval ${zouts[1]}
+if [[ -n "$zout" ]]; then
+    cd "$zout"
 fi
