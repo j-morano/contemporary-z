@@ -293,7 +293,7 @@ impl App {
             dirs_to_show = &valid_dirs[starting_index..];
         }
 
-        let selected_dir_num = self.parse_and_validate_dir_number(&selected_dir, valid_dirs.len()).unwrap();
+        let selected_dir_num = self.parse_and_validate_dir_number(&selected_dir, dirs_to_show.len()).unwrap();
 
         // Get name of the selected dir
         let dir_name = format!("{}", valid_dirs[starting_index+selected_dir_num-1].name);
