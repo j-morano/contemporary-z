@@ -34,26 +34,27 @@ fn main() -> Result<()> {
     let app_defaults = app_defaults_from_config();
     let app = app_from_config();
 
-    let mut database_dir_path = app.database_path.clone();
+    let mut database_path = app.database_path.clone();
     // Replace typical environment variables
     let re = Regex::new(r"\$HOME").unwrap();
     let home_dir = env::var("HOME").unwrap();
-    database_dir_path = String::from(
-        re.replace_all(database_dir_path.as_str(), home_dir.clone())
+    database_path = String::from(
+        re.replace_all(database_path.as_str(), home_dir.clone())
         );
     // If config database not available, use default
-    if !Path::new(database_dir_path.as_str()).exists() {
-        database_dir_path = app_defaults.database_path.clone();
-        database_dir_path = String::from(
-            re.replace_all(database_dir_path.as_str(), home_dir.clone())
+    if !Path::new(database_path.as_str()).exists() {
+        database_path = app_defaults.database_path.clone();
+        database_path = String::from(
+            re.replace_all(database_path.as_str(), home_dir.clone())
             );
         // Create application user-specific data dir if it does not exist
-        fs::create_dir_all(&database_dir_path).unwrap_or_else(
-            |e| panic!("Error creating dir: {}", e));
+        let database_file_parent = Path::new(database_path.as_str()).parent().unwrap();
+        fs::create_dir_all(database_file_parent).unwrap_or_else(
+            |e| panic!("Error creating dir: {}", e)
+        );
     }
 
-    let database_file_path = format!(
-        "{}{}", &database_dir_path, "directories.db");
+    let database_file_path = database_path;
 
     // Open connection with the database
     let conn = Connection::open(database_file_path)?;

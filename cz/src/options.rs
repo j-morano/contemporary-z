@@ -331,20 +331,27 @@ pub(crate) fn do_cd(app: &App, conn: &Connection, args: &[String]) {
                 if valid_dirs.is_empty() {
                     app.show_exit_message("No dirs");
                 } else {
-                    // Access the uppermost dir that matches the substring(s)
-                    if app.substring_shortest || valid_dirs.len() == 1 {
-                        let mut selected_dir = valid_dirs[0].name.as_str();
-                        for dir in valid_dirs.iter() {
-                            if dir.name.len() < selected_dir.len() {
-                                selected_dir = dir.name.as_str();
-                            }
-                        }
-                        app.direct_cd(&conn, selected_dir.to_string());
+                    // If there is only one result, cd to it
+                    if app.substring == "score" || valid_dirs.len() == 1 {
+                        // Access the substring with the highest score
+                        let selected_dir = valid_dirs[0].name.clone();
+                        app.direct_cd(&conn, selected_dir);
                     } else {
-                        // Interactively select dir among all the dirs that
-                        // match the substring(s)
-                        let dir_name = app.select_valid_dir(valid_dirs, 0).unwrap();
-                        app.direct_cd(&conn, dir_name.clone());
+                        // Access the uppermost dir that matches the substring(s)
+                        if app.substring == "shortest" {
+                            let mut selected_dir = valid_dirs[0].name.as_str();
+                            for dir in valid_dirs.iter() {
+                                if dir.name.len() < selected_dir.len() {
+                                    selected_dir = dir.name.as_str();
+                                }
+                            }
+                            app.direct_cd(&conn, selected_dir.to_string());
+                        } else {
+                            // Interactively select dir among all the dirs that
+                            // match the substring(s)
+                            let dir_name = app.select_valid_dir(valid_dirs, 0).unwrap();
+                            app.direct_cd(&conn, dir_name.clone());
+                        }
                     }
                 }
             }

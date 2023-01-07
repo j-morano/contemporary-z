@@ -83,7 +83,7 @@ pub(crate) struct App {
     pub(crate) compact_paths: bool,
     pub(crate) max_results: usize,
     pub(crate) database_path: String,
-    pub(crate) substring_shortest: bool,
+    pub(crate) substring: String,
 }
 
 impl App {

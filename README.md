@@ -100,19 +100,17 @@ Usage: z [OPTION]... [DIRECTORY|SUBSTRING]...
 FUNCTIONALITY:
   * If no option nor directory or substrings are specified, 'cz' prints a
     numbered list of the most 'frecent' directories to select one of them by
-    introducing its number. The list of results can be expanded by introduccing
-    the letter 'e' instead of a number.
+    introducing its number.
   * If a directory alias is introduced, 'cz' does 'cd' to the directory.
   * If a directory name is introduced, 'cz' jumps to the directory (if
     available) and adds it to the directories database (if it is not already
     added).
   * If a substring or substrings are introduced, 'cz' searches in the database
-    for coincidences. Then, if 'substring_shortest' is 'true' ir the number of
+    for coincidences. Then, if 'substring' is 'shortest' or the number of
     matches is equal to 1, it 'cd's to the directory with the shortest pathname.
-    Else, if there are more than 1 match and 'substring_shortest' is 'false',
-    'cz' prints the interative selection menu.
-  * For the sake of efficiency, the directories last accessed more than a month
-    ago are removed from the database.
+    If 'substring' is equal to 'score', it goes to the directory with the
+    highest score. Otherwise, it prints the interactive selection menu. If there
+    is only one result, it always 'cd's to it.
 
 OPTIONS:
 Mandatory arguments to long options are mandatory for short options too.
@@ -130,9 +128,7 @@ Mandatory arguments to long options are mandatory for short options too.
                                if no NUMBER is provided, the max_results number
                                from configuration is used.
       --list-all             list all the directories of the database
-  -r                         remove directories from the database, by
-                               introducing, interactively, its numbers separated
-                               by spaces.
+  -r                         remove a directory from the database, interactively
       --sync                 sync directories (remove all non-existent
                                 directories)
       --help     display this help and exit
@@ -158,7 +154,11 @@ Full documentation <https://github.com/sonarom/contemporary-z>
 * `compact_paths`: `bool`. Replace `/home/<username>` by `~` and `/run/media/<username>` by `>`.
 * `max_results`: `int`. Maximum results to show in the directory list.
 * `database_path`: `string`. Directory where the directories database is/will be located.
-* `substring_shortest`: `bool`. Directly access the dir with the shortest pathname that matches the substring(s).
+* `substring`: `string`. Which dir to select when substring(s) are introduced.
+    + Allowed values:
+        - 'shortest': go to the directory with the shortest path name.
+        - 'score': go to the directory with the highest score (most 'frecent' dir).
+        - 'none': show selection list.
 
 #### Default config
 
@@ -169,7 +169,7 @@ theme = 'dark'
 max_results = 9
 abs_paths = true
 compact_paths = true
-database_path = '$HOME/.local/share/cz/'
-substring_shortest = true
+database_path = '$HOME/.local/share/cz/directories.db'
+substring = 'shortest'
 ```
 
