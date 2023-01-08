@@ -8,12 +8,13 @@ use crate::data::Directory;
 use crate::database::{
     get_dir, get_valid_dirs, drop_directories_table, insert_dir,
     obt_current_dir, drop_current_dir_table, obt_target_dir, remove_dir,
-    get_all_dirs, remove_non_existent_dirs
+    get_all_dirs, remove_non_existent_dirs, remove_dir_alias
 };
 
 use crate::strings::HELP;
 use crate::app::App;
 use crate::database::{get_dir_by_alias, insert_dir_alias, add_alias_to_directory_unique};
+
 
 
 pub(crate) fn clear_database(app: &App, conn: &Connection) -> Result<()> {
@@ -22,6 +23,7 @@ pub(crate) fn clear_database(app: &App, conn: &Connection) -> Result<()> {
     app.show_exit_message("Cleared database");
     Ok(())
 }
+
 
 pub(crate) fn go_to_previous_dir(app: &App, conn: &Connection) {
     match obt_current_dir(&conn) {
@@ -38,6 +40,7 @@ pub(crate) fn go_to_previous_dir(app: &App, conn: &Connection) {
     };
 }
 
+
 pub(crate) fn go_to_target_dir(app: &App, conn: &Connection) {
     match obt_target_dir(&conn) {
         Ok(target_dir) => {
@@ -52,6 +55,7 @@ pub(crate) fn go_to_target_dir(app: &App, conn: &Connection) {
         }
     };
 }
+
 
 pub(crate) fn list_dirs(app: &App, conn: &Connection, args: &[String]) {
     let mut num_results = app.max_results;
@@ -72,6 +76,7 @@ pub(crate) fn list_dirs(app: &App, conn: &Connection, args: &[String]) {
 
     app.list_dirs(&valid_dirs, 0);
 }
+
 
 pub(crate) fn interactive_select_dir(
     app: &App,
@@ -144,7 +149,6 @@ pub(crate) fn interactive_select_dir(
             dir_str = dir_pathbuf.to_str().unwrap();
         }
 
-        // TODO: repeated code
         // Check if dir is in the table
         let dir = get_dir(&conn, dir_str);
 
@@ -210,6 +214,7 @@ pub(crate) fn opt_remove_dirs(app: &App, conn: &Connection, args: &[String]) {
 
 pub(crate) fn add_alias(app: &App, conn: &Connection, args: &[String]) {
     if args.len() < 3 {
+        println!("Aliased dirs");
         let valid_dirs = get_valid_dirs(
             &conn, Vec::new(), current_seconds(), app.max_results, true
         ).unwrap();
@@ -247,11 +252,12 @@ pub(crate) fn add_alias(app: &App, conn: &Connection, args: &[String]) {
                     app.show_exit_message("Added directory alias");
                 }
             } else {
-                add_alias_to_directory_unique(&conn, dir_str, alias.as_str()).unwrap();
                 if args.len() < 4 {
+                    remove_dir_alias(&conn, dir_str).unwrap();
                     let message = format!("Removed dir alias: {}->{}", alias, dir_str);
                     app.show_exit_message(message.as_str());
                 } else {
+                    add_alias_to_directory_unique(&conn, dir_str, alias.as_str()).unwrap();
                     let message = format!("Added dir alias: {}->{}", alias, dir_str);
                     app.show_exit_message(message.as_str());
                 }
@@ -292,6 +298,7 @@ pub(crate) fn list_matching_dirs(app: &App, conn: &Connection, args: &[String]) 
         }
     }
 }
+
 
 pub(crate) fn do_cd(app: &App, conn: &Connection, args: &[String]) {
     // Directory argument

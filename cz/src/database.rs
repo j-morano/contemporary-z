@@ -35,6 +35,15 @@ pub(crate) fn insert_dir_alias(
 }
 
 
+
+pub(crate) fn remove_dir_alias(conn: &Connection, dir_str: &str) -> Result<usize> {
+    return conn.execute(
+        "UPDATE directories SET alias = '' WHERE name = ?1",
+        params![dir_str],
+    );
+}
+
+
 pub(crate) fn add_alias_to_directory_unique(
     conn: &Connection,
     dir_str: &str,
@@ -48,27 +57,17 @@ pub(crate) fn add_alias_to_directory_unique(
     );
     match result {
         Ok(_) => {
-            return add_alias_to_directory(conn, dir_str, alias);
+            return conn.execute(
+                "UPDATE directories SET
+                    alias = ?1
+                    where name = ?2",
+                params![alias, dir_str],
+            );
         }
         Err(e) => {
             return Err(e);
         }
     }
-}
-
-
-fn add_alias_to_directory(
-    conn: &Connection,
-    dir_str: &str,
-    alias: &str
-) -> Result<usize> {
-    // Update dir accesses counter
-    return conn.execute(
-        "UPDATE directories SET
-            alias = ?1
-            where name = ?2",
-        params![alias, dir_str],
-    );
 }
 
 
