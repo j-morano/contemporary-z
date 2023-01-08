@@ -249,17 +249,18 @@ pub(crate) fn add_alias(app: &App, conn: &Connection, args: &[String]) {
                 if !(dir_str == "." || dir_str == "..") {
                     let current_seconds = current_seconds();
                     insert_dir_alias(&conn, dir_str, current_seconds, alias.as_str()).unwrap();
-                    app.show_exit_message("Added directory alias");
+                    let details = format!("{}->{}", alias, dir_str);
+                    app.show_exit_detailed_message("Removed dir alias", details.as_str());
                 }
             } else {
                 if args.len() < 4 {
                     remove_dir_alias(&conn, dir_str).unwrap();
-                    let message = format!("Removed dir alias: {}->{}", alias, dir_str);
-                    app.show_exit_message(message.as_str());
+                    let details = format!("{}->{}", alias, dir_str);
+                    app.show_exit_detailed_message("Removed dir alias", details.as_str());
                 } else {
                     add_alias_to_directory_unique(&conn, dir_str, alias.as_str()).unwrap();
-                    let message = format!("Added dir alias: {}->{}", alias, dir_str);
-                    app.show_exit_message(message.as_str());
+                    let details = format!("{}->{}", alias, dir_str);
+                    app.show_exit_detailed_message("Added dir alias", details.as_str());
                 }
             }
         } else {
@@ -272,8 +273,8 @@ pub(crate) fn add_alias(app: &App, conn: &Connection, args: &[String]) {
             // Always list dirs
             let dir_name = app.select_valid_dir(valid_dirs, 0).unwrap();
             add_alias_to_directory_unique(&conn, &dir_name, dir_str).unwrap();
-            let message = format!("Added dir alias: {}->{}", dir_str, dir_name);
-            app.show_exit_message(message.as_str());
+            let details = format!("{}->{}", dir_str, dir_name);
+            app.show_exit_detailed_message("Added dir alias", details.as_str());
         }
     }
 }

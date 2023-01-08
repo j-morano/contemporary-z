@@ -132,6 +132,15 @@ impl App {
         self.printf("bold", "green", String::from(text));
     }
 
+    pub(crate) fn show_exit_detailed_message(&self, message: &str, details: &str) {
+        println!(
+            "{}: {}",
+            self.format("bold", "green", message.to_string()),
+            details,
+        );
+        exit(1);
+    }
+
     pub(crate) fn select_dir(&self) -> String {
         let mut line = String::new();
         print!("Number: ");
