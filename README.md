@@ -45,14 +45,8 @@ cp z.fish $HOME/.config/fish/functions
 #### Bash/Zsh
 
 ```sh
-# Add this to .bashrc:
-z() {
-    cz "$@"
-    zout=$(cat "/tmp/cz_path")
-    if [[ -n "$zout" ]]; then
-        cd "$zout"
-    fi
-}
+wget https://github.com/j-morano/contemporary-z/releases/download/0.3.0/z.sh
+cat z.sh >> $HOME/.bashrc
 ```
 
 ### Install from source
@@ -107,14 +101,7 @@ cp z.fish $HOME/.config/fish/functions
 #### Bash/Zsh
 
 ```sh
-# Add this to .bashrc:
-z() {
-    cz "$@"
-    zout=$(cat "/tmp/cz_path")
-    if [[ -n "$zout" ]]; then
-        cd "$zout"
-    fi
-}
+cat z.sh >> $HOME/.bashrc
 ```
 
 ## How to use
