@@ -31,13 +31,13 @@ Linux-only.
 ### Install using binary release
 
 ```sh
-wget https://github.com/j-morano/contemporary-z/releases/download/0.3.0/cz
+wget https://github.com/j-morano/contemporary-z/releases/latest/download/cz
 cp cz $HOME/.local/bin/
 ```
 #### Fish
 
 ```sh
-wget https://github.com/j-morano/contemporary-z/releases/download/0.3.0/z.fish
+wget https://github.com/j-morano/contemporary-z/releases/latest/download/z.fish
 mkdir -p $HOME/.config/fish/functions
 cp z.fish $HOME/.config/fish/functions
 ```
@@ -45,7 +45,7 @@ cp z.fish $HOME/.config/fish/functions
 #### Bash/Zsh
 
 ```sh
-wget https://github.com/j-morano/contemporary-z/releases/download/0.3.0/z.sh
+wget https://github.com/j-morano/contemporary-z/releases/latest/download/z.sh
 cat z.sh >> $HOME/.bashrc
 ```
 
