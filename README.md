@@ -34,6 +34,8 @@ To install the program using the binary release, copy and paste the following co
 
 > NOTE: This is only for installing the first time, for updating, see below.
 
+> NOTE: In the following snippets, you can replace `$HOME/.local/bin/` by any other dir in `$PATH`.
+
 #### Fish
 
 ```shell
@@ -105,7 +107,7 @@ $HOME/.cargo/bin/cargo install --path cz
 
 Then, depending on the shell, do the following.
 
-> NOTE: You must be inside the repository folder (`contemporary-z`) to run the commands as shown below. Also, ensure that the `$HOME/.cargo/bin/` is in `$PATH`.
+> NOTE: You must be inside the repository folder (`contemporary-z`) to run the commands as shown below. Also, ensure that `$HOME/.cargo/bin/` is in `$PATH`.
 
 #### Fish
 
