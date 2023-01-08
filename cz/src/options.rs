@@ -205,9 +205,9 @@ pub(crate) fn opt_remove_dirs(app: &App, conn: &Connection, args: &[String]) {
         };
     }
     if all_dirs_removed {
-        app.show_exit_message("Removed all directories");
+        app.show_exit_message("Removed directories");
     } else {
-        app.show_error("Could not remove all directories", "");
+        app.show_error("Could not remove directories", "");
     }
 }
 
