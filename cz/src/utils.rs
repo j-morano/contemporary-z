@@ -5,7 +5,6 @@ use regex::Regex;
 
 
 pub(crate) fn canonicalize_dir_str(dir_str_name: &str) -> String {
-
     let mut dir_str = dir_str_name;
 
     // Canonicalize path

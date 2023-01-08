@@ -14,13 +14,15 @@
 
 ### Rust
 
-* `rustup target add x86_64-unknown-linux-musl`
+```sh
+rustup target add x86_64-unknown-linux-musl`
+```
 
 
 ## Build commands
 
 ### Linux
 
-```
+```sh
 cargo build --release --target=x86_64-unknown-linux-musl
 ```

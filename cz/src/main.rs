@@ -67,23 +67,18 @@ fn main() -> Result<()> {
 
     // If there is a dir argument, cd to the dir
     if args.len() > 1 {
-        // Command option: show version
         if args[1] == "-v" || args[1] == "--version" {
             println!("{} {}", "Version:", env!("CARGO_PKG_VERSION"));
         }
-        // Command option: clear table
         else if args[1] == "--clear" {
             options::clear_database(&app, &conn)?;
         }
-        // Command option: go to previous directory
         else if args[1] == "-" {
             options::go_to_previous_dir(&app, &conn);
         }
-        // Command option: go to target directory
         else if args[1] == "=" {
             options::go_to_target_dir(&app, &conn);
         }
-        // Command option: help
         else if args[1] == "--help" || args[1] == "-h" {
             options::show_help();
         }
@@ -91,32 +86,27 @@ fn main() -> Result<()> {
         else if args[1] == "-l" {
             options::list_dirs(&app, &conn, &args);
         }
-        // Command option: interactive subdir selection
         else if args[1] == "-i" {
+            // Command option: interactive subdir selection
             options::interactive_select_dir(&app, &conn, false);
         }
-        // Command option: interactive subdir selection (including hidden)
         else if args[1] == "--ih" {
+            // Interactive subdir selection (including hidden)
             options::interactive_select_dir(&app, &conn, true);
         }
-        // Command option: remove directory
         else if args[1] == "-r" {
             options::opt_remove_dirs(&app, &conn, &args);
         }
-        // Command option: add alias
         else if args[1] == "-a" {
             options::add_alias(&app, &conn, &args);
         }
-        // Command option: add alias
         else if args[1] == "--remove-alias" {
             options::remove_alias_interactive(&app, &conn)
         }
-        // Command option: sync
-        //  Remove directories which do not exist.
         else if args[1] == "--sync" {
+            //  Remove directories which do not exist.
             options::opt_sync_dirs(&app, &conn);
         }
-        // Command option: list all dirs
         else if args[1] == "--list-all" {
             options::opt_list_all_dirs(&app, &conn);
         }
@@ -126,10 +116,8 @@ fn main() -> Result<()> {
         else {
             options::do_cd(&app, &conn, &args);
         }
-
-    } else { // if there is no argument, list stored dirs to select one
-             //  interactively
-
+    } else {
+        // If there is no argument, list stored dirs to select one interactively
         options::interactive_cd(&app, &conn, &args);
     }
     Ok(())

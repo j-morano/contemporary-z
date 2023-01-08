@@ -22,9 +22,38 @@ For the time being, `cz` is available for [fish shell](https://github.com/fish-s
 
 ### Availability
 
+Linux-only.
+
 - fish shell
 - Bash
 - Zsh
+
+### Install using binary release
+
+```sh
+wget https://github.com/j-morano/contemporary-z/releases/download/0.3.0/cz
+cp cz $HOME/.local/bin/
+```
+#### Fish
+
+```sh
+wget https://github.com/j-morano/contemporary-z/releases/download/0.3.0/z.fish
+mkdir -p $HOME/.config/fish/functions
+cp z.fish $HOME/.config/fish/functions
+```
+
+#### Bash/Zsh
+
+```sh
+# Add this to .bashrc:
+z() {
+    cz "$@"
+    zout=$(cat "/tmp/cz_path")
+    if [[ -n "$zout" ]]; then
+        cd "$zout"
+    fi
+}
+```
 
 ### Install from source
 
@@ -62,29 +91,31 @@ git clone https://github.com/sonarom/contemporary-z.git
 
 #### Run the installation script
 
+```sh
+$HOME/.cargo/bin/cargo install --path cz
+```
+
 > You must be inside the repository folder (`contemporary-z`) to run them as shown below.
 
-##### Fish
-
-```fish
-./bin/install.fish
-```
-
-##### Bash and Zsh
-
-```bash
-./bin/install.sh
-```
-
-
-#### Uninstallation
-
-To uninstall `contemporary-z`, you can use the uninstallation scripts under `bin/` the same way as installation ones:
+#### Fish
 
 ```sh
-./bin/uninstall.[fish,sh]
+mkdir -p $HOME/.config/fish/functions
+cp z.fish $HOME/.config/fish/functions
 ```
 
+#### Bash/Zsh
+
+```sh
+# Add this to .bashrc:
+z() {
+    cz "$@"
+    zout=$(cat "/tmp/cz_path")
+    if [[ -n "$zout" ]]; then
+        cd "$zout"
+    fi
+}
+```
 
 ## How to use
 
