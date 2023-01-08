@@ -13,7 +13,7 @@ use crate::database::{
 
 use crate::strings::HELP;
 use crate::app::App;
-use crate::database::{get_dir_by_alias, insert_dir_alias, add_alias_to_directory};
+use crate::database::{get_dir_by_alias, insert_dir_alias, add_alias_to_directory_unique};
 
 
 pub(crate) fn clear_database(app: &App, conn: &Connection) -> Result<()> {
@@ -247,19 +247,32 @@ pub(crate) fn add_alias(app: &App, conn: &Connection, args: &[String]) {
                     app.show_exit_message("Added directory alias");
                 }
             } else {
-                add_alias_to_directory(&conn, dir_str, alias.as_str()).unwrap();
+                add_alias_to_directory_unique(&conn, dir_str, alias.as_str(), app).unwrap();
                 if args.len() < 4 {
-                    app.show_exit_message("Removed directory alias");
+                    let message = format!("Removed dir alias: {}->{}", alias, dir_str);
+                    app.show_exit_message(message.as_str());
                 } else {
-                    app.show_exit_message("Added directory alias");
+                    let message = format!("Added dir alias: {}->{}", alias, dir_str);
+                    app.show_exit_message(message.as_str());
                 }
             }
         } else {
-            app.show_error("The provided directory does not exist", "");
-            // TODO: select directory to alias interactively
+            println!("Select directory to alias");
+            // app.show_error("The provided directory does not exist", "");
+            let valid_dirs = get_valid_dirs(
+                &conn, Vec::new(), current_seconds(), app.max_results, false
+            ).unwrap();
+
+            // Always list dirs
+            let dir_name = app.select_valid_dir(valid_dirs, 0).unwrap();
+            let result = add_alias_to_directory_unique(&conn, &dir_name, dir_str, app).unwrap();
+            println!("result: {}", result);
+            let message = format!("Added dir alias: {}->{}", dir_str, dir_name);
+            app.show_exit_message(message.as_str());
         }
     }
 }
+
 
 pub(crate) fn list_matching_dirs(app: &App, conn: &Connection, args: &[String]) {
 
@@ -269,7 +282,7 @@ pub(crate) fn list_matching_dirs(app: &App, conn: &Connection, args: &[String]) 
         let valid_dirs = get_valid_dirs(
             // 100000 ~ no results limit
             &conn, Vec::from(&args[2..]), current_seconds(), app.max_results, false
-            ).unwrap();
+        ).unwrap();
         if valid_dirs.is_empty() {
             app.show_exit_message("No dirs");
         } else {
