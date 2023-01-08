@@ -1,5 +1,4 @@
 use crate::data::Directory;
-use crate::app::App;
 
 use std::path::Path;
 
@@ -40,21 +39,19 @@ pub(crate) fn add_alias_to_directory_unique(
     conn: &Connection,
     dir_str: &str,
     alias: &str,
-    app: &App
 ) -> Result<usize> {
-    let mut stmt = conn.prepare("SELECT alias FROM directories WHERE alias = ?1;")?;
-    let mut rows = stmt.query(params![alias])?;
-    match rows.next() {
-        Ok(Some(_)) => {
-            app.show_error("Alias already exists", alias);
-            return Ok(0);
-        },
-        Ok(None) => {
+    let result = conn.execute(
+        "UPDATE directories SET
+            alias = ''
+            where alias = ?1",
+        params![alias],
+    );
+    match result {
+        Ok(_) => {
             return add_alias_to_directory(conn, dir_str, alias);
         }
         Err(e) => {
-            println!("Error: {}", e);
-            return Ok(0);
+            return Err(e);
         }
     }
 }

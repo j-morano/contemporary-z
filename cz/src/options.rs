@@ -247,7 +247,7 @@ pub(crate) fn add_alias(app: &App, conn: &Connection, args: &[String]) {
                     app.show_exit_message("Added directory alias");
                 }
             } else {
-                add_alias_to_directory_unique(&conn, dir_str, alias.as_str(), app).unwrap();
+                add_alias_to_directory_unique(&conn, dir_str, alias.as_str()).unwrap();
                 if args.len() < 4 {
                     let message = format!("Removed dir alias: {}->{}", alias, dir_str);
                     app.show_exit_message(message.as_str());
@@ -265,8 +265,7 @@ pub(crate) fn add_alias(app: &App, conn: &Connection, args: &[String]) {
 
             // Always list dirs
             let dir_name = app.select_valid_dir(valid_dirs, 0).unwrap();
-            let result = add_alias_to_directory_unique(&conn, &dir_name, dir_str, app).unwrap();
-            println!("result: {}", result);
+            add_alias_to_directory_unique(&conn, &dir_name, dir_str).unwrap();
             let message = format!("Added dir alias: {}->{}", dir_str, dir_name);
             app.show_exit_message(message.as_str());
         }
