@@ -28,15 +28,17 @@ Linux-only.
 - Bash
 - Zsh
 
-### Install using binary release
+### Install using binary release (recommended)
+
+To install the program using the binary release, copy and paste the following commands in your terminal.
+
+> NOTE: This is only for installing the first time, for updating, see below.
+
+#### Fish
 
 ```sh
 wget https://github.com/j-morano/contemporary-z/releases/latest/download/cz
 cp cz $HOME/.local/bin/
-```
-#### Fish
-
-```sh
 wget https://github.com/j-morano/contemporary-z/releases/latest/download/z.fish
 mkdir -p $HOME/.config/fish/functions
 cp z.fish $HOME/.config/fish/functions
@@ -45,8 +47,17 @@ cp z.fish $HOME/.config/fish/functions
 #### Bash/Zsh
 
 ```sh
+wget https://github.com/j-morano/contemporary-z/releases/latest/download/cz
+cp cz $HOME/.local/bin/
 wget https://github.com/j-morano/contemporary-z/releases/latest/download/z.sh
 cat z.sh >> $HOME/.bashrc
+```
+
+#### Update
+
+```sh
+wget https://github.com/j-morano/contemporary-z/releases/latest/download/cz
+cp cz $HOME/.local/bin/
 ```
 
 ### Install from source
@@ -83,13 +94,15 @@ Using HTTPS:
 git clone https://github.com/sonarom/contemporary-z.git
 ```
 
-#### Run the installation script
+#### Install using Cargo
 
 ```sh
 $HOME/.cargo/bin/cargo install --path cz
 ```
 
-> You must be inside the repository folder (`contemporary-z`) to run them as shown below.
+Then, depending on the shell, do the following.
+
+> NOTE: You must be inside the repository folder (`contemporary-z`) to run the commands as shown below. Also, ensure that the `$HOME/.cargo/bin/` is in `$PATH`.
 
 #### Fish
 
