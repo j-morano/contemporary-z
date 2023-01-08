@@ -3,7 +3,7 @@ theme = 'dark'
 max_results = 9
 abs_paths = true
 compact_paths = true
-database_path = '$HOME/.local/share/cz/directories.db'
+database_path = '$HOME/.local/share/contemporary-z/directories.db'
 substring = 'shortest'
 ";
 

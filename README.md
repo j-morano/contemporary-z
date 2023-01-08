@@ -144,7 +144,7 @@ Full documentation <https://github.com/sonarom/contemporary-z>
 
 ### Configuration
 
-`cz` supports some configuration options. These options must be set in TOML format in a file with the following path: `~/.config/cz.toml`.
+`cz` supports some configuration options. These options must be set in TOML format in a file with the following path: `~/.config/contemporary-z/cz.toml`.
 
 #### Options:
 
@@ -163,13 +163,13 @@ Full documentation <https://github.com/sonarom/contemporary-z>
 #### Default config
 
 ```toml
-# ~/.config/cz.toml
+# ~/.config/contemporary-z/cz.toml
 
 theme = 'dark'
 max_results = 9
 abs_paths = true
 compact_paths = true
-database_path = '$HOME/.local/share/cz/directories.db'
+database_path = '$HOME/.local/share/contemporary-z/directories.db'
 substring = 'shortest'
 ```
 
