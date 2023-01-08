@@ -36,7 +36,7 @@ To install the program using the binary release, copy and paste the following co
 
 #### Fish
 
-```sh
+```shell
 wget https://github.com/j-morano/contemporary-z/releases/latest/download/cz
 cp cz $HOME/.local/bin/
 wget https://github.com/j-morano/contemporary-z/releases/latest/download/z.fish
@@ -46,7 +46,7 @@ cp z.fish $HOME/.config/fish/functions
 
 #### Bash/Zsh
 
-```sh
+```shell
 wget https://github.com/j-morano/contemporary-z/releases/latest/download/cz
 cp cz $HOME/.local/bin/
 wget https://github.com/j-morano/contemporary-z/releases/latest/download/z.sh
@@ -55,7 +55,7 @@ cat z.sh >> $HOME/.bashrc
 
 #### Update
 
-```sh
+```shell
 wget https://github.com/j-morano/contemporary-z/releases/latest/download/cz
 cp cz $HOME/.local/bin/
 ```
@@ -96,7 +96,7 @@ git clone https://github.com/sonarom/contemporary-z.git
 
 #### Install using Cargo
 
-```sh
+```shell
 $HOME/.cargo/bin/cargo install --path cz
 ```
 
@@ -106,14 +106,14 @@ Then, depending on the shell, do the following.
 
 #### Fish
 
-```sh
+```shell
 mkdir -p $HOME/.config/fish/functions
 cp z.fish $HOME/.config/fish/functions
 ```
 
 #### Bash/Zsh
 
-```sh
+```shell
 cat z.sh >> $HOME/.bashrc
 ```
 
