@@ -96,7 +96,7 @@ fn main() -> Result<()> {
             options::interactive_select_dir(&app, &conn, false);
         }
         // Command option: interactive subdir selection (including hidden)
-        else if args[1] == "-ih" {
+        else if args[1] == "--ih" {
             options::interactive_select_dir(&app, &conn, true);
         }
         // Command option: remove directory
@@ -106,6 +106,10 @@ fn main() -> Result<()> {
         // Command option: add alias
         else if args[1] == "-a" {
             options::add_alias(&app, &conn, &args);
+        }
+        // Command option: add alias
+        else if args[1] == "--remove-alias" {
+            options::remove_alias_interactive(&app, &conn)
         }
         // Command option: sync
         //  Remove directories which do not exist.

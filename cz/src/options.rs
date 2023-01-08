@@ -212,6 +212,22 @@ pub(crate) fn opt_remove_dirs(app: &App, conn: &Connection, args: &[String]) {
 }
 
 
+pub(crate) fn remove_alias_interactive(app: &App, conn: &Connection) {
+    println!("Select directory to remove alias");
+    // app.show_error("The provided directory does not exist", "");
+    let valid_dirs = get_valid_dirs(
+        &conn, Vec::new(), current_seconds(), app.max_results, true
+    ).unwrap();
+
+    let dir_name = app.select_valid_dir(valid_dirs, 0).unwrap();
+    let dir_str = dir_name.as_str();
+
+    // Always list dirs
+    remove_dir_alias(&conn, dir_str).unwrap();
+    app.show_exit_detailed_message("Removed alias for dir", dir_str);
+}
+
+
 pub(crate) fn add_alias(app: &App, conn: &Connection, args: &[String]) {
     if args.len() < 3 {
         println!("Aliased dirs");

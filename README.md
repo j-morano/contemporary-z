@@ -114,25 +114,28 @@ FUNCTIONALITY:
 
 OPTIONS:
 Mandatory arguments to long options are mandatory for short options too.
-  -                          go to the previous directory
-  =                          go to the current directory
+  -                          go to the previous directory.
+  =                          go to the current directory.
   -a [ALIAS] DIRECTORY       add directory alias; if only the directory is
-                               introduced, its alias is removed
-      --clear                clear the directories database
+                               introduced, its alias is removed; if only an
+                               alias is introduced, the programs shows the
+                               directory list to select one of them.
+      --clear                clear the directories database.
   -f SUBSTRING               force substring match list for SUBSTRING
   -i                         interactive selection (using a numbered list) of
                                the subdirectories of the current directory.
-  -ih                        interactive selection, but including hidden
-                               directories
+      --ih                   interactive selection, but including hidden
+                               directories.
   -l [NUMBER]                list a certain NUMBER of directories by 'frecency';
                                if no NUMBER is provided, the max_results number
                                from configuration is used.
       --list-all             list all the directories of the database
-  -r                         remove a directory from the database, interactively
+  -r                         remove a directory from the database, interactively.
+      --remove-alias         remove an alias, interactively.
       --sync                 sync directories (remove all non-existent
-                                directories)
-      --help     display this help and exit
-  -v, --version              display version information and exit
+                                directories).
+      --help     display this help and exit.
+  -v, --version              display version information and exit.
 
 Exit status:
  0  if OK,
