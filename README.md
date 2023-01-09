@@ -14,9 +14,7 @@
 
 **Contemporary-z** (`cz`) is a modern version of [z - jump around](https://github.com/rupa/z). It is implemented in Rust+SQLite, and utilizes temporary files for the inter-process communication with the shell.
 
-`cz` is at an early stage of development, so it lacks many of the functionalities available in the original `z`. However, its design makes it easily extensible, so these functionalities will not take long to be incorporated.
-
-For the time being, `cz` is available for [fish shell](https://github.com/fish-shell/fish-shell), [Bash](https://www.gnu.org/software/bash/) and [Zsh](https://www.zsh.org/). Furthermore, since it is written in Rust and uses an SQLite database, it should be relatively easy to adapt it to more shells; it is only necessary to translate into the language of the new shell the installation and runtime scripts.
+For the time being, `cz` is available for [fish shell](https://github.com/fish-shell/fish-shell), [Bash](https://www.gnu.org/software/bash/) and [Zsh](https://www.zsh.org/). Furthermore, since it is written in Rust and uses an SQLite database, it should be relatively easy to adapt it to more shells; it is only necessary to translate into the language of the new shell the _z scripts_ (e.g. `z.sh`).
 
 ## Installation
 
@@ -107,7 +105,9 @@ $HOME/.cargo/bin/cargo install --path cz
 
 Then, depending on the shell, do the following.
 
-> NOTE: You must be inside the repository folder (`contemporary-z`) to run the commands as shown below. Also, ensure that `$HOME/.cargo/bin/` is in `$PATH`.
+> NOTE: ensure that `$HOME/.cargo/bin/` is in `$PATH`.
+
+> NOTE: You must be inside the repository folder (`contemporary-z`) to run the commands as shown below.
 
 #### Fish
 
@@ -128,7 +128,6 @@ The default alias of Contemporary-z is `z`. However, if a different alias is pre
 
 
 ### Usage:
-
 
 ```
 Usage: z [OPTION]... [DIRECTORY|SUBSTRING]...
