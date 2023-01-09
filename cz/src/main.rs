@@ -42,11 +42,11 @@ fn main() -> Result<()> {
         re.replace_all(database_path.as_str(), home_dir.clone())
         );
     // If config database not available, use default
-    if !Path::new(database_path.as_str()).exists() {
+    if !Path::new(database_path.as_str()).parent().unwrap().exists() {
         database_path = app_defaults.database_path.clone();
         database_path = String::from(
             re.replace_all(database_path.as_str(), home_dir.clone())
-            );
+        );
         // Create application user-specific data dir if it does not exist
         let database_file_parent = Path::new(database_path.as_str()).parent().unwrap();
         fs::create_dir_all(database_file_parent).unwrap_or_else(
@@ -54,10 +54,8 @@ fn main() -> Result<()> {
         );
     }
 
-    let database_file_path = database_path;
-
     // Open connection with the database
-    let conn = Connection::open(database_file_path)?;
+    let conn = Connection::open(database_path)?;
 
     create_dirs_table_if_not_exist(&conn)?;
     create_current_dir_table_if_not_exist(&conn)?;
