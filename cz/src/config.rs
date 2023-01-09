@@ -48,7 +48,7 @@ pub(crate) fn app_defaults_from_config() -> App {
 
 
 pub(crate) fn app_from_config() -> App {
-    let path = format!("{}/.config/cz/cz.toml", get_home_dir());
+    let path = format!("{}/.config/contemporary-z/cz.toml", get_home_dir());
     let config_string = match fs::read_to_string(path) {
         Ok(contents) => { contents }
         Err(_) => { DEFAULT_CONFIG.to_string() }
