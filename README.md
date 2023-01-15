@@ -10,6 +10,9 @@
 </p>
 
 
+https://user-images.githubusercontent.com/48717183/212571284-a4c27d27-203c-47a8-afd9-6856f1aaff96.mp4
+
+
 ## Key Features
 
 **Contemporary-z** (`cz`) is a modern version of [z - jump around](https://github.com/rupa/z). It is implemented in Rust+SQLite, and utilizes temporary files for the inter-process communication with the shell.
