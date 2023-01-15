@@ -40,7 +40,7 @@ To install the program using the binary release, copy and paste the following co
 wget https://github.com/j-morano/contemporary-z/releases/latest/download/cz
 chmod +x cz
 cp cz $HOME/.local/bin/
-wget https://github.com/j-morano/contemporary-z/releases/latest/download/z.fish
+wget https://raw.githubusercontent.com/j-morano/contemporary-z/main/z.fish
 mkdir -p $HOME/.config/fish/functions
 cp z.fish $HOME/.config/fish/functions
 ```
@@ -51,7 +51,7 @@ cp z.fish $HOME/.config/fish/functions
 wget https://github.com/j-morano/contemporary-z/releases/latest/download/cz
 chmod +x cz
 cp cz $HOME/.local/bin/
-wget https://github.com/j-morano/contemporary-z/releases/latest/download/z.sh
+wget https://raw.githubusercontent.com/j-morano/contemporary-z/main/z.sh
 cat z.sh >> $HOME/.bashrc
 ```
 
