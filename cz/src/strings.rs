@@ -5,6 +5,7 @@ abs_paths = true
 compact_paths = true
 database_path = '$HOME/.local/share/contemporary-z/directories.db'
 substring = 'shortest'
+show_files = 'none'
 ";
 
 
@@ -40,6 +41,8 @@ Mandatory arguments to long options are mandatory for short options too.
                                the subdirectories of the current directory.
       --ih                   interactive selection, but including hidden
                                directories.
+      --id                   interactive selection, for directories only
+                               (ignore congifuration option 'show_files').
   -l [NUMBER]                list a certain NUMBER of directories by 'frecency';
                                if no NUMBER is provided, the max_results number
                                from configuration is used.

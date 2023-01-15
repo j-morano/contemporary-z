@@ -84,10 +84,11 @@ pub(crate) struct App {
     pub(crate) max_results: usize,
     pub(crate) database_path: String,
     pub(crate) substring: String,
+    pub(crate) show_files: String,
 }
 
 impl App {
-    fn format(&self, sgr: &str, color: &str, text: String) -> String {
+    pub(crate) fn format(&self, sgr: &str, color: &str, text: String) -> String {
         let mut full_color ;
         if self.theme == "bright" {
             full_color = format!("bright_{}_fg", color);
@@ -150,7 +151,7 @@ impl App {
     }
 
 
-    pub(crate) fn list_dirs(&self, valid_dirs: &Vec<Directory>, max_num: usize) {
+    pub(crate) fn list_dirs(&self, valid_dirs: &Vec<Directory>, max_num: usize, start: usize) {
         let mut max_results = max_num;
         if max_num == 0 {
             max_results = self.max_results;
@@ -184,27 +185,45 @@ impl App {
 
                 println!(
                     "{}) {}{} {}",
-                    self.format("bold", "", (i+1).to_string()),
+                    self.format("bold", "", (i+start).to_string()),
                     alias,
                     self.format("bold", "blue", dir_name),
-                    (i+1),
+                    (i+start),
                     // dir.score
                 );
-                if i == (max_results - 1) {
+                if i == (max_results - start) {
                     break;
                 }
             }
         }
     }
 
+
+    fn print_files(files: Vec<String>) {
+        // check if files is empty
+        if files.len() > 0 {
+            for file in files {
+                println!("{}", file.to_string());
+            }
+        }
+    }
+
+
     pub(crate) fn select_valid_dir_no_exit(
         &self,
         valid_dirs: Vec<Directory>,
         max_num: usize,
+        start: usize,
+        files: Vec<String>,
     ) -> Result<String, SelectionError>
     {
-
-        self.list_dirs(&valid_dirs, max_num);
+        if self.show_files == "top" {
+            App::print_files(files.clone());
+        }
+        self.list_dirs(&valid_dirs, max_num, start);
+        if self.show_files == "bottom" {
+            App::print_files(files.clone());
+        }
         println!();
 
         // Select dir by number
@@ -216,19 +235,19 @@ impl App {
         };
 
         // Check if the introduced number is valid
-        if selected_dir > valid_dirs.len() || selected_dir < 1{
+        if selected_dir > valid_dirs.len() + start - 1 || selected_dir < start {
             return Err(SelectionError);
         }
 
         // Get name of the selected dir
-        let dir_name = format!("{}", valid_dirs[selected_dir-1].name);
+        let dir_name = format!("{}", valid_dirs[selected_dir-start].name);
 
         return Ok(dir_name);
     }
 
     pub(crate) fn select_valid_dirs(&self, valid_dirs: Vec<Directory>, max_num: usize) -> Result<Vec<String>> {
 
-        self.list_dirs(&valid_dirs, max_num);
+        self.list_dirs(&valid_dirs, max_num, 1);
         println!();
 
         // Select dirs by numbers
@@ -293,7 +312,7 @@ impl App {
             if number_of_pages > 0 {
                 println!("[{}/{}]", i+1, number_of_pages);
             }
-            self.list_dirs(&dirs_to_show.to_vec(), max_num);
+            self.list_dirs(&dirs_to_show.to_vec(), max_num, 1);
             println!();
 
             selected_dir = self.select_dir();

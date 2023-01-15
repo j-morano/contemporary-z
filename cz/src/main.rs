@@ -86,11 +86,15 @@ fn main() -> Result<()> {
         }
         else if args[1] == "-i" {
             // Command option: interactive subdir selection
-            options::interactive_select_dir(&app, &conn, false);
+            options::interactive_navigation(&app, &conn, false, false);
+        }
+        else if args[1] == "--id" {
+            // Command option: interactive subdir selection
+            options::interactive_navigation(&app, &conn, false, true);
         }
         else if args[1] == "--ih" {
             // Interactive subdir selection (including hidden)
-            options::interactive_select_dir(&app, &conn, true);
+            options::interactive_navigation(&app, &conn, true, false);
         }
         else if args[1] == "-r" {
             options::opt_remove_dirs(&app, &conn, &args);

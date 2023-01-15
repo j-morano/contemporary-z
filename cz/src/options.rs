@@ -74,39 +74,50 @@ pub(crate) fn list_dirs(app: &App, conn: &Connection, args: &[String]) {
         &conn, Vec::new(), current_seconds(), num_results, false
     ).unwrap();
 
-    app.list_dirs(&valid_dirs, 0);
+    app.list_dirs(&valid_dirs, 0, 1);
 }
 
 
-pub(crate) fn interactive_select_dir(
+pub(crate) fn interactive_navigation(
     app: &App,
     conn: &Connection,
-    hidden: bool
+    hidden: bool,
+    force_dir_only: bool,
 ) {
     let mut dir_to_read = String::from(".");
     loop {
         let paths = fs::read_dir(dir_to_read.as_str()).unwrap();
         let mut valid_dirs: Vec<Directory> = Vec::new();
+        let mut files: Vec<String> = Vec::new();
 
         for result_path in paths {
             let dir_path = result_path.unwrap().path();
             if dir_path.exists()
-                && dir_path.is_dir()
             {
-                let filename = String::from(
-                    dir_path.file_name().unwrap().to_str().unwrap()
-                );
-                if (hidden && filename != ".")
-                    || (!hidden  && !filename.starts_with("."))
-                {
-                    let directory = Directory{
-                        name: filename.clone(),
-                        counter: 0,
-                        last_access: 0,
-                        score: 0.0,
-                        alias: String::new()
-                    };
-                    valid_dirs.push(directory);
+                if dir_path.is_dir() {
+                    let filename = String::from(
+                        dir_path.file_name().unwrap().to_str().unwrap()
+                    );
+                    if (hidden && filename != ".")
+                        || (!hidden  && !filename.starts_with("."))
+                    {
+                        let directory = Directory{
+                            name: filename.clone(),
+                            counter: 0,
+                            last_access: 0,
+                            score: 0.0,
+                            alias: String::new()
+                        };
+                        valid_dirs.push(directory);
+                    }
+                } else {
+                    if !force_dir_only {
+                        // Add to files
+                        let filename = String::from(
+                            dir_path.file_name().unwrap().to_str().unwrap()
+                        );
+                        files.push(filename);
+                    }
                 }
             }
         }
@@ -127,7 +138,7 @@ pub(crate) fn interactive_select_dir(
         }
 
         let dir_name: String; //= String::new();
-        match app.select_valid_dir_no_exit(valid_dirs, usize::MAX) {
+        match app.select_valid_dir_no_exit(valid_dirs, usize::MAX, 0, files) {
             Ok(dir_string)  => {
                 dir_name = dir_string
             }
@@ -182,7 +193,9 @@ pub(crate) fn interactive_select_dir(
                 }
             };
         }
-        println!("{}", dir_to_read);
+        // print in bold dir_to_read
+        println!("{}", app.format("bold", "", dir_to_read.to_string()));
+        // println!("{}", dir_to_read);
     }
     app.direct_cd(&conn, dir_to_read);
 }
@@ -421,5 +434,5 @@ pub(crate) fn opt_sync_dirs(app: &App, conn: &Connection) {
 
 pub(crate) fn opt_list_all_dirs(app: &App, conn: &Connection) {
     let all_dirs = get_all_dirs(&conn).unwrap();
-    app.list_dirs(&all_dirs, 0);
+    app.list_dirs(&all_dirs, 0, 1);
 }
