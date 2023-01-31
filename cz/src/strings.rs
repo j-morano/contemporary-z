@@ -6,6 +6,7 @@ compact_paths = true
 database_path = '$HOME/.local/share/contemporary-z/directories.db'
 substring = 'shortest'
 show_files = 'none'
+nav_start_number = 1
 ";
 
 

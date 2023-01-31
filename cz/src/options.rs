@@ -138,7 +138,7 @@ pub(crate) fn interactive_navigation(
         }
 
         let dir_name: String; //= String::new();
-        match app.select_valid_dir_no_exit(valid_dirs, usize::MAX, 0, files) {
+        match app.select_valid_dir_no_exit(valid_dirs, usize::MAX, app.nav_start_number, files) {
             Ok(dir_string)  => {
                 dir_name = dir_string
             }

@@ -207,6 +207,8 @@ Full documentation <https://github.com/sonarom/contemporary-z>
         - 'top': show files on top of dirs.
         - 'bottom': show files under the dirs.
         - 'none': do not show files.
+* `nav_start_number`: `int`. Start number for interactive navigation, that is, the number that the parent directory will have.
+   + Recommended values: 1 or 0.
 
 
 #### Default config
@@ -221,4 +223,5 @@ compact_paths = true
 database_path = '$HOME/.local/share/contemporary-z/directories.db'
 substring = 'shortest'
 show_files = 'none'
+nav_start_number = 1
 ```

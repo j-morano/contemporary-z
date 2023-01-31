@@ -85,6 +85,7 @@ pub(crate) struct App {
     pub(crate) database_path: String,
     pub(crate) substring: String,
     pub(crate) show_files: String,
+    pub(crate) nav_start_number: usize,
 }
 
 impl App {

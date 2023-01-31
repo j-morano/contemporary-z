@@ -22,6 +22,7 @@ fn build_app(
     database_path: Value,
     substring: Value,
     show_files: Value,
+    nav_start_number: Value,
 ) -> App {
     return App {
         theme: theme.as_str().unwrap().to_string(),
@@ -31,6 +32,7 @@ fn build_app(
         database_path: database_path.as_str().unwrap().to_string(),
         substring: substring.as_str().unwrap().to_string(),
         show_files: show_files.as_str().unwrap().to_string(),
+        nav_start_number: nav_start_number.as_integer().unwrap() as usize,
     }
 }
 
@@ -46,6 +48,7 @@ pub(crate) fn app_defaults_from_config() -> App {
         default_value.get("database_path").unwrap().clone(),
         default_value.get("substring").unwrap().clone(),
         default_value.get("show_files").unwrap().clone(),
+        default_value.get("nav_start_number").unwrap().clone(),
     )
 }
 
@@ -67,5 +70,6 @@ pub(crate) fn app_from_config() -> App {
         get_option(user_value.clone(), default_value.clone(), "database_path"),
         get_option(user_value.clone(), default_value.clone(), "substring"),
         get_option(user_value.clone(), default_value.clone(), "show_files"),
+        get_option(user_value.clone(), default_value.clone(), "nav_start_number"),
     )
 }
