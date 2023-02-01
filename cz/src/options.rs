@@ -330,9 +330,13 @@ pub(crate) fn list_matching_dirs(app: &App, conn: &Connection, args: &[String]) 
 }
 
 
-pub(crate) fn do_cd(app: &App, conn: &Connection, args: &[String]) {
+pub(crate) fn do_cd(app: &App, conn: &Connection, args: &[String], forced_substring: &str) {
     // Directory argument
-    let mut dir_str = args[1].as_str();
+    let mut starting_index = 1;
+    if forced_substring != "none" {
+        starting_index = 2;
+    }
+    let mut dir_str = args[starting_index].as_str();
 
     // If string is an alias, then cd to the directory, if exists
     match get_dir_by_alias(&conn, dir_str) {
@@ -374,20 +378,24 @@ pub(crate) fn do_cd(app: &App, conn: &Connection, args: &[String]) {
                      // top results that matches the substrings
                 // Get shortest directory
                 let valid_dirs = get_valid_dirs(
-                    &conn, Vec::from(&args[1..]), current_seconds(), app.max_results, false
+                    &conn, Vec::from(&args[starting_index..]), current_seconds(), app.max_results, false
                 ).unwrap();
 
                 if valid_dirs.is_empty() {
                     app.show_exit_message("No dirs");
                 } else {
                     // If there is only one result, cd to it
-                    if app.substring == "score" || valid_dirs.len() == 1 {
+                    if
+                        app.substring == "score"
+                        || forced_substring == "score"
+                        || valid_dirs.len() == 1
+                    {
                         // Access the substring with the highest score
                         let selected_dir = valid_dirs[0].name.clone();
                         app.direct_cd(&conn, selected_dir);
                     } else {
                         // Access the uppermost dir that matches the substring(s)
-                        if app.substring == "shortest" {
+                        if app.substring == "shortest" || forced_substring == "shortest" {
                             let mut selected_dir = valid_dirs[0].name.as_str();
                             for dir in valid_dirs.iter() {
                                 if dir.name.len() < selected_dir.len() {

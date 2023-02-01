@@ -159,6 +159,7 @@ Mandatory arguments to long options are mandatory for short options too.
                                alias is introduced, the programs shows the
                                directory list to select one of them.
       --clear                clear the directories database.
+  -e                         force substring matching by score.
   -f SUBSTRING               force substring match list for SUBSTRING
   -i                         interactive selection (using a numbered list) of
                                the subdirectories of the current directory.
@@ -172,6 +173,7 @@ Mandatory arguments to long options are mandatory for short options too.
       --list-all             list all the directories of the database
   -r                         remove a directory from the database, interactively.
       --remove-alias         remove an alias, interactively.
+  -t                         force substring matching by shortest path.
       --sync                 sync directories (remove all non-existent
                                 directories).
       --help     display this help and exit.

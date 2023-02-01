@@ -115,8 +115,14 @@ fn main() -> Result<()> {
         else if args[1] == "-f" {
             options::list_matching_dirs(&app, &conn, &args);
         }
+        else if args[1] == "-t" {
+            options::do_cd(&app, &conn, &args, "shortest");
+        }
+        else if args[1] == "-e" {
+            options::do_cd(&app, &conn, &args, "score");
+        }
         else {
-            options::do_cd(&app, &conn, &args);
+            options::do_cd(&app, &conn, &args, "none");
         }
     } else {
         // If there is no argument, list stored dirs to select one interactively
