@@ -73,13 +73,13 @@ if not args.update:
             zsh_contents = fp.read()
         bashrc_path = expandvars("$HOME/.bashrc")
         with open(bashrc_path, 'r') as fp:
-            matches = re.findall("z\(\)", fp.read())
+            matches = re.findall("z( )+\(", fp.read())
         if len(matches) == 0:
             print(' - Adding z function to bashrc.')
             with open(bashrc_path, 'a') as fp:
                 fp.write(zsh_contents)
         else:
-            print('Warning: z function already exists in .bashrc, so it was not added.')
+            print('Warning: a function `z` already exists in .bashrc, so it was not added.')
     elif 'fish' in args.shell:
         print('Installing cz for fish shell.')
         print(' - Downloading z.fish.')
@@ -91,11 +91,12 @@ if not args.update:
         Path(
             expandvars("$HOME/.config/fish/functions")
         ).mkdir(parents=True, exist_ok=True)
-        print(' - Copying z.fish to fish functions directory.')
-        shutil.copyfile(
-            'z.fish',
-            expandvars('$HOME/.config/fish/functions/z.fish')
-        )
+        z_fish_func_path = expandvars('$HOME/.config/fish/functions/z.fish')
+        if os.path.exists(z_fish_func_path):
+            print(' - Removing existing fish function.')
+            os.remove(z_fish_func_path)
+        print(' - Moving z.fish to fish functions directory.')
+        shutil.move('z.fish', z_fish_func_path)
 
 print('Done! Please restart your shell.')
 print(
