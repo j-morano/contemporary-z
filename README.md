@@ -34,7 +34,7 @@ Linux-only.
 To install `cz`, you can just run the installation script `install`.
 
 You can download the script from the following URL:
-- <https://raw.githubusercontent.com/j-morano/contemporary-z/main/z.sh>
+- <https://raw.githubusercontent.com/j-morano/contemporary-z/main/install>
 
 To see the different installation options, you can just type:
 ```shell
