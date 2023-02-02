@@ -61,5 +61,5 @@ Exit status:
  0  if OK,
  1  if minor problems (e.g., cannot access subdirectory)
 
-Full documentation <https://github.com/sonarom/contemporary-z>
+Full documentation <https://github.com/j-morano/contemporary-z>
 ";

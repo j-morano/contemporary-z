@@ -25,46 +25,80 @@ parser.add_argument(
 parser.add_argument(
    '--source',
     action='store_true',
+    help='Install from source'
 )
 parser.add_argument(
    '--update',
     action='store_true',
+    help='Update existing installation'
 )
 args = parser.parse_args()
 
 args.path = expandvars(args.path)
 
+
 if args.source:
-    os.system("git clone https://github.com/sonarom/contemporary-z.git")
-    os.system("$HOME/.cargo/bin/cargo install --path contemporary-z/cz")
+    if not os.path.exists('Cargo.toml'):
+        print('Cloning repository.')
+        os.system("git clone https://github.com/sonarom/contemporary-z.git")
+        src_path = 'contemporary-z'
+    else:
+        src_path = '.'
+    print('Installing using Cargo.')
+    os.system(f"$HOME/.cargo/bin/cargo install --path {src_path}")
 else:
+    print('Downloading binary.')
     request.urlretrieve(
         "https://github.com/j-morano/contemporary-z/releases/latest/download/cz",
         "cz"
     )
+    print('Making binary executable.')
     st = os.stat('cz')
     os.chmod('cz', st.st_mode | 0o0111)
+    if os.path.exists(os.path.join(args.path, 'cz')):
+        print('Removing existing binary.')
+        os.remove(os.path.join(args.path, 'cz'))
+    print('Adding new binary.')
     shutil.move('cz', args.path)
 
 if not args.update:
     if 'bash' in args.shell or 'zsh' in args.shell:
+        print('Installing cz for bash shell.')
+        print(' - Downloading z.sh.')
         request.urlretrieve(
             "https://raw.githubusercontent.com/j-morano/contemporary-z/main/z.sh",
             "z.sh"
         )
         with open('z.sh', 'r') as fp:
             zsh_contents = fp.read()
-
         bashrc_path = expandvars("$HOME/.bashrc")
         with open(bashrc_path, 'r') as fp:
             matches = re.findall("z\(\)", fp.read())
         if len(matches) == 0:
+            print(' - Adding z function to bashrc.')
             with open(bashrc_path, 'a') as fp:
                 fp.write(zsh_contents)
+        else:
+            print('Warning: z function already exists in .bashrc, so it was not added.')
     elif 'fish' in args.shell:
+        print('Installing cz for fish shell.')
+        print(' - Downloading z.fish.')
         request.urlretrieve(
             "https://raw.githubusercontent.com/j-morano/contemporary-z/main/z.fish",
             "z.fish"
         )
-        Path("$HOME/.config/fish/functions").mkdir(parents=True, exist_ok=True)
-        shutil.copyfile('z.fish', expandvars('$HOME/.config/fish/functions/z.fish'))
+        print(' - Creating fish functions directory if it does not exist.')
+        Path(
+            expandvars("$HOME/.config/fish/functions")
+        ).mkdir(parents=True, exist_ok=True)
+        print(' - Copying z.fish to fish functions directory.')
+        shutil.copyfile(
+            'z.fish',
+            expandvars('$HOME/.config/fish/functions/z.fish')
+        )
+
+print('Done! Please restart your shell.')
+print(
+    'Then, you can check if contemporary-z is correctly installed by running:'
+    '\n$ z --version'
+)

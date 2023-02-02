@@ -29,7 +29,24 @@ Linux-only.
 - Bash
 - Zsh
 
-### Install using binary release (recommended)
+### Install/update using installation script (recommended)
+
+To install `cz`, you can just run the installation script `install`.
+
+You can download the script from the following URL:
+- <https://raw.githubusercontent.com/j-morano/contemporary-z/main/z.sh>
+
+To see the different installation options, you can just type:
+```shell
+./install --help
+```
+
+The default installation path is `$HOME/.local/bin/`.
+
+> NOTE: in order to execute it, the script must be executable, so the command `chmod +x install` may be needed.
+
+
+### Install manually using binary release
 
 To install the program using the binary release, copy and paste the following commands in your terminal.
 
@@ -42,10 +59,10 @@ To install the program using the binary release, copy and paste the following co
 ```shell
 wget https://github.com/j-morano/contemporary-z/releases/latest/download/cz
 chmod +x cz
-cp cz $HOME/.local/bin/
+mv cz $HOME/.local/bin/
 wget https://raw.githubusercontent.com/j-morano/contemporary-z/main/z.fish
 mkdir -p $HOME/.config/fish/functions
-cp z.fish $HOME/.config/fish/functions
+mv z.fish $HOME/.config/fish/functions
 ```
 
 #### Bash/Zsh
@@ -53,7 +70,7 @@ cp z.fish $HOME/.config/fish/functions
 ```shell
 wget https://github.com/j-morano/contemporary-z/releases/latest/download/cz
 chmod +x cz
-cp cz $HOME/.local/bin/
+mv cz $HOME/.local/bin/
 wget https://raw.githubusercontent.com/j-morano/contemporary-z/main/z.sh
 cat z.sh >> $HOME/.bashrc
 ```
@@ -63,17 +80,17 @@ cat z.sh >> $HOME/.bashrc
 ```shell
 wget https://github.com/j-morano/contemporary-z/releases/latest/download/cz
 chmod +x cz
-cp cz $HOME/.local/bin/
+mv cz $HOME/.local/bin/
 ```
 
-### Install from source
+### Install manually from source
 
 To install `cz` from source, it is required to have installed [Cargo](https://doc.rust-lang.org/cargo/), the Rust _package manager_. You can install Rust, with `rustc` and `cargo`, following the instructions on [this](https://www.rust-lang.org/tools/install) page or from the official repositories of your distribution.
 
 If this requirement is met, it is only necessary to clone the repository and run the specific installation script for the desired shell.
 
 
-#### Debian-based distros:
+#### Debian-based distros
 
 In Debian-based distros (like Ubuntu), it is necessary to install the `build-essential` meta-package: 
 
@@ -88,38 +105,36 @@ In Arch-based distros, it is necessary to install the `base-devel` meta-package:
 sudo pacman -S base-devel
 ```
 
-#### Repository cloning
+#### Clone the repository
 
-Using SSH:
 ```shell
-git clone git@github.com:sonarom/contemporary-z.git
-```
-
-Using HTTPS:
-```shell
-git clone https://github.com/sonarom/contemporary-z.git
+git clone https://github.com/j-morano/contemporary-z.git
 ```
 
 #### Install using Cargo
 
 ```shell
-$HOME/.cargo/bin/cargo install --path cz
+$HOME/.cargo/bin/cargo install --path .
 ```
 
-Then, depending on the shell, do the following.
-
 > NOTE: ensure that `$HOME/.cargo/bin/` is in `$PATH`.
+
+Then, depending on the shell, do the following.
 
 > NOTE: You must be inside the repository folder (`contemporary-z`) to run the commands as shown below.
 
 #### Fish
 
+Add the function to fish functions.
+
 ```shell
 mkdir -p $HOME/.config/fish/functions
-cp z.fish $HOME/.config/fish/functions
+mv z.fish $HOME/.config/fish/functions
 ```
 
 #### Bash/Zsh
+
+Add the code from `z.sh` to `.bashrc`. For example:
 
 ```shell
 cat z.sh >> $HOME/.bashrc
@@ -130,9 +145,12 @@ cat z.sh >> $HOME/.bashrc
 The default alias of Contemporary-z is `z`. However, if a different alias is preferred, it can be easily changed in the installation scripts. Hereafter, `cz` refers to the entire application, and `z` refers to the command.
 
 
-### Usage:
+### Usage
+
+To see the usage of `cz`, you can just run it with the `--help` argument.
 
 ```
+$ z --help
 Usage: z [OPTION]... [DIRECTORY|SUBSTRING]...
 
 FUNCTIONALITY:
@@ -183,7 +201,7 @@ Exit status:
  0  if OK,
  1  if minor problems (e.g., cannot access subdirectory)
 
-Full documentation <https://github.com/sonarom/contemporary-z>
+Full documentation <https://github.com/j-morano/contemporary-z>
 ```
 
 
