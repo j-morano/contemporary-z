@@ -96,7 +96,10 @@ if not args.update:
             print(' - Removing existing fish function.')
             os.remove(z_fish_func_path)
         print(' - Moving z.fish to fish functions directory.')
-        shutil.move('z.fish', z_fish_func_path)
+        if args.source:
+            shutil.copy('z.fish', z_fish_func_path)
+        else:
+            shutil.move('z.fish', z_fish_func_path)
 
 print('Done! Please restart your shell.')
 print(
