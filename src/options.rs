@@ -386,9 +386,8 @@ pub(crate) fn do_cd(app: &App, conn: &Connection, args: &[String], forced_substr
                 } else {
                     // If there is only one result, cd to it
                     if
-                        app.substring == "score"
-                        || forced_substring == "score"
-                        || valid_dirs.len() == 1
+                        valid_dirs.len() == 1
+                        || (app.substring == "score" && forced_substring != "shortest")
                     {
                         // Access the substring with the highest score
                         let selected_dir = valid_dirs[0].name.clone();
