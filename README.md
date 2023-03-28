@@ -37,7 +37,7 @@ To install `cz`, you can just run the installation script.
 curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/j-morano/contemporary-z/main/install | python3
 ```
 
-If you prefere, you can download the script from the following URL:
+You can download the script from the following URL, and check the installation options with `--help`:
 - <https://raw.githubusercontent.com/j-morano/contemporary-z/main/install>
 
 The default installation path is `$HOME/.local/bin/`.
