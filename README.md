@@ -31,15 +31,14 @@ Linux-only.
 
 ### Install/update using installation script (recommended)
 
-To install `cz`, you can just run the installation script `install`.
+To install `cz`, you can just run the installation script.
 
-You can download the script from the following URL:
-- <https://raw.githubusercontent.com/j-morano/contemporary-z/main/install>
-
-To see the different installation options, you can just type:
 ```shell
-./install --help
+curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/j-morano/contemporary-z/main/install | python3
 ```
+
+If you prefere, you can download the script from the following URL:
+- <https://raw.githubusercontent.com/j-morano/contemporary-z/main/install>
 
 The default installation path is `$HOME/.local/bin/`.
 
