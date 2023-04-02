@@ -37,14 +37,6 @@ To install `cz`, you can just run the installation script.
 curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/j-morano/contemporary-z/main/install | python3
 ```
 
-You can download the script from the following URL, and check the installation options with `--help`:
-- <https://raw.githubusercontent.com/j-morano/contemporary-z/main/install>
-
-The default installation path is `$HOME/.local/bin/`.
-
-> NOTE: in order to execute it, the script must be executable, so the command `chmod +x install` may be needed.
-
-
 ### Install manually using binary release
 
 To install the program using the binary release, copy and paste the following commands in your terminal.
@@ -90,19 +82,6 @@ If this requirement is met, it is only necessary to clone the repository and run
 
 
 #### Debian-based distros
-
-In Debian-based distros (like Ubuntu), it is necessary to install the `build-essential` meta-package: 
-
-```shell
-sudo apt install build-essential
-```
-
-#### Arch Linux
-
-In Arch-based distros, it is necessary to install the `base-devel` meta-package:
-```
-sudo pacman -S base-devel
-```
 
 #### Clone the repository
 

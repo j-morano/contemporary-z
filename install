@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import os
-import argparse
 from urllib import request
 from pathlib import Path
 from os.path import expandvars
@@ -9,35 +8,54 @@ import shutil
 import re
 
 
-parser = argparse.ArgumentParser(description='Install contemporary-z')
-parser.add_argument(
-    '--path',
-    type=str,
-    default='$HOME/.local/bin/',
-    help='Path to install contemporary-z to'
-)
-parser.add_argument(
-    '--shell',
-    type=str,
-    default=os.getenv('SHELL'),
-    help='Shell to install contemporary-z for'
-)
-parser.add_argument(
-   '--source',
-    action='store_true',
-    help='Install from source'
-)
-parser.add_argument(
-   '--update',
-    action='store_true',
-    help='Update existing installation'
-)
-args = parser.parse_args()
+## Options
+# Path to install contemporary-z to
+path = '$HOME/.local/bin/'
+# Shell to install contemporary-z for
+shell = os.getenv('SHELL')
+# Install from source
+source = False
+# Update existing installation
+update = False
+# Valid shells to install contemporary-z for
+valid_shells = ['bash', 'zsh', 'fish']
 
-args.path = expandvars(args.path)
+# Offer all options and ask user to select one
+print('''\
+Welcome to the contemporary-z installer!
+Please select an option:
+  1. Install from binary (recommended).
+  2. Install from source.
+  3. Update existing installation.
+  4. Exit.\
+''')
 
+while True:
+    try:
+        option = input('Option: ')
+        if option == '1':
+            print('=> Installing from binary.')
+            source = False
+            break
+        elif option == '2':
+            print('=> Installing from source.')
+            source = True
+            break
+        elif option == '3':
+            print('=> Updating existing installation.')
+            update = True
+            break
+        elif option == '4' or option == '':
+            print('=> Exiting.')
+            exit(0)
+        else:
+            print('Invalid option.')
+    except ValueError:
+        print('Invalid option.')
 
-if args.source:
+path = expandvars(path)
+
+if source:
     if not os.path.exists('Cargo.toml'):
         print('Cloning repository.')
         os.system("git clone https://github.com/sonarom/contemporary-z.git")
@@ -55,14 +73,50 @@ else:
     print('Making binary executable.')
     st = os.stat('cz')
     os.chmod('cz', st.st_mode | 0o0111)
-    if os.path.exists(os.path.join(args.path, 'cz')):
+    print(
+        'Please select the installation path, or press enter to use the',
+        '  default ({}).'.format(path),
+        sep='\n'
+    )
+    while True:
+        try:
+            new_path = input('Path: ')
+            if new_path == '':
+                break
+            elif os.path.exists(new_path):
+                path = new_path
+                break
+            else:
+                print('Invalid path.')
+        except ValueError:
+            print('Invalid path.')
+    if os.path.exists(os.path.join(path, 'cz')):
         print('Removing existing binary.')
-        os.remove(os.path.join(args.path, 'cz'))
+        os.remove(os.path.join(path, 'cz'))
     print('Adding new binary.')
-    shutil.move('cz', args.path)
+    shutil.move('cz', path)
 
-if not args.update:
-    if 'bash' in args.shell or 'zsh' in args.shell:
+if not update:
+    if shell is None:
+        print(
+            'Warning: could not detect shell.',
+            'Please specify the shell you want to install contemporary-z for.',
+            'Options: {}'.format(', '.join(valid_shells)),
+            sep='\n'
+        )
+        while True:
+            try:
+                shell = input('Shell: ')
+                if shell not in valid_shells:
+                    print('Invalid shell.')
+                else:
+                    break
+            except ValueError:
+                print('Invalid shell.')
+    if shell not in valid_shells:
+        print('Unfortunately, your shell is still not supported.')
+        exit(1)
+    if 'bash' in shell or 'zsh' in shell:
         print('Installing cz for bash shell.')
         print(' - Downloading z.sh.')
         request.urlretrieve(
@@ -73,14 +127,14 @@ if not args.update:
             zsh_contents = fp.read()
         bashrc_path = expandvars("$HOME/.bashrc")
         with open(bashrc_path, 'r') as fp:
-            matches = re.findall("z( )+\(", fp.read())
+            matches = re.findall(r"z( )+\(", fp.read())
         if len(matches) == 0:
             print(' - Adding z function to bashrc.')
             with open(bashrc_path, 'a') as fp:
                 fp.write(zsh_contents)
         else:
             print('Warning: a function `z` already exists in .bashrc, so it was not added.')
-    elif 'fish' in args.shell:
+    elif 'fish' in shell:
         print('Installing cz for fish shell.')
         print(' - Downloading z.fish.')
         request.urlretrieve(
@@ -96,13 +150,13 @@ if not args.update:
             print(' - Removing existing fish function.')
             os.remove(z_fish_func_path)
         print(' - Moving z.fish to fish functions directory.')
-        if args.source:
+        if source:
             shutil.copy('z.fish', z_fish_func_path)
         else:
             shutil.move('z.fish', z_fish_func_path)
 
-print('Done! Please restart your shell.')
-print(
-    'Then, you can check if contemporary-z is correctly installed by running:'
-    '\n$ z --version'
-)
+print('''\
+Done! Please restart your shell.
+Then, you can check if contemporary-z is correctly installed by running:
+$ z --version
+''')
