@@ -34,7 +34,7 @@ Linux-only.
 To install `cz`, you can just run the installation script.
 
 ```shell
-curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/j-morano/contemporary-z/main/install | python3
+python3 -c "$(curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/j-morano/contemporary-z/main/install)"
 ```
 
 ### Install manually using binary release
