@@ -20,6 +20,13 @@ update = False
 # Valid shells to install contemporary-z for
 valid_shells = ['bash', 'zsh', 'fish']
 
+
+def is_valid_shell(shell):
+    for valid_shell in valid_shells:
+        if valid_shell in shell:
+            return True
+
+
 # Offer all options and ask user to select one
 print('''\
 Welcome to the contemporary-z installer!
@@ -107,15 +114,12 @@ if not update:
         while True:
             try:
                 shell = input('Shell: ')
-                if shell not in valid_shells:
+                if not is_valid_shell(shell):
                     print('Invalid shell.')
                 else:
                     break
             except ValueError:
                 print('Invalid shell.')
-    if shell not in valid_shells:
-        print('Unfortunately, your shell is still not supported.')
-        exit(1)
     if 'bash' in shell or 'zsh' in shell:
         print('Installing cz for bash shell.')
         print(' - Downloading z.sh.')
@@ -154,6 +158,9 @@ if not update:
             shutil.copy('z.fish', z_fish_func_path)
         else:
             shutil.move('z.fish', z_fish_func_path)
+    else:
+        print('Unfortunately, your shell is still not supported.')
+        exit(1)
 
 print('''\
 Done! Please restart your shell.
