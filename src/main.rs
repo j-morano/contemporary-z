@@ -17,7 +17,6 @@ use crate::database::{
 use app::write_dir;
 use config::app_defaults_from_config;
 
-use toml::Value;
 use regex::Regex;
 use rusqlite::{Connection, Result};
 use std::env;
@@ -32,40 +31,50 @@ use crate::config::app_from_config;
 use crate::data::Directory;
 
 
-fn init_toml_file(database_toml_fn: String) -> Vec<Directory> {
-    println!("database_toml_fn: {}", database_toml_fn);
-    // Create database_toml_fn if it does not exist
-    if !Path::new(database_toml_fn.as_str()).exists() {
-        let database_toml_parent = Path::new(database_toml_fn.as_str()).parent().unwrap();
-        fs::create_dir_all(database_toml_parent).unwrap_or_else(
+
+fn init_dir_file(database_fn: String) -> Vec<Directory> {
+    println!("database_fn: {}", database_fn);
+    // Create database_fn if it does not exist
+    if !Path::new(database_fn.as_str()).exists() {
+        let database_fn_parent = Path::new(database_fn.as_str()).parent().unwrap();
+        fs::create_dir_all(database_fn_parent).unwrap_or_else(
             |e| panic!("Error creating dir: {}", e)
         );
-        fs::write(database_toml_fn.as_str(), "").unwrap_or_else(
+        fs::write(database_fn.as_str(), "").unwrap_or_else(
             |e| panic!("Error creating file: {}", e)
         );
     }
-    // Read database_toml_fn and parse it
-    let db_string = fs::read_to_string(database_toml_fn).unwrap();
+    // Read database_fn and parse it
+    let db_string = fs::read_to_string(database_fn).unwrap();
     println!("db_string: {}", db_string);
     /* The string is like this:
-     * [[dir]]
-     * name = "dir1"
-     * counter = 1
-     * last_access = 1234567890
-     * score = 0.0
-     * alias = "d1"
+     * name1
+     * counter1
+     * last_access1
+     * score1
+     * "alias1"
+     * ---
+     * name2
+     * counter2
+     * last_access2
+     * score2
+     * "alias2"
      *
-     * [[dir]]
      * ...
     */
-    let db = db_string.parse::<Value>().unwrap();
     let mut dirs = Vec::new();
-    for dir in db.as_table().unwrap().get("dir").unwrap().as_array().unwrap() {
-        let name = dir.get("name").unwrap().as_str().unwrap().to_string();
-        let counter = dir.get("counter").unwrap().as_integer().unwrap() as i64;
-        let last_access = dir.get("last_access").unwrap().as_integer().unwrap() as i64;
-        let score = dir.get("score").unwrap().as_float().unwrap();
-        let alias = dir.get("alias").unwrap().as_str().unwrap().to_string();
+    let dir_strings = db_string.split("---");
+    for dir_string in dir_strings {
+        let dir_string = dir_string.trim();
+        if dir_string.len() == 0 {
+            continue;
+        }
+        let dir_string = dir_string.split("\n").collect::<Vec<&str>>();
+        let name = dir_string[0].to_string();
+        let counter = dir_string[1].parse::<i64>().unwrap();
+        let last_access = dir_string[2].parse::<i64>().unwrap();
+        let score = dir_string[3].parse::<f64>().unwrap();
+        let alias = dir_string[4].replace("\"", "");
         let dir = Directory {
             name,
             counter,
@@ -75,9 +84,9 @@ fn init_toml_file(database_toml_fn: String) -> Vec<Directory> {
         };
         dirs.push(dir);
     }
-
     dirs
 }
+
 
 fn main() -> Result<()> {
     // Collect command-line arguments
@@ -107,8 +116,8 @@ fn main() -> Result<()> {
         );
     }
     // The same as database_path but as toml file, not db
-    let database_toml_fn = database_path.clone().replace(".db", ".toml");
-    let dirs = &mut init_toml_file(database_toml_fn.clone());
+    let database_dir_fn = database_path.clone().replace(".db", ".dir");
+    let dirs = &mut init_dir_file(database_dir_fn.clone());
     // mutable reference dirs
     directories::remove_old(dirs);
 
@@ -186,19 +195,18 @@ fn main() -> Result<()> {
         // If there is no argument, list stored dirs to select one interactively
         options::interactive_cd(&app, &conn, &args);
     }
-    // Write dirs to database_toml_fn
+    // Write dirs to database_dir_fn
     let mut db_string = String::new();
     for dir in dirs.iter() {
-        db_string.push_str("[[dir]]\n");
-        db_string.push_str(&format!("name = \"{}\"\n", dir.name));
-        db_string.push_str(&format!("counter = {}\n", dir.counter));
-        db_string.push_str(&format!("last_access = {}\n", dir.last_access));
+        db_string.push_str(&format!("{}\n", dir.name));
+        db_string.push_str(&format!("{}\n", dir.counter));
+        db_string.push_str(&format!("{}\n", dir.last_access));
         // Score must be a float in the format x.y
-        db_string.push_str(&format!("score = {:.10}\n", dir.score));
-        db_string.push_str(&format!("alias = \"{}\"\n", dir.alias));
-        db_string.push_str("\n");
+        db_string.push_str(&format!("{}\n", dir.score));
+        db_string.push_str(&format!("\"{}\"\n", dir.alias));
+        db_string.push_str("---\n");
     }
-    fs::write(database_toml_fn, db_string).unwrap_or_else(
+    fs::write(database_dir_fn, db_string).unwrap_or_else(
         |e| panic!("Error writing file: {}", e)
     );
     Ok(())
