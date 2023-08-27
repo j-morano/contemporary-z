@@ -1,5 +1,6 @@
 use crate::database::{update_dir_counter, update_current_dir, update_target_dir};
 use crate::data::Directory;
+use crate::directories;
 
 use rusqlite::{Connection, Result};
 use std::env::current_dir;
@@ -77,7 +78,7 @@ pub struct SelectionError;
 
 
 #[allow(dead_code)]
-pub(crate) struct App {
+pub(crate) struct App { //<'a> {
     pub(crate) theme: String,
     pub(crate) abs_paths: bool,
     pub(crate) compact_paths: bool,
@@ -86,6 +87,7 @@ pub(crate) struct App {
     pub(crate) substring: String,
     pub(crate) show_files: String,
     pub(crate) nav_start_number: usize,
+    // pub(crate) dirs: &'a mut Vec<Directory>,
 }
 
 impl App {
@@ -368,8 +370,15 @@ impl App {
             Ok(_) => {}
             Err(_) => {}
         };
+        // directories::insert(, dir_name.as_str(), current_seconds);
         self.post_current_dir(&conn);
         self.post_target_dir(&conn, dir_name.clone());
+        write_dir(dir_name.clone());
+    }
+
+    pub(crate) fn dir_direct_cd(&self, dirs: &mut Vec<Directory>, dir_name: String) {
+        println!("dir_direct_cd");
+        directories::insert(dirs, dir_name.as_str(), current_seconds());
         write_dir(dir_name.clone());
     }
 }

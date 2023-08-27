@@ -330,7 +330,13 @@ pub(crate) fn list_matching_dirs(app: &App, conn: &Connection, args: &[String]) 
 }
 
 
-pub(crate) fn do_cd(app: &App, conn: &Connection, args: &[String], forced_substring: &str) {
+pub(crate) fn do_cd(
+    app: &App,
+    conn: &Connection,
+    args: &[String],
+    forced_substring: &str,
+    dirs: &mut Vec<Directory>,
+) {
     // Directory argument
     let mut starting_index = 1;
     if forced_substring != "none" {
@@ -345,7 +351,8 @@ pub(crate) fn do_cd(app: &App, conn: &Connection, args: &[String], forced_substr
             if Path::new(dir_str).exists()
                 && metadata(dir_str).unwrap().is_dir()
             {
-                app.direct_cd(&conn, dir);
+                app.direct_cd(&conn, dir.clone());
+                app.dir_direct_cd(dirs, dir.clone());
             }
         },
         Err(_) => {
@@ -364,15 +371,17 @@ pub(crate) fn do_cd(app: &App, conn: &Connection, args: &[String], forced_substr
                 if let Err(_err) = dir {
                     // Do not store '..' or '.' dirs
                     if !(dir_str == "." || dir_str == "..") {
-                        let current_seconds = current_seconds();
-                        insert_dir(&conn, dir_str, current_seconds).unwrap();
+                        insert_dir(&conn, dir_str, current_seconds()).unwrap();
                     }
                     app.direct_cd(&conn, dir_str.to_string());
+                    app.dir_direct_cd(dirs, dir_str.to_string());
 
 
                 } else { // if it is already present in the table, update its
                          // counter
-                    app.direct_cd(&conn, dir.unwrap());
+                    let dir_str = dir.unwrap();
+                    app.direct_cd(&conn, dir_str.clone());
+                    app.dir_direct_cd(dirs, dir_str.clone());
                 }
             } else { // if arguments are substrings, go to the parent folder of the
                      // top results that matches the substrings
@@ -391,7 +400,8 @@ pub(crate) fn do_cd(app: &App, conn: &Connection, args: &[String], forced_substr
                     {
                         // Access the substring with the highest score
                         let selected_dir = valid_dirs[0].name.clone();
-                        app.direct_cd(&conn, selected_dir);
+                        app.direct_cd(&conn, selected_dir.clone());
+                        app.dir_direct_cd(dirs, selected_dir);
                     } else {
                         // Access the uppermost dir that matches the substring(s)
                         if app.substring == "shortest" || forced_substring == "shortest" {
@@ -402,11 +412,13 @@ pub(crate) fn do_cd(app: &App, conn: &Connection, args: &[String], forced_substr
                                 }
                             }
                             app.direct_cd(&conn, selected_dir.to_string());
+                            app.dir_direct_cd(dirs, selected_dir.to_string());
                         } else {
                             // Interactively select dir among all the dirs that
                             // match the substring(s)
                             let dir_name = app.select_valid_dir(valid_dirs, 0).unwrap();
                             app.direct_cd(&conn, dir_name.clone());
+                            app.dir_direct_cd(dirs, dir_name);
                         }
                     }
                 }
