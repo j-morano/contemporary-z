@@ -4,7 +4,7 @@ use crate::data::Directory;
 use rusqlite::{Connection, Result};
 use std::env::current_dir;
 use std::process::exit;
-use home::home_dir;
+use std::env;
 use std::fs;
 use std::io::prelude::*;
 use std::io;
@@ -68,8 +68,8 @@ pub(crate) fn current_seconds() -> i64 {
 }
 
 pub(crate) fn get_home_dir() -> String {
-    let current_home_dir = home_dir().unwrap();
-    return current_home_dir.into_os_string().into_string().unwrap();
+    let current_home_dir = env::var("HOME").unwrap();
+    return current_home_dir;
 }
 
 #[derive(Debug, Clone)]

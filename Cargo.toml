@@ -7,6 +7,5 @@ edition = "2018"
 
 [dependencies]
 rusqlite = { version = "0.26", features = ["bundled"] }
-home = "0.5"
 regex = "1.5"
 toml = "0.5"
