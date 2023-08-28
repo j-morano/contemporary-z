@@ -23,11 +23,11 @@ pub(crate) fn clear_database(app: &App, conn: &Connection) -> Result<()> {
 }
 
 
-pub(crate) fn go_to_previous_dir(app: &App, conn: &Connection) {
+pub(crate) fn go_to_previous_dir(mut app: App, conn: &Connection) {
     match obt_current_dir(&conn) {
         Ok(current_dir) => {
             if Path::new(current_dir.as_str()).exists() {
-                app.direct_cd(&conn, current_dir);
+                app.direct_cd(current_dir);
             } else {
                 app.show_error("No valid previous directory", "");
             }
@@ -39,11 +39,11 @@ pub(crate) fn go_to_previous_dir(app: &App, conn: &Connection) {
 }
 
 
-pub(crate) fn go_to_target_dir(app: &App, conn: &Connection) {
+pub(crate) fn go_to_target_dir(mut app: App, conn: &Connection) {
     match obt_target_dir(&conn) {
         Ok(target_dir) => {
             if Path::new(target_dir.as_str()).exists() {
-                app.direct_cd(&conn, target_dir);
+                app.direct_cd(target_dir);
             } else {
                 app.show_error("No valid current directory", "");
             }
@@ -77,7 +77,7 @@ pub(crate) fn list_dirs(app: &App, conn: &Connection, args: &[String]) {
 
 
 pub(crate) fn interactive_navigation(
-    app: &App,
+    mut app: App,
     conn: &Connection,
     hidden: bool,
     force_dir_only: bool,
@@ -195,7 +195,7 @@ pub(crate) fn interactive_navigation(
         println!("{}", app.format("bold", "", dir_to_read.to_string()));
         // println!("{}", dir_to_read);
     }
-    app.direct_cd(&conn, dir_to_read);
+    app.direct_cd(dir_to_read);
 }
 
 
@@ -239,14 +239,14 @@ pub(crate) fn remove_alias_interactive(app: &App, conn: &Connection) {
 }
 
 
-pub(crate) fn interactive_cd(app: &App, conn: &Connection, args: &[String]) {
+pub(crate) fn interactive_cd(mut app: App, conn: &Connection, args: &[String]) {
     let valid_dirs = get_valid_dirs(
         &conn, Vec::from(&args[1..]), current_seconds(), app.max_results, false
     ).unwrap();
 
     // Always list dirs
     let dir_name = app.select_valid_dir(valid_dirs, 0).unwrap();
-    app.direct_cd(&conn, dir_name.clone());
+    app.direct_cd(dir_name.clone());
 }
 
 

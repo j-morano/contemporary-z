@@ -289,46 +289,8 @@ impl App <'_> {
         return Ok(dir_name);
     }
 
-    pub(crate) fn post_current_dir(&self, conn: &Connection) {
-        let current_dir = match current_dir() {
-            Ok(current_dir) => { current_dir }
-            Err(_) => {
-                // If the current dir has been deleted, do not update current
-                //  dir
-                return
-            }
-        };
-        let current_dir_string = current_dir.into_os_string().into_string().expect("Error");
-        match update_current_dir(conn, current_dir_string) {
-            Ok(_) => { }
-            Err(error) => {
-                self.show_error("Could not update current dir", error.to_string().as_str());
-            }
-        };
-    }
 
-    pub(crate) fn post_target_dir(&self, conn: &Connection, dir_name: String) {
-        match update_target_dir(conn, dir_name) {
-            Ok(_) => { }
-            Err(error) => {
-                self.show_error("Could not update target dir", error.to_string().as_str());
-            }
-        };
-    }
-
-    pub(crate) fn direct_cd(&self, conn: &Connection, dir_name: String) {
-        let current_seconds = current_seconds();
-        match update_dir_counter(&conn, String::from(dir_name.clone()), current_seconds) {
-            Ok(_) => {}
-            Err(_) => {}
-        };
-        // directories::insert(, dir_name.as_str(), current_seconds);
-        self.post_current_dir(&conn);
-        self.post_target_dir(&conn, dir_name.clone());
-        write_dir(dir_name.clone());
-    }
-
-    pub(crate) fn dir_direct_cd(&mut self, dir_name: String) {
+    pub(crate) fn direct_cd(&mut self, dir_name: String) {
         println!("dir_direct_cd");
         self.insert(dir_name.as_str());
         write_dir(dir_name.clone());
@@ -353,7 +315,7 @@ impl App <'_> {
                 if Path::new(dir_str).exists()
                     && metadata(dir_str).unwrap().is_dir()
                 {
-                    self.dir_direct_cd(dir.name);
+                    self.direct_cd(dir.name);
                 }
             },
             Err(_) => {
@@ -369,10 +331,10 @@ impl App <'_> {
                         Ok(dir) => {
                             // If the dir is not in the table and it does exists in the
                             //   FS, add it
-                            self.dir_direct_cd(dir.name);
+                            self.direct_cd(dir.name);
                         },
                         Err(_) => {
-                            self.dir_direct_cd(dir_str.to_string());
+                            self.direct_cd(dir_str.to_string());
                         }
                     }
                 } else { // if arguments are substrings, go to the parent folder of the
@@ -393,7 +355,7 @@ impl App <'_> {
                             // Access the substring with the highest score
                             let selected_dir = valid_dirs[0].name.clone();
                             // app.direct_cd(&conn, selected_dir.clone());
-                            self.dir_direct_cd(selected_dir);
+                            self.direct_cd(selected_dir);
                         } else {
                             // Access the uppermost dir that matches the substring(s)
                             if self.substring == "shortest" || forced_substring == "shortest" {
@@ -404,13 +366,13 @@ impl App <'_> {
                                     }
                                 }
                                 // app.direct_cd(&conn, selected_dir.to_string());
-                                self.dir_direct_cd(selected_dir.to_string());
+                                self.direct_cd(selected_dir.to_string());
                             } else {
                                 // Interactively select dir among all the dirs that
                                 // match the substring(s)
                                 let dir_name = self.select_valid_dir(valid_dirs, 0).unwrap();
                                 // app.direct_cd(&conn, dir_name.clone());
-                                self.dir_direct_cd(dir_name);
+                                self.direct_cd(dir_name);
                             }
                         }
                     }
@@ -431,7 +393,7 @@ impl App <'_> {
                 // Interactively select dir among all the dirs that
                 // match the substring(s)
                 let dir_name = self.select_valid_dir(valid_dirs, 0).unwrap();
-                self.dir_direct_cd(dir_name.clone());
+                self.direct_cd(dir_name.clone());
             }
         }
     }
@@ -459,7 +421,7 @@ impl App <'_> {
 
             // Always list dirs
             let dir_name = self.select_valid_dir(valid_dirs, 0).unwrap();
-            self.dir_direct_cd(dir_name.clone());
+            self.direct_cd(dir_name.clone());
         } else {
             let mut alias = &String::from("");
             let mut dir_str;
@@ -648,5 +610,18 @@ impl App <'_> {
     }
 
 
+    fn get_all_dirs(&mut self) -> Vec<Directory> {
+        let mut all_dirs: Vec<Directory> = Vec::new();
+        for dir in self.dirs.iter() {
+            all_dirs.push(dir.clone());
+        }
+        all_dirs.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
+        return all_dirs;
+    }
+
+    pub(crate) fn list_all(&mut self) {
+        let all_dirs = self.get_all_dirs();
+        self.list_dirs(&all_dirs, 0, 1);
+    }
 
 }
