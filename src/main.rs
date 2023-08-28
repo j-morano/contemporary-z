@@ -7,15 +7,9 @@ mod utils;
 mod strings;
 mod options;
 
-use crate::database::{
-    create_dirs_table_if_not_exist,
-    create_current_dir_table_if_not_exist,
-    remove_old_dirs
-};
 
 use utils::write_dir;
 
-use rusqlite::{Connection, Result};
 use std::env;
 use std::fs;
 use crate::app::get_home_dir;
@@ -24,7 +18,7 @@ use crate::app::current_seconds;
 
 
 
-fn main() -> Result<()> {
+fn main() {
     // Collect command-line arguments
     let args: Vec<_> = env::args().collect();
 
@@ -37,13 +31,6 @@ fn main() -> Result<()> {
     app.compute_score(current_seconds());
 
 
-    // Open connection with the database
-    // let conn = Connection::open(app.database_path.clone())?;
-
-    // create_dirs_table_if_not_exist(&conn)?;
-    // create_current_dir_table_if_not_exist(&conn)?;
-    // remove_old_dirs(&conn)?;
-
     write_dir("".to_string());
 
     // If there is a dir argument, cd to the dir
@@ -52,20 +39,20 @@ fn main() -> Result<()> {
             println!("{} {}", "Version:", env!("CARGO_PKG_VERSION"));
         }
         else if args[1] == "--clear" {
-            // options::clear_database(&app, &conn)?;
+            app.clear_database();
         }
         else if args[1] == "-" {
-            // options::go_to_previous_dir(&app, &conn);
+            app.go_to_previous();
         }
         else if args[1] == "=" {
-            // options::go_to_target_dir(&app, &conn);
+            app.go_to_last();
         }
         else if args[1] == "--help" || args[1] == "-h" {
             options::show_help();
         }
         // Command option: list directories
         else if args[1] == "-l" {
-            // options::list_dirs(&app, &conn, &args);
+            app.list_existent();
         }
         else if args[1] == "-i" {
             // Command option: interactive subdir selection
@@ -80,17 +67,17 @@ fn main() -> Result<()> {
             // options::interactive_navigation(&app, &conn, true, false);
         }
         else if args[1] == "-r" {
-            // options::opt_remove_dirs(&app, &conn, &args);
+            app.remove_dirs(&args);
         }
         else if args[1] == "-a" {
             app.add_alias(&args);
         }
         else if args[1] == "--remove-alias" {
-            // options::remove_alias_interactive(&app, &conn)
+            app.remove_alias_interactive();
         }
         else if args[1] == "--sync" {
             //  Remove directories which do not exist.
-            // options::opt_sync_dirs(&app, &conn);
+            app.sync_dirs();
         }
         else if args[1] == "--list-all" {
             // options::opt_list_all_dirs(&app, &conn);
@@ -106,12 +93,11 @@ fn main() -> Result<()> {
             app.do_cd(&args, "score");
         }
         else {
-            // options::do_cd(app, &args, "none");
             app.do_cd(&args, "none");
         }
     } else {
         // If there is no argument, list stored dirs to select one interactively
-        // options::interactive_cd(&app, &conn, &args);
+        app.interactive_cd(&args);
     }
     // Write dirs to database_dir_fn
     let mut db_string = String::new();
@@ -129,5 +115,4 @@ fn main() -> Result<()> {
     fs::write(app.database_path.clone(), db_string).unwrap_or_else(
         |e| panic!("Error writing file: {}", e)
         );
-    Ok(())
 }

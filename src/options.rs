@@ -260,9 +260,3 @@ pub(crate) fn opt_sync_dirs(app: &App, conn: &Connection) {
     remove_non_existent_dirs(&conn).unwrap();
     app.show_exit_message("Synced directories.");
 }
-
-
-pub(crate) fn opt_list_all_dirs(app: &App, conn: &Connection) {
-    let all_dirs = get_all_dirs(&conn).unwrap();
-    app.list_dirs(&all_dirs, 0, 1);
-}

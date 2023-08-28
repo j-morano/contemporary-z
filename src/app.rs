@@ -610,18 +610,116 @@ impl App <'_> {
     }
 
 
-    fn get_all_dirs(&mut self) -> Vec<Directory> {
+    fn get_all_dirs(&mut self, existent_only: bool) -> Vec<Directory> {
         let mut all_dirs: Vec<Directory> = Vec::new();
         for dir in self.dirs.iter() {
+            if existent_only && !Path::new(&dir.name).exists() {
+                continue;
+            }
             all_dirs.push(dir.clone());
         }
         all_dirs.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
         return all_dirs;
     }
 
-    pub(crate) fn list_all(&mut self) {
-        let all_dirs = self.get_all_dirs();
+
+    pub(crate) fn list_existent(&mut self) {
+        let all_dirs = self.get_all_dirs(true);
         self.list_dirs(&all_dirs, 0, 1);
+    }
+
+
+    pub(crate) fn list_all(&mut self) {
+        let all_dirs = self.get_all_dirs(false);
+        self.list_dirs(&all_dirs, 0, 1);
+    }
+
+    pub(crate) fn sync_dirs(&mut self) {
+        let mut dirs_to_remove: Vec<String> = Vec::new();
+        for dir in self.dirs.iter() {
+            if !Path::new(&dir.name).exists() {
+                dirs_to_remove.push(dir.name.clone());
+            }
+        }
+        for dir in dirs_to_remove.iter() {
+            self.remove(dir);
+        }
+    }
+
+    pub(crate) fn remove(&mut self, dir_str: &str) {
+        let mut i = 0;
+        for dir in self.dirs.iter() {
+            if dir.name == dir_str {
+                self.dirs.remove(i);
+                break;
+            }
+            i += 1;
+        }
+    }
+
+
+    pub(crate) fn go_to_last(&mut self) {
+        // Sort by last access
+        self.dirs.sort_by(|a, b| b.last_access.partial_cmp(&a.last_access).unwrap());
+        // Get the first dir
+        let dir = self.dirs[0].name.clone();
+        self.direct_cd(dir);
+    }
+
+
+    pub(crate) fn go_to_previous(&mut self) {
+        // Sort by last access
+        self.dirs.sort_by(|a, b| b.last_access.partial_cmp(&a.last_access).unwrap());
+        // Get the second dir
+        if self.dirs.len() > 1 {
+            let dir = self.dirs[1].name.clone();
+            self.direct_cd(dir);
+        }
+    }
+
+    pub(crate) fn clear_database(&mut self) {
+        self.dirs.clear();
+    }
+
+    pub(crate) fn remove_alias_interactive(&mut self) {
+        let valid_dirs = self.get_valid(
+            Vec::new(), true
+        ).unwrap();
+
+        // Always list dirs
+        let dir_name = self.select_valid_dir(valid_dirs, 0).unwrap();
+        self.remove_alias(&dir_name);
+        let details = format!("{}->{}", "", dir_name);
+        self.show_exit_detailed_message("Removed dir alias", details.as_str());
+    }
+
+    pub(crate) fn interactive_cd(&mut self, args: &[String]) {
+        let valid_dirs = self.get_valid(
+            Vec::from(&args[1..]), false
+        ).unwrap();
+
+        // Always list dirs
+        let dir_name = self.select_valid_dir(valid_dirs, 0).unwrap();
+        self.direct_cd(dir_name.clone());
+    }
+
+
+    pub(crate) fn remove_dirs(&mut self, args: &[String]) {
+        let valid_dirs = self.get_valid(
+            Vec::from(&args[2..]), false
+        ).unwrap();
+
+        let dir_names = self.select_valid_dirs(valid_dirs, 0).unwrap();
+
+        let all_dirs_removed = true;
+        for dir_name in dir_names {
+            self.remove(&dir_name);
+        }
+        if all_dirs_removed {
+            self.show_exit_message("Removed directories");
+        } else {
+            self.show_error("Could not remove directories", "");
+        }
     }
 
 }
