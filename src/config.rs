@@ -8,8 +8,17 @@ use crate::strings::DEFAULT_CONFIG;
 
 fn get_option(user_value: Value, default_value: Value, option: &str) -> Value {
     let mut value = user_value.get(option);
+    // Check if value is None
     if value == None {
         value = default_value.get(option);
+    }
+    // If the option is "database_path", also check if the path exists. If it
+    //  does not exist, use the default value.
+    else if option == "database_path" {
+        let path = value.unwrap().as_str().unwrap();
+        if !fs::metadata(path).is_ok() {
+            value = default_value.get(option);
+        }
     }
     value.unwrap().clone()
 }
@@ -26,7 +35,7 @@ fn build_app(
     nav_start_number: Value,
     dirs: &mut Vec<Directory>,
 ) -> App {
-    let mut app = App {
+    let app = App {
         theme: theme.as_str().unwrap().to_string(),
         abs_paths: abs_paths.as_bool().unwrap(),
         compact_paths: compact_paths.as_bool().unwrap(),
@@ -38,23 +47,6 @@ fn build_app(
         dirs,
     };
     return app;
-}
-
-
-pub(crate) fn app_defaults_from_config(dirs: &mut Vec<Directory>) -> App {
-    let default_value = DEFAULT_CONFIG.to_string().parse::<Value>().unwrap();
-
-    return build_app(
-        default_value.get("theme").unwrap().clone(),
-        default_value.get("abs_paths").unwrap().clone(),
-        default_value.get("compact_paths").unwrap().clone(),
-        default_value.get("max_results").unwrap().clone(),
-        default_value.get("database_path").unwrap().clone(),
-        default_value.get("substring").unwrap().clone(),
-        default_value.get("show_files").unwrap().clone(),
-        default_value.get("nav_start_number").unwrap().clone(),
-        dirs,
-    )
 }
 
 

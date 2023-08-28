@@ -14,7 +14,6 @@ use crate::database::{
 };
 
 use utils::write_dir;
-use config::app_defaults_from_config;
 
 use regex::Regex;
 use rusqlite::{Connection, Result};
@@ -35,10 +34,10 @@ fn init_dir_file(database_fn: String) -> Vec<Directory> {
         let database_fn_parent = Path::new(database_fn.as_str()).parent().unwrap();
         fs::create_dir_all(database_fn_parent).unwrap_or_else(
             |e| panic!("Error creating dir: {}", e)
-        );
+            );
         fs::write(database_fn.as_str(), "").unwrap_or_else(
             |e| panic!("Error creating file: {}", e)
-        );
+            );
     }
     // Read database_fn and parse it
     let db_string = fs::read_to_string(database_fn).unwrap();
@@ -56,7 +55,7 @@ fn init_dir_file(database_fn: String) -> Vec<Directory> {
      * score2
      * ---
      * ...
-    */
+     */
     let mut dirs = Vec::new();
     let dir_strings = db_string.split("---");
     for dir_string in dir_strings {
@@ -91,9 +90,6 @@ fn main() -> Result<()> {
     // Collect command-line arguments
     let args: Vec<_> = env::args().collect();
 
-    let def_dirs = &mut Vec::new();
-    // App configuration
-    let app_defaults = app_defaults_from_config(def_dirs);
     let dirs = &mut Vec::new();
     let app = &mut app_from_config(dirs);
 
@@ -105,17 +101,11 @@ fn main() -> Result<()> {
         re.replace_all(database_path.as_str(), home_dir.clone())
         );
     // If config database not available, use default
-    if !Path::new(database_path.as_str()).parent().unwrap().exists() {
-        database_path = app_defaults.database_path.clone();
-        database_path = String::from(
-            re.replace_all(database_path.as_str(), home_dir.clone())
+    // Create application user-specific data dir if it does not exist
+    let database_file_parent = Path::new(database_path.as_str()).parent().unwrap();
+    fs::create_dir_all(database_file_parent).unwrap_or_else(
+        |e| panic!("Error creating dir: {}", e)
         );
-        // Create application user-specific data dir if it does not exist
-        let database_file_parent = Path::new(database_path.as_str()).parent().unwrap();
-        fs::create_dir_all(database_file_parent).unwrap_or_else(
-            |e| panic!("Error creating dir: {}", e)
-        );
-    }
     // The same as database_path but as toml file, not db
     let database_dir_fn = database_path.clone().replace(".db", ".dir");
     let dirs = &mut init_dir_file(database_dir_fn.clone());
@@ -215,6 +205,6 @@ fn main() -> Result<()> {
     }
     fs::write(database_dir_fn, db_string).unwrap_or_else(
         |e| panic!("Error writing file: {}", e)
-    );
+        );
     Ok(())
 }
