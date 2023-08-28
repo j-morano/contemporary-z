@@ -1,11 +1,8 @@
-use crate::database::{update_dir_counter, update_current_dir, update_target_dir};
 use crate::data::Directory;
 use crate::utils::canonicalize_dir_str;
 use crate::utils::write_dir;
 
-use rusqlite::{Connection, Result};
 use std::fs::metadata;
-use std::env::current_dir;
 use std::process::exit;
 use std::env;
 use std::io::prelude::*;
@@ -14,6 +11,8 @@ use regex::Regex;
 use std::time::{SystemTime, UNIX_EPOCH};
 use crate::colors::{color_code, sgr_code};
 use std::path::Path;
+use std::path::PathBuf;
+use std::fs;
 
 
 
@@ -201,7 +200,7 @@ impl App <'_> {
         return Ok(dir_name);
     }
 
-    pub(crate) fn select_valid_dirs(&self, valid_dirs: Vec<Directory>, max_num: usize) -> Result<Vec<String>> {
+    pub(crate) fn select_valid_dirs(&self, valid_dirs: Vec<Directory>, max_num: usize) -> Result<Vec<String>, String> {
 
         self.list_dirs(&valid_dirs, max_num, 1);
         println!();
@@ -256,7 +255,7 @@ impl App <'_> {
         }
     }
 
-    pub(crate) fn select_valid_dir(&self, valid_dirs: Vec<Directory>, max_num: usize) -> Result<String> {
+    pub(crate) fn select_valid_dir(&self, valid_dirs: Vec<Directory>, max_num: usize) -> Result<String, String> {
         let mut i = 0;
         let mut selected_dir: String;
         let mut dirs_to_show = &valid_dirs[0..];
@@ -722,4 +721,115 @@ impl App <'_> {
         }
     }
 
+
+    pub(crate) fn interactive_navigation(
+        &mut self,
+        hidden: bool,
+        force_dir_only: bool,
+    ) {
+        let mut dir_to_read = String::from(".");
+        loop {
+            let paths = fs::read_dir(dir_to_read.as_str()).unwrap();
+            let mut valid_dirs: Vec<Directory> = Vec::new();
+            let mut files: Vec<String> = Vec::new();
+
+            for result_path in paths {
+                let dir_path = result_path.unwrap().path();
+                if dir_path.exists()
+                {
+                    if dir_path.is_dir() {
+                        let filename = String::from(
+                            dir_path.file_name().unwrap().to_str().unwrap()
+                        );
+                        if (hidden && filename != ".")
+                            || (!hidden  && !filename.starts_with("."))
+                        {
+                            let directory = Directory{
+                                name: filename.clone(),
+                                counter: 0,
+                                last_access: 0,
+                                score: 0.0,
+                                alias: String::new()
+                            };
+                            valid_dirs.push(directory);
+                        }
+                    } else {
+                        if !force_dir_only {
+                            // Add to files
+                            let filename = String::from(
+                                dir_path.file_name().unwrap().to_str().unwrap()
+                            );
+                            files.push(filename);
+                        }
+                    }
+                }
+            }
+            // Parent directory
+            let directory = Directory{
+                name: "..".to_string(),
+                counter: 0,
+                last_access: 0,
+                score: 0.0,
+                alias: String::new()
+            };
+            valid_dirs.push(directory);
+            // Sort dirs by name
+            valid_dirs.sort_by_key(|dir| dir.name.clone());
+
+            if valid_dirs.is_empty() {
+                break;
+            }
+
+            let dir_name: String; //= String::new();
+            match self.select_valid_dir_no_exit(valid_dirs, usize::MAX, self.nav_start_number, files) {
+                Ok(dir_string)  => {
+                    dir_name = dir_string
+                }
+                Err(_error) => {
+                    break;
+                }
+            };
+            println!();
+
+            let dir_name_str = dir_name.as_str();
+            let base_dir_str = dir_to_read.as_str();
+            let dir_path = Path::new(base_dir_str);
+            let dir_path_buf = dir_path.join(dir_name_str);
+            let mut dir_str = dir_path_buf.to_str().unwrap();
+
+            let dir_pathbuf;
+            if self.abs_paths {
+                dir_pathbuf = PathBuf::from(dir_str).canonicalize().unwrap();
+                dir_str = dir_pathbuf.to_str().unwrap();
+            }
+
+            // Check if dir is in the table
+            let dir = self.get(dir_str);
+
+            // If the dir is not in the table and it does exists in the
+            //   FS, add it
+            if let Err(_err) = dir {
+                // Do not store '..' or '.' dirs
+                if !(dir_str == "." || dir_str == "..") {
+                    self.insert(dir_str);
+                }
+                dir_to_read = String::from(dir_str);
+
+            } else { // if it is already present in the table, update its
+                     // counter
+                match dir {
+                    Ok(dir_string)  => {
+                        dir_to_read = dir_string.name.clone();
+                    }
+                    Err(error) => {
+                        self.show_error("Directory does not exist", error.to_string().as_str());
+                    }
+                };
+            }
+            // print in bold dir_to_read
+            println!("{}", self.format("bold", "", dir_to_read.to_string()));
+            // println!("{}", dir_to_read);
+        }
+        self.direct_cd(dir_to_read);
+    }
 }

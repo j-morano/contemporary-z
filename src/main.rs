@@ -57,14 +57,17 @@ fn main() {
         else if args[1] == "-i" {
             // Command option: interactive subdir selection
             // options::interactive_navigation(&app, &conn, false, false);
+            app.interactive_navigation(false, false);
         }
         else if args[1] == "--id" {
             // Command option: interactive subdir selection
             // options::interactive_navigation(&app, &conn, false, true);
+            app.interactive_navigation(false, true);
         }
         else if args[1] == "--ih" {
             // Interactive subdir selection (including hidden)
             // options::interactive_navigation(&app, &conn, true, false);
+            app.interactive_navigation(true, false);
         }
         else if args[1] == "-r" {
             app.remove_dirs(&args);
