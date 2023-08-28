@@ -24,11 +24,8 @@ use std::path::Path;
 use std::fs;
 use crate::app::get_home_dir;
 use crate::config::app_from_config;
-
-
-
-
 use crate::data::Directory;
+use crate::app::current_seconds;
 
 
 
@@ -52,14 +49,13 @@ fn init_dir_file(database_fn: String) -> Vec<Directory> {
      * counter1
      * last_access1
      * score1
-     * "alias1"
+     * alias1 // alias is optional
      * ---
      * name2
      * counter2
      * last_access2
      * score2
-     * "alias2"
-     *
+     * ---
      * ...
     */
     let mut dirs = Vec::new();
@@ -74,7 +70,11 @@ fn init_dir_file(database_fn: String) -> Vec<Directory> {
         let counter = dir_string[1].parse::<i64>().unwrap();
         let last_access = dir_string[2].parse::<i64>().unwrap();
         let score = dir_string[3].parse::<f64>().unwrap();
-        let alias = dir_string[4].replace("\"", "");
+        let mut alias = String::from("");
+        if dir_string.len() == 5 {
+            // alias is optional
+            alias = dir_string[4].to_string();
+        }
         let dir = Directory {
             name,
             counter,
@@ -120,6 +120,7 @@ fn main() -> Result<()> {
     let dirs = &mut init_dir_file(database_dir_fn.clone());
     // mutable reference dirs
     directories::remove_old(dirs);
+    directories::compute_score(dirs, current_seconds());
 
     // Open connection with the database
     let conn = Connection::open(database_path)?;
@@ -183,13 +184,13 @@ fn main() -> Result<()> {
             options::list_matching_dirs(&app, &conn, &args);
         }
         else if args[1] == "-t" {
-            options::do_cd(&app, &conn, &args, "shortest", dirs);
+            options::do_cd(&app, dirs, &args, "shortest");
         }
         else if args[1] == "-e" {
-            options::do_cd(&app, &conn, &args, "score", dirs);
+            options::do_cd(&app, dirs, &args, "score");
         }
         else {
-            options::do_cd(&app, &conn, &args, "none", dirs);
+            options::do_cd(&app, dirs, &args, "none");
         }
     } else {
         // If there is no argument, list stored dirs to select one interactively
@@ -202,8 +203,10 @@ fn main() -> Result<()> {
         db_string.push_str(&format!("{}\n", dir.counter));
         db_string.push_str(&format!("{}\n", dir.last_access));
         // Score must be a float in the format x.y
-        db_string.push_str(&format!("{}\n", dir.score));
-        db_string.push_str(&format!("\"{}\"\n", dir.alias));
+        db_string.push_str(&format!("{:.10}\n", dir.score));
+        if dir.alias.len() > 0 {
+            db_string.push_str(&format!("{}\n", dir.alias));
+        }
         db_string.push_str("---\n");
     }
     fs::write(database_dir_fn, db_string).unwrap_or_else(

@@ -15,6 +15,7 @@ use crate::strings::HELP;
 use crate::app::App;
 use crate::database::{get_dir_by_alias, insert_dir_alias, add_alias_to_directory_unique};
 
+use crate::directories;
 
 
 pub(crate) fn clear_database(app: &App, conn: &Connection) -> Result<()> {
@@ -332,10 +333,9 @@ pub(crate) fn list_matching_dirs(app: &App, conn: &Connection, args: &[String]) 
 
 pub(crate) fn do_cd(
     app: &App,
-    conn: &Connection,
+    dirs: &mut Vec<Directory>,
     args: &[String],
     forced_substring: &str,
-    dirs: &mut Vec<Directory>,
 ) {
     // Directory argument
     let mut starting_index = 1;
@@ -345,14 +345,13 @@ pub(crate) fn do_cd(
     let mut dir_str = args[starting_index].as_str();
 
     // If string is an alias, then cd to the directory, if exists
-    match get_dir_by_alias(&conn, dir_str) {
+    match directories::get_by_alias(dirs, dir_str) {
         Ok(dir) => {
-            let dir_str = dir.as_str();
+            let dir_str = dir.name.as_str();
             if Path::new(dir_str).exists()
                 && metadata(dir_str).unwrap().is_dir()
             {
-                app.direct_cd(&conn, dir.clone());
-                app.dir_direct_cd(dirs, dir.clone());
+                app.dir_direct_cd(dirs, dir.name);
             }
         },
         Err(_) => {
@@ -364,30 +363,39 @@ pub(crate) fn do_cd(
                 dir_str = canonical_dir.as_str();
 
                 // Check if dir is in the table
-                let dir = get_dir(&conn, dir_str);
+                match directories::get(dirs, dir_str) {
+                    Ok(dir) => {
+                        // If the dir is not in the table and it does exists in the
+                        //   FS, add it
+                        app.dir_direct_cd(dirs, dir.name);
+                    },
+                    Err(_) => {
+                        app.dir_direct_cd(dirs, dir_str.to_string());
+                    }
+                }
 
                 // If the dir is not in the table and it does exists in the
                 //   FS, add it
-                if let Err(_err) = dir {
-                    // Do not store '..' or '.' dirs
-                    if !(dir_str == "." || dir_str == "..") {
-                        insert_dir(&conn, dir_str, current_seconds()).unwrap();
-                    }
-                    app.direct_cd(&conn, dir_str.to_string());
-                    app.dir_direct_cd(dirs, dir_str.to_string());
+                // if let Err(_err) = dir {
+                //     // Do not store '..' or '.' dirs
+                //     // if !(dir_str == "." || dir_str == "..") {
+                //     //     insert_dir(&conn, dir_str, current_seconds()).unwrap();
+                //     // }
+                //     // app.direct_cd(&conn, dir_str.to_string());
+                //     app.dir_direct_cd(dirs, dir_str.to_string());
 
 
-                } else { // if it is already present in the table, update its
-                         // counter
-                    let dir_str = dir.unwrap();
-                    app.direct_cd(&conn, dir_str.clone());
-                    app.dir_direct_cd(dirs, dir_str.clone());
-                }
+                // } else { // if it is already present in the table, update its
+                //          // counter
+                //     // let dir_str = dir.unwrap();
+                //     // app.direct_cd(&conn, dir_str.clone());
+                //     app.dir_direct_cd(dirs, dir);
+                // }
             } else { // if arguments are substrings, go to the parent folder of the
                      // top results that matches the substrings
                 // Get shortest directory
-                let valid_dirs = get_valid_dirs(
-                    &conn, Vec::from(&args[starting_index..]), current_seconds(), app.max_results, false
+                let valid_dirs = directories::get_valid(
+                    dirs, Vec::from(&args[starting_index..]), false
                 ).unwrap();
 
                 if valid_dirs.is_empty() {
@@ -400,7 +408,7 @@ pub(crate) fn do_cd(
                     {
                         // Access the substring with the highest score
                         let selected_dir = valid_dirs[0].name.clone();
-                        app.direct_cd(&conn, selected_dir.clone());
+                        // app.direct_cd(&conn, selected_dir.clone());
                         app.dir_direct_cd(dirs, selected_dir);
                     } else {
                         // Access the uppermost dir that matches the substring(s)
@@ -411,13 +419,13 @@ pub(crate) fn do_cd(
                                     selected_dir = dir.name.as_str();
                                 }
                             }
-                            app.direct_cd(&conn, selected_dir.to_string());
+                            // app.direct_cd(&conn, selected_dir.to_string());
                             app.dir_direct_cd(dirs, selected_dir.to_string());
                         } else {
                             // Interactively select dir among all the dirs that
                             // match the substring(s)
                             let dir_name = app.select_valid_dir(valid_dirs, 0).unwrap();
-                            app.direct_cd(&conn, dir_name.clone());
+                            // app.direct_cd(&conn, dir_name.clone());
                             app.dir_direct_cd(dirs, dir_name);
                         }
                     }
