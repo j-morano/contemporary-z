@@ -1,9 +1,7 @@
 use rusqlite::{Connection, Result};
 use std::path::{Path, PathBuf};
 use std::fs;
-use std::fs::metadata;
 use crate::app::current_seconds;
-use crate::utils::canonicalize_dir_str;
 use crate::data::Directory;
 use crate::database::{
     get_dir, get_valid_dirs, drop_directories_table, insert_dir,
@@ -13,9 +11,8 @@ use crate::database::{
 
 use crate::strings::HELP;
 use crate::app::App;
-use crate::database::{get_dir_by_alias, insert_dir_alias, add_alias_to_directory_unique};
+// use crate::database::{add_alias_to_directory_unique};
 
-use crate::directories;
 
 
 pub(crate) fn clear_database(app: &App, conn: &Connection) -> Result<()> {
@@ -239,200 +236,6 @@ pub(crate) fn remove_alias_interactive(app: &App, conn: &Connection) {
     // Always list dirs
     remove_dir_alias(&conn, dir_str).unwrap();
     app.show_exit_detailed_message("Removed alias for dir", dir_str);
-}
-
-
-pub(crate) fn add_alias(app: &App, conn: &Connection, args: &[String]) {
-    if args.len() < 3 {
-        println!("Aliased dirs");
-        let valid_dirs = get_valid_dirs(
-            &conn, Vec::new(), current_seconds(), app.max_results, true
-        ).unwrap();
-
-        // Always list dirs
-        let dir_name = app.select_valid_dir(valid_dirs, 0).unwrap();
-        app.direct_cd(&conn, dir_name.clone());
-    } else {
-        let mut alias = &String::from("");
-        let mut dir_str;
-        if args.len() < 4 {
-            // Remove alias
-            dir_str = args[2].as_str();
-        } else {
-            alias = &args[2];
-            dir_str = args[3].as_str();
-        }
-
-        if Path::new(dir_str).exists()
-            && metadata(dir_str).unwrap().is_dir()
-        {
-            let canonical_dir = canonicalize_dir_str(dir_str);
-            dir_str = canonical_dir.as_str();
-
-            // Check if dir is in the table
-            let dir = get_dir(&conn, dir_str);
-
-            // If the dir is not in the table and it does exists in the
-            //   FS, add it
-            if let Err(_err) = dir {
-                // Do not store '..' or '.' dirs
-                if !(dir_str == "." || dir_str == "..") {
-                    let current_seconds = current_seconds();
-                    insert_dir_alias(&conn, dir_str, current_seconds, alias.as_str()).unwrap();
-                    let details = format!("{}->{}", alias, dir_str);
-                    app.show_exit_detailed_message("Removed dir alias", details.as_str());
-                }
-            } else {
-                if args.len() < 4 {
-                    remove_dir_alias(&conn, dir_str).unwrap();
-                    let details = format!("{}->{}", alias, dir_str);
-                    app.show_exit_detailed_message("Removed dir alias", details.as_str());
-                } else {
-                    add_alias_to_directory_unique(&conn, dir_str, alias.as_str()).unwrap();
-                    let details = format!("{}->{}", alias, dir_str);
-                    app.show_exit_detailed_message("Added dir alias", details.as_str());
-                }
-            }
-        } else {
-            println!("Select directory to alias");
-            // app.show_error("The provided directory does not exist", "");
-            let valid_dirs = get_valid_dirs(
-                &conn, Vec::new(), current_seconds(), app.max_results, false
-            ).unwrap();
-
-            // Always list dirs
-            let dir_name = app.select_valid_dir(valid_dirs, 0).unwrap();
-            add_alias_to_directory_unique(&conn, &dir_name, dir_str).unwrap();
-            let details = format!("{}->{}", dir_str, dir_name);
-            app.show_exit_detailed_message("Added dir alias", details.as_str());
-        }
-    }
-}
-
-
-pub(crate) fn list_matching_dirs(app: &App, conn: &Connection, args: &[String]) {
-
-    if args.len() < 3 {
-        app.show_error("No substring provided", "");
-    } else {
-        let valid_dirs = get_valid_dirs(
-            // 100000 ~ no results limit
-            &conn, Vec::from(&args[2..]), current_seconds(), app.max_results, false
-        ).unwrap();
-        if valid_dirs.is_empty() {
-            app.show_exit_message("No dirs");
-        } else {
-            // Interactively select dir among all the dirs that
-            // match the substring(s)
-            let dir_name = app.select_valid_dir(valid_dirs, 0).unwrap();
-            app.direct_cd(&conn, dir_name.clone());
-        }
-    }
-}
-
-
-pub(crate) fn do_cd(
-    app: &App,
-    dirs: &mut Vec<Directory>,
-    args: &[String],
-    forced_substring: &str,
-) {
-    // Directory argument
-    let mut starting_index = 1;
-    if forced_substring != "none" {
-        starting_index = 2;
-    }
-    let mut dir_str = args[starting_index].as_str();
-
-    // If string is an alias, then cd to the directory, if exists
-    match directories::get_by_alias(dirs, dir_str) {
-        Ok(dir) => {
-            let dir_str = dir.name.as_str();
-            if Path::new(dir_str).exists()
-                && metadata(dir_str).unwrap().is_dir()
-            {
-                app.dir_direct_cd(dirs, dir.name);
-            }
-        },
-        Err(_) => {
-            // If it is a dir AND exists in the FS
-            if Path::new(dir_str).exists()
-                && metadata(dir_str).unwrap().is_dir()
-            {
-                let canonical_dir = canonicalize_dir_str(dir_str);
-                dir_str = canonical_dir.as_str();
-
-                // Check if dir is in the table
-                match directories::get(dirs, dir_str) {
-                    Ok(dir) => {
-                        // If the dir is not in the table and it does exists in the
-                        //   FS, add it
-                        app.dir_direct_cd(dirs, dir.name);
-                    },
-                    Err(_) => {
-                        app.dir_direct_cd(dirs, dir_str.to_string());
-                    }
-                }
-
-                // If the dir is not in the table and it does exists in the
-                //   FS, add it
-                // if let Err(_err) = dir {
-                //     // Do not store '..' or '.' dirs
-                //     // if !(dir_str == "." || dir_str == "..") {
-                //     //     insert_dir(&conn, dir_str, current_seconds()).unwrap();
-                //     // }
-                //     // app.direct_cd(&conn, dir_str.to_string());
-                //     app.dir_direct_cd(dirs, dir_str.to_string());
-
-
-                // } else { // if it is already present in the table, update its
-                //          // counter
-                //     // let dir_str = dir.unwrap();
-                //     // app.direct_cd(&conn, dir_str.clone());
-                //     app.dir_direct_cd(dirs, dir);
-                // }
-            } else { // if arguments are substrings, go to the parent folder of the
-                     // top results that matches the substrings
-                // Get shortest directory
-                let valid_dirs = directories::get_valid(
-                    dirs, Vec::from(&args[starting_index..]), false
-                ).unwrap();
-
-                if valid_dirs.is_empty() {
-                    app.show_exit_message("No dirs");
-                } else {
-                    // If there is only one result, cd to it
-                    if
-                        valid_dirs.len() == 1
-                        || (app.substring == "score" && forced_substring != "shortest")
-                    {
-                        // Access the substring with the highest score
-                        let selected_dir = valid_dirs[0].name.clone();
-                        // app.direct_cd(&conn, selected_dir.clone());
-                        app.dir_direct_cd(dirs, selected_dir);
-                    } else {
-                        // Access the uppermost dir that matches the substring(s)
-                        if app.substring == "shortest" || forced_substring == "shortest" {
-                            let mut selected_dir = valid_dirs[0].name.as_str();
-                            for dir in valid_dirs.iter() {
-                                if dir.name.len() < selected_dir.len() {
-                                    selected_dir = dir.name.as_str();
-                                }
-                            }
-                            // app.direct_cd(&conn, selected_dir.to_string());
-                            app.dir_direct_cd(dirs, selected_dir.to_string());
-                        } else {
-                            // Interactively select dir among all the dirs that
-                            // match the substring(s)
-                            let dir_name = app.select_valid_dir(valid_dirs, 0).unwrap();
-                            // app.direct_cd(&conn, dir_name.clone());
-                            app.dir_direct_cd(dirs, dir_name);
-                        }
-                    }
-                }
-            }
-        },
-    };
 }
 
 

@@ -44,31 +44,31 @@ pub(crate) fn remove_dir_alias(conn: &Connection, dir_str: &str) -> Result<usize
 }
 
 
-pub(crate) fn add_alias_to_directory_unique(
-    conn: &Connection,
-    dir_str: &str,
-    alias: &str,
-) -> Result<usize> {
-    let result = conn.execute(
-        "UPDATE directories SET
-            alias = ''
-            where alias = ?1",
-        params![alias],
-    );
-    match result {
-        Ok(_) => {
-            return conn.execute(
-                "UPDATE directories SET
-                    alias = ?1
-                    where name = ?2",
-                params![alias, dir_str],
-            );
-        }
-        Err(e) => {
-            return Err(e);
-        }
-    }
-}
+// pub(crate) fn add_alias_to_directory_unique(
+//     conn: &Connection,
+//     dir_str: &str,
+//     alias: &str,
+// ) -> Result<usize> {
+//     let result = conn.execute(
+//         "UPDATE directories SET
+//             alias = ''
+//             where alias = ?1",
+//         params![alias],
+//     );
+//     match result {
+//         Ok(_) => {
+//             return conn.execute(
+//                 "UPDATE directories SET
+//                     alias = ?1
+//                     where name = ?2",
+//                 params![alias, dir_str],
+//             );
+//         }
+//         Err(e) => {
+//             return Err(e);
+//         }
+//     }
+// }
 
 
 pub(crate) fn drop_directories_table(conn: &Connection) -> Result<usize> {

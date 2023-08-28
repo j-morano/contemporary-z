@@ -6,7 +6,6 @@ mod colors;
 mod utils;
 mod strings;
 mod options;
-mod directories;
 
 use crate::database::{
     create_dirs_table_if_not_exist,
@@ -14,7 +13,7 @@ use crate::database::{
     remove_old_dirs
 };
 
-use app::write_dir;
+use utils::write_dir;
 use config::app_defaults_from_config;
 
 use regex::Regex;
@@ -92,9 +91,11 @@ fn main() -> Result<()> {
     // Collect command-line arguments
     let args: Vec<_> = env::args().collect();
 
+    let def_dirs = &mut Vec::new();
     // App configuration
-    let app_defaults = app_defaults_from_config();
-    let app = app_from_config();
+    let app_defaults = app_defaults_from_config(def_dirs);
+    let dirs = &mut Vec::new();
+    let app = &mut app_from_config(dirs);
 
     let mut database_path = app.database_path.clone();
     // Replace typical environment variables
@@ -119,8 +120,10 @@ fn main() -> Result<()> {
     let database_dir_fn = database_path.clone().replace(".db", ".dir");
     let dirs = &mut init_dir_file(database_dir_fn.clone());
     // mutable reference dirs
-    directories::remove_old(dirs);
-    directories::compute_score(dirs, current_seconds());
+    app.remove_old();
+    app.compute_score(current_seconds());
+
+    app.dirs = dirs;
 
     // Open connection with the database
     let conn = Connection::open(database_path)?;
@@ -168,7 +171,7 @@ fn main() -> Result<()> {
             options::opt_remove_dirs(&app, &conn, &args);
         }
         else if args[1] == "-a" {
-            options::add_alias(&app, &conn, &args);
+            app.add_alias(&args);
         }
         else if args[1] == "--remove-alias" {
             options::remove_alias_interactive(&app, &conn)
@@ -181,16 +184,17 @@ fn main() -> Result<()> {
             options::opt_list_all_dirs(&app, &conn);
         }
         else if args[1] == "-f" {
-            options::list_matching_dirs(&app, &conn, &args);
+            app.list_matching_dirs(&args);
         }
         else if args[1] == "-t" {
-            options::do_cd(&app, dirs, &args, "shortest");
+            app.do_cd(&args, "shortest");
         }
         else if args[1] == "-e" {
-            options::do_cd(&app, dirs, &args, "score");
+            app.do_cd(&args, "score");
         }
         else {
-            options::do_cd(&app, dirs, &args, "none");
+            // options::do_cd(app, &args, "none");
+            app.do_cd(&args, "none");
         }
     } else {
         // If there is no argument, list stored dirs to select one interactively

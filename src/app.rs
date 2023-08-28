@@ -1,68 +1,21 @@
 use crate::database::{update_dir_counter, update_current_dir, update_target_dir};
 use crate::data::Directory;
-use crate::directories;
+use crate::utils::canonicalize_dir_str;
+use crate::utils::write_dir;
 
 use rusqlite::{Connection, Result};
+use std::fs::metadata;
 use std::env::current_dir;
 use std::process::exit;
 use std::env;
-use std::fs;
 use std::io::prelude::*;
 use std::io;
 use regex::Regex;
 use std::time::{SystemTime, UNIX_EPOCH};
 use crate::colors::{color_code, sgr_code};
+use std::path::Path;
 
 
-pub(crate) fn write_dir(path: String) {
-    // Open file in read mode
-    let mut z_file = match fs::OpenOptions::new()
-        .read(true)
-        .write(false)
-        .open("/tmp/cz_path") {
-            Err(_) => {
-                // Open file in write mode
-                fs::OpenOptions::new()
-                    .read(true)
-                    .write(true)
-                    .create(true)
-                    .truncate(true)
-                    .open("/tmp/cz_path")
-                    .expect("Could not open file")
-            },
-            Ok(file) => {
-                // Set writeable
-                let mut permissions = file.metadata().expect(
-                    "Could not get metadata"
-                    ).permissions();
-                permissions.set_readonly(false);
-                file.set_permissions(permissions.clone()).expect(
-                    "Could not set permissions."
-                    );
-                // Open file in write mode
-                fs::OpenOptions::new()
-                    .read(true)
-                    .write(true)
-                    .truncate(true)
-                    .open("/tmp/cz_path")
-                    .expect("Could not open file")
-            }
-        };
-    // Write action
-    z_file.write_all(
-        format!("{}", path).as_bytes()
-        ).expect("Could not write to file");
-    // Set read-only again
-    let mut permissions = z_file.metadata().expect(
-        "Could not get metadata"
-        ).permissions();
-    permissions.set_readonly(false);
-    z_file.set_permissions(permissions.clone()).expect(
-        "Could not set permissions."
-        );
-    permissions.set_readonly(true);
-    z_file.set_permissions(permissions).expect("Could not set permissions.");
-}
 
 pub(crate) fn current_seconds() -> i64 {
     return SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64;
@@ -78,7 +31,7 @@ pub struct SelectionError;
 
 
 #[allow(dead_code)]
-pub(crate) struct App { //<'a> {
+pub(crate) struct App <'a> {
     pub(crate) theme: String,
     pub(crate) abs_paths: bool,
     pub(crate) compact_paths: bool,
@@ -87,10 +40,10 @@ pub(crate) struct App { //<'a> {
     pub(crate) substring: String,
     pub(crate) show_files: String,
     pub(crate) nav_start_number: usize,
-    // pub(crate) dirs: &'a mut Vec<Directory>,
+    pub(crate) dirs: &'a mut Vec<Directory>,
 }
 
-impl App {
+impl App <'_> {
     pub(crate) fn format(&self, sgr: &str, color: &str, text: String) -> String {
         let mut full_color ;
         if self.theme == "bright" {
@@ -304,7 +257,6 @@ impl App {
     }
 
     pub(crate) fn select_valid_dir(&self, valid_dirs: Vec<Directory>, max_num: usize) -> Result<String> {
-
         let mut i = 0;
         let mut selected_dir: String;
         let mut dirs_to_show = &valid_dirs[0..];
@@ -376,9 +328,325 @@ impl App {
         write_dir(dir_name.clone());
     }
 
-    pub(crate) fn dir_direct_cd(&self, dirs: &mut Vec<Directory>, dir_name: String) {
+    pub(crate) fn dir_direct_cd(&mut self, dir_name: String) {
         println!("dir_direct_cd");
-        directories::insert(dirs, dir_name.as_str(), current_seconds());
+        self.insert(dir_name.as_str());
         write_dir(dir_name.clone());
     }
+
+    pub(crate) fn do_cd(
+        &mut self,
+        args: &[String],
+        forced_substring: &str,
+    ) {
+        // Directory argument
+        let mut starting_index = 1;
+        if forced_substring != "none" {
+            starting_index = 2;
+        }
+        let mut dir_str = args[starting_index].as_str();
+
+        // If string is an alias, then cd to the directory, if exists
+        match self.get_by_alias(dir_str) {
+            Ok(dir) => {
+                let dir_str = dir.name.as_str();
+                if Path::new(dir_str).exists()
+                    && metadata(dir_str).unwrap().is_dir()
+                {
+                    self.dir_direct_cd(dir.name);
+                }
+            },
+            Err(_) => {
+                // If it is a dir AND exists in the FS
+                if Path::new(dir_str).exists()
+                    && metadata(dir_str).unwrap().is_dir()
+                {
+                    let canonical_dir = canonicalize_dir_str(dir_str);
+                    dir_str = canonical_dir.as_str();
+
+                    // Check if dir is in the table
+                    match self.get(dir_str) {
+                        Ok(dir) => {
+                            // If the dir is not in the table and it does exists in the
+                            //   FS, add it
+                            self.dir_direct_cd(dir.name);
+                        },
+                        Err(_) => {
+                            self.dir_direct_cd(dir_str.to_string());
+                        }
+                    }
+                } else { // if arguments are substrings, go to the parent folder of the
+                         // top results that matches the substrings
+                    // Get shortest directory
+                    let valid_dirs = self.get_valid(
+                        Vec::from(&args[starting_index..]), false
+                    ).unwrap();
+
+                    if valid_dirs.is_empty() {
+                        self.show_exit_message("No dirs");
+                    } else {
+                        // If there is only one result, cd to it
+                        if
+                            valid_dirs.len() == 1
+                            || (self.substring == "score" && forced_substring != "shortest")
+                        {
+                            // Access the substring with the highest score
+                            let selected_dir = valid_dirs[0].name.clone();
+                            // app.direct_cd(&conn, selected_dir.clone());
+                            self.dir_direct_cd(selected_dir);
+                        } else {
+                            // Access the uppermost dir that matches the substring(s)
+                            if self.substring == "shortest" || forced_substring == "shortest" {
+                                let mut selected_dir = valid_dirs[0].name.as_str();
+                                for dir in valid_dirs.iter() {
+                                    if dir.name.len() < selected_dir.len() {
+                                        selected_dir = dir.name.as_str();
+                                    }
+                                }
+                                // app.direct_cd(&conn, selected_dir.to_string());
+                                self.dir_direct_cd(selected_dir.to_string());
+                            } else {
+                                // Interactively select dir among all the dirs that
+                                // match the substring(s)
+                                let dir_name = self.select_valid_dir(valid_dirs, 0).unwrap();
+                                // app.direct_cd(&conn, dir_name.clone());
+                                self.dir_direct_cd(dir_name);
+                            }
+                        }
+                    }
+                }
+            },
+        };
+    }
+
+
+    pub(crate) fn list_matching_dirs(&mut self, args: &[String]) {
+        if args.len() < 3 {
+            self.show_error("No substring provided", "");
+        } else {
+            let valid_dirs = self.get_valid(Vec::from(&args[2..]), false).unwrap();
+            if valid_dirs.is_empty() {
+                self.show_exit_message("No dirs");
+            } else {
+                // Interactively select dir among all the dirs that
+                // match the substring(s)
+                let dir_name = self.select_valid_dir(valid_dirs, 0).unwrap();
+                self.dir_direct_cd(dir_name.clone());
+            }
+        }
+    }
+
+    
+    pub(crate) fn replace_alias(&mut self, dir_str: &str, alias: &str,) {
+        for dir in self.dirs.iter_mut() {
+            if dir.alias == alias {
+                dir.alias = alias.to_string();
+            }
+            if dir.name == dir_str {
+                dir.alias = alias.to_string();
+            }
+        }
+    }
+
+
+
+    pub(crate) fn add_alias(&mut self, args: &[String]) {
+        if args.len() < 3 {
+            println!("Aliased dirs");
+            let valid_dirs = self.get_valid(
+                Vec::new(), true
+            ).unwrap();
+
+            // Always list dirs
+            let dir_name = self.select_valid_dir(valid_dirs, 0).unwrap();
+            self.dir_direct_cd(dir_name.clone());
+        } else {
+            let mut alias = &String::from("");
+            let mut dir_str;
+            if args.len() < 4 {
+                // Remove alias
+                dir_str = args[2].as_str();
+            } else {
+                alias = &args[2];
+                dir_str = args[3].as_str();
+            }
+
+            if Path::new(dir_str).exists()
+                && metadata(dir_str).unwrap().is_dir()
+            {
+                let canonical_dir = canonicalize_dir_str(dir_str);
+                dir_str = canonical_dir.as_str();
+
+                // Check if dir is in the table
+                let dir = self.get(dir_str);
+
+                // If the dir is not in the table and it does exists in the
+                //   FS, add it
+                if let Err(_err) = dir {
+                    // Do not store '..' or '.' dirs
+                    if !(dir_str == "." || dir_str == "..") {
+                        self.insert_with_alias(dir_str, alias.as_str());
+                        let details = format!("{}->{}", alias, dir_str);
+                        self.show_exit_detailed_message("Removed dir alias", details.as_str());
+                    }
+                } else {
+                    if args.len() < 4 {
+                        self.remove_alias(dir_str);
+                        let details = format!("{}->{}", alias, dir_str);
+                        self.show_exit_detailed_message("Removed dir alias", details.as_str());
+                    } else {
+                        // add_alias_to_directory_unique(&conn, dir_str, alias.as_str()).unwrap();
+                        self.replace_alias(dir_str, alias.as_str());
+                        let details = format!("{}->{}", alias, dir_str);
+                        self.show_exit_detailed_message("Added dir alias", details.as_str());
+                    }
+                }
+            } else {
+                println!("Select directory to alias");
+                // app.show_error("The provided directory does not exist", "");
+                let valid_dirs = self.get_valid(
+                    Vec::new(), false
+                ).unwrap();
+
+                // Always list dirs
+                let dir_name = self.select_valid_dir(valid_dirs, 0).unwrap();
+                // add_alias_to_directory_unique(&conn, &dir_name, dir_str).unwrap();
+                self.replace_alias(&dir_name, dir_str);
+                let details = format!("{}->{}", dir_str, dir_name);
+                self.show_exit_detailed_message("Added dir alias", details.as_str());
+            }
+        }
+    }
+
+
+
+    pub(crate) fn remove_old(&mut self) {
+        let current_seconds = current_seconds();
+        let seconds_in_a_month = 60 * 60 * 24 * 30;
+        let limit = current_seconds - seconds_in_a_month;
+        // Remove old dirs, i.e. dirs that have not been accessed in a month
+        self.dirs.retain(|dir| dir.last_access > limit);
+    }
+
+
+    pub(crate) fn insert(&mut self, dir: &str) {
+        self.insert_with_alias(dir, "");
+    }
+
+
+
+    pub(crate) fn insert_with_alias(&mut self, dir: &str, alias: &str) {
+        println!("inserting dir: {}", dir);
+        // Check if dir is already in dirs
+        let mut found = false;
+        for d in self.dirs.iter_mut() {
+            if d.name == dir {
+                d.counter += 1;
+                d.last_access = current_seconds();
+                d.alias = alias.to_string();
+                found = true;
+                break;
+            }
+        }
+        // If not, add it
+        if !found {
+            let dir = Directory {
+                name: dir.to_string(),
+                counter: 1,
+                last_access: current_seconds(),
+                score: 0.0,
+                alias: alias.to_string(),
+            };
+            self.dirs.push(dir);
+        }
+    }
+
+
+    pub(crate) fn get_by_alias(&mut self, alias: &str) -> Result<Directory, String> {
+        for dir in self.dirs.iter() {
+            if dir.alias == alias {
+                return Ok(dir.clone());
+            }
+        }
+        Err("Alias not found".to_string())
+    }
+
+
+    pub(crate) fn get(&mut self, name: &str) -> Result<Directory, String> {
+        for d in self.dirs.iter() {
+            if d.name == name {
+                return Ok(d.clone());
+            }
+        }
+        Err("Directory not found".to_string())
+    }
+
+
+    pub(crate) fn compute_score(&mut self, current_seconds: i64) {
+        // 'Frecency' formula: https://github.com/rupa/z/blob/master/z.sh
+        for dir in self.dirs.iter_mut() {
+            dir.score = 10000.0 * dir.counter as f64 * (3.75 / ((0.0001 * (current_seconds - dir.last_access) as f64 + 1.0) + 0.25));
+        }
+    }
+
+
+    pub(crate) fn get_valid( 
+        &mut self,
+        patterns: Vec<String>,
+        alias_only: bool,
+    ) -> Result<Vec<Directory>, String> {
+        // Filter invalid dirs from the current path
+        let mut valid_dirs: Vec<Directory> = Vec::new();
+
+        // Sub-string coincidences
+        let mut pattern = String::new();
+        if !patterns.is_empty() {
+            pattern = patterns.join("*");
+            pattern = format!("*{}*", pattern);
+        }
+
+        // Sort by score
+        self.dirs.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
+
+        // Filter by pattern
+        let mut filtered_dirs: Vec<Directory> = Vec::new();
+        for dir in self.dirs.iter() {
+            if pattern.is_empty() || dir.name.contains(&pattern) {
+                filtered_dirs.push(dir.clone());
+            }
+        }
+
+        // Filter by alias
+        if alias_only {
+            let mut alias_dirs: Vec<Directory> = Vec::new();
+            for dir in filtered_dirs.iter() {
+                if dir.alias != "" {
+                    alias_dirs.push(dir.clone());
+                }
+            }
+            filtered_dirs = alias_dirs;
+        }
+        
+        // Filter by existence
+        for dir in filtered_dirs.iter() {
+            if Path::new(&dir.name).exists() {
+                valid_dirs.push(dir.clone());
+            }
+        }
+
+        Ok(valid_dirs)
+    }
+
+
+    pub(crate) fn remove_alias(&mut self, dir_str: &str) {
+        for dir in self.dirs.iter_mut() {
+            if dir.name == dir_str {
+                dir.alias = "".to_string();
+                break;
+            }
+        }
+    }
+
+
+
 }

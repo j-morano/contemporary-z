@@ -1,5 +1,6 @@
 use std::fs;
 use toml::Value;
+use crate::data::Directory;
 use crate::get_home_dir;
 use crate::app::App;
 use crate::strings::DEFAULT_CONFIG;
@@ -23,8 +24,9 @@ fn build_app(
     substring: Value,
     show_files: Value,
     nav_start_number: Value,
+    dirs: &mut Vec<Directory>,
 ) -> App {
-    return App {
+    let mut app = App {
         theme: theme.as_str().unwrap().to_string(),
         abs_paths: abs_paths.as_bool().unwrap(),
         compact_paths: compact_paths.as_bool().unwrap(),
@@ -33,11 +35,13 @@ fn build_app(
         substring: substring.as_str().unwrap().to_string(),
         show_files: show_files.as_str().unwrap().to_string(),
         nav_start_number: nav_start_number.as_integer().unwrap() as usize,
-    }
+        dirs,
+    };
+    return app;
 }
 
 
-pub(crate) fn app_defaults_from_config() -> App {
+pub(crate) fn app_defaults_from_config(dirs: &mut Vec<Directory>) -> App {
     let default_value = DEFAULT_CONFIG.to_string().parse::<Value>().unwrap();
 
     return build_app(
@@ -49,11 +53,12 @@ pub(crate) fn app_defaults_from_config() -> App {
         default_value.get("substring").unwrap().clone(),
         default_value.get("show_files").unwrap().clone(),
         default_value.get("nav_start_number").unwrap().clone(),
+        dirs,
     )
 }
 
 
-pub(crate) fn app_from_config() -> App {
+pub(crate) fn app_from_config(dirs: &mut Vec<Directory>) -> App {
     let path = format!("{}/.config/contemporary-z/cz.toml", get_home_dir());
     let config_string = match fs::read_to_string(path) {
         Ok(contents) => { contents }
@@ -71,5 +76,6 @@ pub(crate) fn app_from_config() -> App {
         get_option(user_value.clone(), default_value.clone(), "substring"),
         get_option(user_value.clone(), default_value.clone(), "show_files"),
         get_option(user_value.clone(), default_value.clone(), "nav_start_number"),
+        dirs,
     )
 }
