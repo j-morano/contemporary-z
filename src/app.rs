@@ -455,7 +455,7 @@ impl App <'_> {
                 if let Err(_err) = dir {
                     // Do not store '..' or '.' dirs
                     if !(dir_str == "." || dir_str == "..") {
-                        self.insert_with_alias(dir_str, alias.as_str());
+                        self.insert_with_alias(dir_str, Some(alias.as_str()));
                         let details = format!("{}->{}", alias, dir_str);
                         self.show_exit_detailed_message("Removed dir alias", details.as_str());
                     }
@@ -499,11 +499,11 @@ impl App <'_> {
 
 
     pub(crate) fn insert(&mut self, dir: &str) {
-        self.insert_with_alias(dir, "");
+        self.insert_with_alias(dir, None);
     }
 
 
-    pub(crate) fn insert_with_alias(&mut self, dir: &str, alias: &str) {
+    pub(crate) fn insert_with_alias(&mut self, dir: &str, alias: Option<&str>) {
         // println!("inserting dir: {}", dir);
         // Check if dir is already in dirs
         let mut found = false;
@@ -511,13 +511,19 @@ impl App <'_> {
             if d.name == dir {
                 d.counter += 1;
                 d.last_access = current_seconds();
-                d.alias = alias.to_string();
+                if let Some(alias) = alias {
+                    d.alias = alias.to_string();
+                }
                 found = true;
                 break;
             }
         }
         // If not, add it
         if !found {
+            let alias = match alias {
+                Some(alias) => alias,
+                None => "",
+            };
             let dir = Directory {
                 name: dir.to_string(),
                 counter: 1,
