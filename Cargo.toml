@@ -7,4 +7,3 @@ edition = "2018"
 
 [dependencies]
 regex = "1.5"
-toml = "0.5"
