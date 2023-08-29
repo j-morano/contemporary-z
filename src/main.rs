@@ -37,6 +37,9 @@ fn main() {
         if args[1] == "-v" || args[1] == "--version" {
             println!("{} {}", "Version:", env!("CARGO_PKG_VERSION"));
         }
+        else if args[1] == "--database-path" {
+            println!("{}", app.database_path);
+        }
         else if args[1] == "--clear" {
             app.clear_database();
         }
