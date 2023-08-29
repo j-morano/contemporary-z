@@ -69,9 +69,11 @@ impl App <'_> {
         }
     }
 
+
     fn printf(&self, sgr: &str, color: &str, text: String) {
         println!("{}", self.format(sgr, color, text));
     }
+
 
     pub(crate) fn show_error(&self, text: &str, error: &str) {
         write_dir("".to_string());
@@ -88,9 +90,11 @@ impl App <'_> {
         exit(1);
     }
 
+
     pub(crate) fn show_exit_message(&self, text: &str) {
         self.printf("bold", "green", String::from(text));
     }
+
 
     pub(crate) fn show_exit_detailed_message(&self, message: &str, details: &str) {
         println!(
@@ -98,8 +102,8 @@ impl App <'_> {
             self.format("bold", "green", message.to_string()),
             details,
         );
-        exit(1);
     }
+
 
     pub(crate) fn select_dir(&self) -> String {
         let mut line = String::new();
@@ -118,7 +122,6 @@ impl App <'_> {
         // If there are no dirs, exit
         if valid_dirs.len() == 0 {
             self.show_exit_message("No dirs");
-            exit(0);
         } else {
             // Show valid dirs
             for (i, dir) in valid_dirs.iter().enumerate() {
@@ -204,6 +207,7 @@ impl App <'_> {
         return Ok(dir_name);
     }
 
+
     pub(crate) fn select_valid_dirs(&self, valid_dirs: Vec<Directory>, max_num: usize) -> Result<Vec<String>, String> {
 
         self.list_dirs(&valid_dirs, max_num, 1);
@@ -227,6 +231,7 @@ impl App <'_> {
 
         return Ok(selected_dirs_strings);
     }
+
 
     fn parse_and_validate_dir_number(
         &self,
@@ -258,6 +263,7 @@ impl App <'_> {
             return Ok(selected_dir);
         }
     }
+
 
     pub(crate) fn select_valid_dir(&self, valid_dirs: Vec<Directory>, max_num: usize) -> Result<String, String> {
         let mut i = 0;
@@ -297,6 +303,7 @@ impl App <'_> {
         self.insert(dir_name.as_str());
         write_dir(dir_name.clone());
     }
+
 
     pub(crate) fn do_cd(
         &mut self,
@@ -400,18 +407,17 @@ impl App <'_> {
         }
     }
 
-    
+
     pub(crate) fn replace_alias(&mut self, dir_str: &str, alias: &str,) {
         for dir in self.dirs.iter_mut() {
             if dir.alias == alias {
-                dir.alias = alias.to_string();
+                dir.alias = "".to_string();
             }
             if dir.name == dir_str {
                 dir.alias = alias.to_string();
             }
         }
     }
-
 
 
     pub(crate) fn add_alias(&mut self, args: &[String]) {
@@ -483,7 +489,6 @@ impl App <'_> {
     }
 
 
-
     pub(crate) fn remove_old(&mut self) {
         let current_seconds = current_seconds();
         let seconds_in_a_month = 60 * 60 * 24 * 30;
@@ -496,7 +501,6 @@ impl App <'_> {
     pub(crate) fn insert(&mut self, dir: &str) {
         self.insert_with_alias(dir, "");
     }
-
 
 
     pub(crate) fn insert_with_alias(&mut self, dir: &str, alias: &str) {
@@ -635,6 +639,7 @@ impl App <'_> {
         self.list_dirs(&all_dirs, 0, 1);
     }
 
+
     pub(crate) fn sync_dirs(&mut self) {
         let mut dirs_to_remove: Vec<String> = Vec::new();
         for dir in self.dirs.iter() {
@@ -646,6 +651,7 @@ impl App <'_> {
             self.remove(dir);
         }
     }
+
 
     pub(crate) fn remove(&mut self, dir_str: &str) {
         let mut i = 0;
@@ -678,9 +684,11 @@ impl App <'_> {
         }
     }
 
+
     pub(crate) fn clear_database(&mut self) {
         self.dirs.clear();
     }
+
 
     pub(crate) fn remove_alias_interactive(&mut self) {
         let valid_dirs = self.get_valid(
@@ -693,6 +701,7 @@ impl App <'_> {
         let details = format!("{}->{}", "", dir_name);
         self.show_exit_detailed_message("Removed dir alias", details.as_str());
     }
+
 
     pub(crate) fn interactive_cd(&mut self, args: &[String]) {
         let valid_dirs = self.get_valid(

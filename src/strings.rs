@@ -37,6 +37,7 @@ Mandatory arguments to long options are mandatory for short options too.
                                alias is introduced, the programs shows the
                                directory list to select one of them.
       --clear                clear the directories database.
+  --database-path            show the path of the directories database.
   -e                         force substring matching by score.
   -f SUBSTRING               force substring match list for SUBSTRING
   -i                         interactive selection (using a numbered list) of
