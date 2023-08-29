@@ -1,11 +1,9 @@
-mod database;
 mod data;
 mod app;
 mod config;
 mod colors;
 mod utils;
 mod strings;
-mod options;
 
 
 use utils::write_dir;
@@ -15,6 +13,7 @@ use std::fs;
 use crate::app::get_home_dir;
 use crate::config::app_from_config;
 use crate::app::current_seconds;
+use crate::strings::HELP;
 
 
 
@@ -48,7 +47,7 @@ fn main() {
             app.go_to_last();
         }
         else if args[1] == "--help" || args[1] == "-h" {
-            options::show_help();
+            println!("{}", HELP);
         }
         // Command option: list directories
         else if args[1] == "-l" {

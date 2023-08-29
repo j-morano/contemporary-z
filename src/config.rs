@@ -11,7 +11,7 @@ use regex::Regex;
 
 
 fn init_dir_file(database_fn: String, dirs: &mut Vec<Directory>) {
-    println!("database_fn: {}", database_fn);
+    // println!("database_fn: {}", database_fn);
     // Create database_fn if it does not exist
     if !Path::new(database_fn.as_str()).exists() {
         let database_fn_parent = Path::new(database_fn.as_str()).parent().unwrap();
@@ -24,7 +24,7 @@ fn init_dir_file(database_fn: String, dirs: &mut Vec<Directory>) {
     }
     // Read database_fn and parse it
     let db_string = fs::read_to_string(database_fn).unwrap();
-    println!("db_string: {}", db_string);
+    // println!("db_string:\n{}", db_string);
     /* The string is like this:
      * name1
      * counter1
