@@ -15,9 +15,9 @@ https://user-images.githubusercontent.com/48717183/212571284-a4c27d27-203c-47a8-
 
 ## Key Features
 
-**Contemporary-z** (`cz`) is a modern version of [z - jump around](https://github.com/rupa/z). It is implemented in Rust+SQLite, and utilizes temporary files for the inter-process communication with the shell.
+**Contemporary-z** (`cz`) is a modern version of [z - jump around](https://github.com/rupa/z). It is implemented in Rust and utilizes temporary files for the inter-process communication with the shell.
 
-For the time being, `cz` is available for [fish shell](https://github.com/fish-shell/fish-shell), [Bash](https://www.gnu.org/software/bash/) and [Zsh](https://www.zsh.org/). Furthermore, since it is written in Rust and uses an SQLite database, it should be relatively easy to adapt it to more shells; it is only necessary to translate into the language of the new shell the _z scripts_ (e.g. `z.sh`).
+For the time being, `cz` is available for [fish shell](https://github.com/fish-shell/fish-shell), [Bash](https://www.gnu.org/software/bash/) and [Zsh](https://www.zsh.org/). Furthermore, it should be relatively easy to adapt it to more shells; it is only necessary to translate into the language of the new shell the _z scripts_ (e.g. `z.sh`).
 
 ## Installation
 
@@ -185,7 +185,7 @@ Full documentation <https://github.com/j-morano/contemporary-z>
 
 ### Configuration
 
-`cz` supports some configuration options. These options must be set in TOML format in a file with the following path: `~/.config/contemporary-z/cz.toml`.
+`cz` supports some configuration options. These options must be set in a file with the following path: `~/.config/contemporary-z/cz.conf` using the format `option = value`.
 
 #### Options:
 
@@ -211,15 +211,15 @@ Full documentation <https://github.com/j-morano/contemporary-z>
 
 #### Default config
 
-```toml
-# ~/.config/contemporary-z/cz.toml
+```text
+# ~/.config/contemporary-z/cz.conf
 
-theme = 'dark'
+theme = dark
 max_results = 9
 abs_paths = true
 compact_paths = true
-database_path = '$HOME/.local/share/contemporary-z/directories.db'
-substring = 'shortest'
-show_files = 'none'
+database_path = $HOME/.local/share/contemporary-z/directories.dir
+substring = shortest
+show_files = none
 nav_start_number = 1
 ```
