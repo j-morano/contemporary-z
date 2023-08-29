@@ -562,12 +562,7 @@ impl App <'_> {
         // Filter invalid dirs from the current path
         let mut valid_dirs: Vec<Directory> = Vec::new();
 
-        // Sub-string coincidences
-        let mut pattern = String::new();
-        if !patterns.is_empty() {
-            pattern = patterns.join("*");
-            pattern = format!("*{}*", pattern);
-        }
+        println!("patterns: {:?}", patterns);
 
         // Sort by score
         self.dirs.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
@@ -575,8 +570,15 @@ impl App <'_> {
         // Filter by pattern
         let mut filtered_dirs: Vec<Directory> = Vec::new();
         for dir in self.dirs.iter() {
-            if pattern.is_empty() || dir.name.contains(&pattern) {
+            println!("dir: {}", dir.name);
+            if patterns.is_empty() {
                 filtered_dirs.push(dir.clone());
+            } else {
+                for pattern in patterns.iter() {
+                    if dir.name.contains(pattern) {
+                        filtered_dirs.push(dir.clone());
+                    }
+                }
             }
         }
 
