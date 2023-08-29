@@ -294,7 +294,6 @@ impl App <'_> {
 
 
     pub(crate) fn direct_cd(&mut self, dir_name: String) {
-        println!("dir_direct_cd");
         self.insert(dir_name.as_str());
         write_dir(dir_name.clone());
     }
@@ -501,7 +500,7 @@ impl App <'_> {
 
 
     pub(crate) fn insert_with_alias(&mut self, dir: &str, alias: &str) {
-        println!("inserting dir: {}", dir);
+        // println!("inserting dir: {}", dir);
         // Check if dir is already in dirs
         let mut found = false;
         for d in self.dirs.iter_mut() {
