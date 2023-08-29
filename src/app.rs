@@ -7,7 +7,6 @@ use std::process::exit;
 use std::env;
 use std::io::prelude::*;
 use std::io;
-use regex::Regex;
 use std::time::{SystemTime, UNIX_EPOCH};
 use crate::colors::{color_code, sgr_code};
 use std::path::Path;
@@ -23,6 +22,11 @@ pub(crate) fn current_seconds() -> i64 {
 pub(crate) fn get_home_dir() -> String {
     let current_home_dir = env::var("HOME").unwrap();
     return current_home_dir;
+}
+
+pub(crate) fn get_user() -> String {
+    let current_user = env::var("USER").unwrap();
+    return current_user;
 }
 
 #[derive(Debug, Clone)]
@@ -123,14 +127,14 @@ impl App <'_> {
                 if self.compact_paths {
                     // Replace /home/<user> with '~'
                     let current_home_dir = get_home_dir();
-                    let re_h = Regex::new(
-                        format!(r"^{}", current_home_dir.as_str()).as_str()
-                        ).unwrap();
-                    dir_name = re_h.replace(dir_name.as_str(), "~").parse().unwrap();
+                    dir_name = dir_name.replace(current_home_dir.as_str(), "~");
 
                     // Replace (/run)/media/<user> with '>'
-                    let re_m = Regex::new(r"^/(run/)?media/([^/]+)").unwrap();
-                    dir_name = re_m.replace(dir_name.as_str(), ">").parse().unwrap();
+                    let user = get_user();
+                    let media_user = format!("/media/{}", user);
+                    let run_media_user = format!("/run/media/{}", user);
+                    dir_name = dir_name.replace(run_media_user.as_str(), ">");
+                    dir_name = dir_name.replace(media_user.as_str(), ">");
                 }
 
                 let mut alias = String::new();

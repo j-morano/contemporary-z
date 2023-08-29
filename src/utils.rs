@@ -1,7 +1,5 @@
-use std::borrow::Borrow;
 use std::path::PathBuf;
 use std::fs;
-use regex::Regex;
 use std::io::Write;
 
 
@@ -22,12 +20,13 @@ pub(crate) fn canonicalize_dir_str(dir_str_name: &str) -> String {
         dir_str = &dir_str[..dir_str.len() - 1];
     }
 
-    // Replace multiple contiguous slashes by a single slash
-    let re = Regex::new(r"/(/)+").unwrap();
-    let result = re.replace_all(dir_str, "/");
+    // Do the same with a loop
+    let mut dir_str = String::from(dir_str);
+    while dir_str.contains("//") {
+        dir_str = dir_str.replace("//", "/");
+    }
 
-    dir_str = result.borrow();
-    String::from(dir_str)
+    dir_str
 }
 
 

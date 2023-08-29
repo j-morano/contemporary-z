@@ -5,7 +5,6 @@ use crate::app::App;
 use crate::strings::DEFAULT_CONFIG;
 use std::path::Path;
 use std::env;
-use regex::Regex;
 
 
 
@@ -166,11 +165,8 @@ fn build_app(
     let mut database_path = database_path.clone();
 
     // Replace typical environment variables
-    let re = Regex::new(r"\$HOME").unwrap();
     let home_dir = env::var("HOME").unwrap();
-    database_path = String::from(
-        re.replace_all(database_path.as_str(), home_dir.clone())
-        );
+    database_path = database_path.replace("$HOME", &home_dir);
     // If config database not available, use default
     // Create application user-specific data dir if it does not exist
     let database_file_parent = Path::new(database_path.as_str()).parent().unwrap();
