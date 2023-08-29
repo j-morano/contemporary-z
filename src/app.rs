@@ -562,15 +562,12 @@ impl App <'_> {
         // Filter invalid dirs from the current path
         let mut valid_dirs: Vec<Directory> = Vec::new();
 
-        println!("patterns: {:?}", patterns);
-
         // Sort by score
         self.dirs.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
 
         // Filter by pattern
         let mut filtered_dirs: Vec<Directory> = Vec::new();
         for dir in self.dirs.iter() {
-            println!("dir: {}", dir.name);
             if patterns.is_empty() {
                 filtered_dirs.push(dir.clone());
             } else {
