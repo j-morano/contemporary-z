@@ -12,7 +12,6 @@ use std::env;
 use std::fs;
 use crate::app::get_home_dir;
 use crate::config::app_from_config;
-use crate::app::current_seconds;
 use crate::strings::HELP;
 
 
@@ -24,11 +23,6 @@ fn main() {
     // Initialize dirs and app
     let dirs = &mut Vec::new();
     let app = &mut app_from_config(dirs);
-
-    // mutable reference dirs
-    app.remove_old();
-    app.compute_score(current_seconds());
-
 
     write_dir("".to_string());
 
@@ -108,7 +102,7 @@ fn main() {
         db_string.push_str(&format!("{}\n", dir.counter));
         db_string.push_str(&format!("{}\n", dir.last_access));
         // Score must be a float in the format x.y
-        db_string.push_str(&format!("{:.10}\n", dir.score));
+        // db_string.push_str(&format!("{:.10}\n", dir.score));
         if dir.alias.len() > 0 {
             db_string.push_str(&format!("{}\n", dir.alias));
         }

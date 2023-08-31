@@ -5,6 +5,7 @@ use crate::app::App;
 use crate::strings::DEFAULT_CONFIG;
 use std::path::Path;
 use std::env;
+use crate::app::get_current_seconds;
 
 
 
@@ -20,6 +21,10 @@ fn init_dir_file(database_fn: String, dirs: &mut Vec<Directory>) {
             |e| panic!("Error creating file: {}", e)
             );
     }
+
+    let current_seconds = get_current_seconds();
+    // Current seconds minus 2 months
+    let limit = current_seconds - (60 * 60 * 24 * 30 * 2);
     // Read database_fn and parse it
     let db_string = fs::read_to_string(database_fn).unwrap();
     // println!("db_string:\n{}", db_string);
@@ -47,11 +52,14 @@ fn init_dir_file(database_fn: String, dirs: &mut Vec<Directory>) {
         let name = dir_string[0].to_string();
         let counter = dir_string[1].parse::<i64>().unwrap();
         let last_access = dir_string[2].parse::<i64>().unwrap();
-        let score = dir_string[3].parse::<f64>().unwrap();
+        if last_access < limit {
+            continue;
+        }
+        let score = 10000.0 * counter as f64 * (3.75 / ((0.0001 * (current_seconds - last_access) as f64 + 1.0) + 0.25));
         let mut alias = String::from("");
-        if dir_string.len() == 5 {
+        if dir_string.len() == 4 {
             // alias is optional
-            alias = dir_string[4].to_string();
+            alias = dir_string[3].to_string();
         }
         let dir = Directory {
             name,

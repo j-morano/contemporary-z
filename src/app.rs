@@ -15,7 +15,7 @@ use std::fs;
 
 
 
-pub(crate) fn current_seconds() -> i64 {
+pub(crate) fn get_current_seconds() -> i64 {
     return SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64;
 }
 
@@ -489,15 +489,6 @@ impl App <'_> {
     }
 
 
-    pub(crate) fn remove_old(&mut self) {
-        let current_seconds = current_seconds();
-        let seconds_in_a_month = 60 * 60 * 24 * 30;
-        let limit = current_seconds - seconds_in_a_month;
-        // Remove old dirs, i.e. dirs that have not been accessed in a month
-        self.dirs.retain(|dir| dir.last_access > limit);
-    }
-
-
     pub(crate) fn insert(&mut self, dir: &str) {
         self.insert_with_alias(dir, None);
     }
@@ -510,7 +501,7 @@ impl App <'_> {
         for d in self.dirs.iter_mut() {
             if d.name == dir {
                 d.counter += 1;
-                d.last_access = current_seconds();
+                d.last_access = get_current_seconds();
                 if let Some(alias) = alias {
                     d.alias = alias.to_string();
                 }
@@ -527,7 +518,7 @@ impl App <'_> {
             let dir = Directory {
                 name: dir.to_string(),
                 counter: 1,
-                last_access: current_seconds(),
+                last_access: get_current_seconds(),
                 score: 0.0,
                 alias: alias.to_string(),
             };
@@ -553,14 +544,6 @@ impl App <'_> {
             }
         }
         Err("Directory not found".to_string())
-    }
-
-
-    pub(crate) fn compute_score(&mut self, current_seconds: i64) {
-        // 'Frecency' formula: https://github.com/rupa/z/blob/master/z.sh
-        for dir in self.dirs.iter_mut() {
-            dir.score = 10000.0 * dir.counter as f64 * (3.75 / ((0.0001 * (current_seconds - dir.last_access) as f64 + 1.0) + 0.25));
-        }
     }
 
 
