@@ -102,11 +102,12 @@ else:
         os.remove(os.path.join(path, 'cz'))
     print('Adding new binary.')
     if not os.path.exists(path):
-        print(f'The path does not exist ({path}). Do you want to create it?')
+        print(f'The path "{path}" does not exist. Do you want to create it?')
         print('Warning: if you choose not to create the path, the installation will be aborted.')
         while True:
             create_path = input('Create path? [y/n]: ')
             if create_path == 'y':
+                print(' - Creating path.')
                 os.makedirs(path)
                 break
             else:
