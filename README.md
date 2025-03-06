@@ -34,8 +34,9 @@ Linux-only.
 To install `cz`, you can just run the installation script.
 
 ```shell
-python3 -c "$(curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/j-morano/contemporary-z/main/install)"
+python -c "$(curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/j-morano/contemporary-z/main/install)"
 ```
+
 
 ### Install manually using binary release
 
@@ -46,6 +47,7 @@ To install the program using the binary release, copy and paste the following co
 
 > [!TIP]
 > In the following snippets, you can replace `$HOME/.local/bin/` by any other dir in `$PATH`.
+
 
 #### Fish
 
@@ -83,8 +85,6 @@ To install `cz` from source, it is required to have installed [Cargo](https://do
 If this requirement is met, it is only necessary to clone the repository and run the specific installation script for the desired shell.
 
 
-#### Debian-based distros
-
 #### Clone the repository
 
 ```shell
@@ -93,17 +93,17 @@ git clone https://github.com/j-morano/contemporary-z.git
 
 #### Install using Cargo
 
-Install the program using Cargo, and then add the function to the corresponding shell.
-
 ```shell
 $HOME/.cargo/bin/cargo install --path .
 ```
 
 > [!IMPORTANT]
-> Ensure that `$HOME/.cargo/bin/` is in `$PATH`.
->
-> You must be inside the repository folder (`contemporary-z`) to run the commands as shown below.
+> Ensure that `$HOME/.cargo/bin/` is in `$PATH` after the installation.
 
+#### Add the function to the shell
+
+> [!IMPORTANT]
+> You must be inside the repository folder (`contemporary-z`) to run the commands as shown below.
 
 ##### Fish
 
