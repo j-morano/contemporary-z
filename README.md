@@ -44,7 +44,7 @@ To install the program using the binary release, copy and paste the following co
 > [!NOTE]
 > This is only for installing the first time, for updating, see [Update](#update).
 
-> [!NOTE]
+> [!TIP]
 > In the following snippets, you can replace `$HOME/.local/bin/` by any other dir in `$PATH`.
 
 #### Fish
@@ -93,19 +93,19 @@ git clone https://github.com/j-morano/contemporary-z.git
 
 #### Install using Cargo
 
+Install the program using Cargo, and then add the function to the corresponding shell.
+
 ```shell
 $HOME/.cargo/bin/cargo install --path .
 ```
 
-> [!NOTE]
+> [!IMPORTANT]
 > Ensure that `$HOME/.cargo/bin/` is in `$PATH`.
-
-Then, depending on the shell, do the following.
-
-> [!NOTE]
+>
 > You must be inside the repository folder (`contemporary-z`) to run the commands as shown below.
 
-#### Fish
+
+##### Fish
 
 Add the function to fish functions.
 
@@ -114,7 +114,7 @@ mkdir -p $HOME/.config/fish/functions
 mv z.fish $HOME/.config/fish/functions
 ```
 
-#### Bash/Zsh
+##### Bash/Zsh
 
 Add the code from `z.sh` to `.bashrc`. For example:
 
