@@ -41,9 +41,11 @@ python3 -c "$(curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent
 
 To install the program using the binary release, copy and paste the following commands in your terminal.
 
-> NOTE: This is only for installing the first time, for updating, see below.
+> [!NOTE]
+> This is only for installing the first time, for updating, see [Update](#update).
 
-> NOTE: In the following snippets, you can replace `$HOME/.local/bin/` by any other dir in `$PATH`.
+> [!NOTE]
+> In the following snippets, you can replace `$HOME/.local/bin/` by any other dir in `$PATH`.
 
 #### Fish
 
@@ -95,11 +97,13 @@ git clone https://github.com/j-morano/contemporary-z.git
 $HOME/.cargo/bin/cargo install --path .
 ```
 
-> NOTE: ensure that `$HOME/.cargo/bin/` is in `$PATH`.
+> [!NOTE]
+> Ensure that `$HOME/.cargo/bin/` is in `$PATH`.
 
 Then, depending on the shell, do the following.
 
-> NOTE: You must be inside the repository folder (`contemporary-z`) to run the commands as shown below.
+> [!NOTE]
+> You must be inside the repository folder (`contemporary-z`) to run the commands as shown below.
 
 #### Fish
 
