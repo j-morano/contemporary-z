@@ -22,11 +22,9 @@ FUNCTIONALITY:
     available) and adds it to the directories database (if it is not already
     added).
   * If a substring or substrings are introduced, 'cz' searches in the database
-    for coincidences. Then, if 'substring' is 'shortest' or the number of
-    matches is equal to 1, it 'cd's to the directory with the shortest pathname.
-    If 'substring' is equal to 'score', it goes to the directory with the
-    highest score. Otherwise, it prints the interactive selection menu. If there
-    is only one result, it always 'cd's to it.
+    for coincidences. The selected directory will depend on the 'substring'
+    configuration option (see Configuration section below). If there is only
+    one result, it always 'cd's to it, regardless of the option.
 
 OPTIONS:
 Mandatory arguments to long options are mandatory for short options too.
@@ -37,8 +35,9 @@ Mandatory arguments to long options are mandatory for short options too.
                                alias is introduced, the programs shows the
                                directory list to select one of them.
       --clear                clear the directories database.
+  -b SUBSTRING               force substring matching by basename.
   --database-path            show the path of the directories database.
-  -e                         force substring matching by score.
+  -e SUBSTRING               force substring matching by score.
   -f SUBSTRING               force substring match list for SUBSTRING
   -i                         interactive selection (using a numbered list) of
                                the subdirectories of the current directory.
@@ -52,7 +51,7 @@ Mandatory arguments to long options are mandatory for short options too.
       --list-all             list all the directories of the database
   -r                         remove a directory from the database, interactively.
       --remove-alias         remove an alias, interactively.
-  -t                         force substring matching by shortest path.
+  -t SUBSTRING               force substring matching by shortest path.
       --sync                 sync directories (remove all non-existent
                                 directories).
       --help     display this help and exit.
@@ -62,5 +61,55 @@ Exit status:
  0  if OK,
  1  if minor problems (e.g., cannot access subdirectory)
 
-Full documentation <https://github.com/j-morano/contemporary-z>
+
+CONFIGURATION:
+'cz' supports some configuration options. These options must be set in a file
+with the following path: '~/.config/contemporary-z/cz.conf' using the format
+'option = value'.
+
+Configuration options:
+  theme: string. Color theme.
+      * Allowed values: 'dark', 'bright'
+  abs_paths: bool. Record directories using full paths or relative paths.
+      With the latter option, shown directories will vary from one directory to
+      another.
+  compact_paths: bool. Replace '/home/<username>' by '~' and
+      '/run/media/<username>' by '>'.
+  max_results: int. Maximum results to show in the directory list.
+  database_path: string. Directory where the directories database is/will
+      be located.
+  substring: string. Which dir to select when substring(s) are introduced.
+      * Allowed values:
+          - 'shortest': go to the directory with the shortest path name.
+          - 'score': go to the directory with the highest score (most 'frecent'
+              dir).
+          - 'none': show selection list.
+          - 'basename': go to the directory with the highest score (most 'frecent'
+              dir) whose _basename_ matches the substring(s).
+  show_files: string. Whether to show non-dir files, and where, in
+      interactive selection.
+      * Allowed values:
+          - 'top': show files on top of dirs.
+          - 'bottom': show files under the dirs.
+          - 'none': do not show files.
+  nav_start_number: int. Start number for interactive navigation, that is,
+      the number that the parent directory will have.
+      * Recommended values: 1 or 0.
+
+
+Default config:
+-------------------------------------------------------------------
+# ~/.config/contemporary-z/cz.conf
+
+theme = dark
+max_results = 9
+abs_paths = true
+compact_paths = true
+database_path = $HOME/.local/share/contemporary-z/directories.dir
+substring = shortest
+show_files = none
+nav_start_number = 1
+-------------------------------------------------------------------
+
+Source code: <https://github.com/j-morano/contemporary-z>
 ";

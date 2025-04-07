@@ -88,6 +88,9 @@ fn main() {
         else if args[1] == "-e" {
             app.do_cd(&args, "score");
         }
+        else if args[1] == "-b" {
+            app.do_cd(&args, "basename");
+        }
         else {
             app.do_cd(&args, "none");
         }

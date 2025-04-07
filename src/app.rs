@@ -221,7 +221,7 @@ impl App <'_> {
         let mut selected_dirs_strings: Vec<String> = Vec::new();
 
         for selected_dir_num_str in selected_dirs_nums_str {
-             
+
             let selected_dir_num = self.parse_and_validate_dir_number(&selected_dir_num_str, valid_dirs.len()).unwrap();
 
             // Get name of the selected dir and add it to the list
@@ -237,7 +237,7 @@ impl App <'_> {
         &self,
         selected_dir: &str,
         max_num: usize
-    ) -> Result<usize, SelectionError> 
+    ) -> Result<usize, SelectionError>
     {
 
         // Select dir by number
@@ -300,6 +300,7 @@ impl App <'_> {
 
 
     pub(crate) fn direct_cd(&mut self, dir_name: String) {
+        println!("cd {}", dir_name);
         self.insert(dir_name.as_str());
         write_dir(dir_name.clone());
     }
@@ -346,28 +347,34 @@ impl App <'_> {
                             self.direct_cd(dir_str.to_string());
                         }
                     }
-                } else { // if arguments are substrings, go to the parent folder of the
-                         // top results that matches the substrings
+                } else { // if arguments are substrings, go to the top results that matches
+                         // the substrings
                     // Get shortest directory
                     let valid_dirs = self.get_valid(
                         Vec::from(&args[starting_index..]), false
                     ).unwrap();
+                    // Print all valid dirs
+                    for dir in valid_dirs.iter() { println!("{}", dir.name); }
 
                     if valid_dirs.is_empty() {
                         self.show_exit_message("No dirs");
                     } else {
                         // If there is only one result, cd to it
-                        if
-                            valid_dirs.len() == 1
-                            || (self.substring == "score" && forced_substring != "shortest")
+                        if valid_dirs.len() == 1
+                            || (self.substring == "score" && forced_substring == "none")
+                            || forced_substring == "score"
                         {
+                            println!("Score");
                             // Access the substring with the highest score
                             let selected_dir = valid_dirs[0].name.clone();
                             // app.direct_cd(&conn, selected_dir.clone());
                             self.direct_cd(selected_dir);
                         } else {
                             // Access the uppermost dir that matches the substring(s)
-                            if self.substring == "shortest" || forced_substring == "shortest" {
+                            if (self.substring == "shortest" && forced_substring == "none")
+                                || forced_substring == "shortest"
+                            {
+                                println!("Shortest");
                                 let mut selected_dir = valid_dirs[0].name.as_str();
                                 for dir in valid_dirs.iter() {
                                     if dir.name.len() < selected_dir.len() {
@@ -376,6 +383,27 @@ impl App <'_> {
                                 }
                                 // app.direct_cd(&conn, selected_dir.to_string());
                                 self.direct_cd(selected_dir.to_string());
+                            }
+                            else if (self.substring == "basename" && forced_substring == "none")
+                                || forced_substring == "basename"
+                            {
+                                println!("Basename");
+                                for dir in valid_dirs.iter() {
+                                    // Access the basename of the dir that matches the substring(s)
+                                    let basename = PathBuf::from(dir.name.clone());
+                                    let basename_str = basename.file_name().unwrap().to_str().unwrap().to_string();
+                                    let mut all_match = true;
+                                    for pattern in args[starting_index..].iter() {
+                                        if !basename_str.contains(pattern) {
+                                            all_match = false;
+                                            break;
+                                        }
+                                    }
+                                    if all_match {
+                                        self.direct_cd(dir.name.clone());
+                                        break;
+                                    }
+                                }
                             } else {
                                 // Interactively select dir among all the dirs that
                                 // match the substring(s)
@@ -547,7 +575,7 @@ impl App <'_> {
     }
 
 
-    pub(crate) fn get_valid( 
+    pub(crate) fn get_valid(
         &mut self,
         patterns: Vec<String>,
         alias_only: bool,
@@ -564,10 +592,15 @@ impl App <'_> {
             if patterns.is_empty() {
                 filtered_dirs.push(dir.clone());
             } else {
+                let mut all_match = true;
                 for pattern in patterns.iter() {
-                    if dir.name.contains(pattern) {
-                        filtered_dirs.push(dir.clone());
+                    if !dir.name.contains(pattern) {
+                        all_match = false;
+                        break;
                     }
+                }
+                if all_match {
+                    filtered_dirs.push(dir.clone());
                 }
             }
         }
@@ -582,7 +615,7 @@ impl App <'_> {
             }
             filtered_dirs = alias_dirs;
         }
-        
+
         // Filter by existence
         for dir in filtered_dirs.iter() {
             if Path::new(&dir.name).exists() {
