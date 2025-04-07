@@ -300,7 +300,6 @@ impl App <'_> {
 
 
     pub(crate) fn direct_cd(&mut self, dir_name: String) {
-        println!("cd {}", dir_name);
         self.insert(dir_name.as_str());
         write_dir(dir_name.clone());
     }
@@ -353,8 +352,6 @@ impl App <'_> {
                     let valid_dirs = self.get_valid(
                         Vec::from(&args[starting_index..]), false
                     ).unwrap();
-                    // Print all valid dirs
-                    for dir in valid_dirs.iter() { println!("{}", dir.name); }
 
                     if valid_dirs.is_empty() {
                         self.show_exit_message("No dirs");
@@ -364,7 +361,6 @@ impl App <'_> {
                             || (self.substring == "score" && forced_substring == "none")
                             || forced_substring == "score"
                         {
-                            println!("Score");
                             // Access the substring with the highest score
                             let selected_dir = valid_dirs[0].name.clone();
                             // app.direct_cd(&conn, selected_dir.clone());
@@ -374,7 +370,6 @@ impl App <'_> {
                             if (self.substring == "shortest" && forced_substring == "none")
                                 || forced_substring == "shortest"
                             {
-                                println!("Shortest");
                                 let mut selected_dir = valid_dirs[0].name.as_str();
                                 for dir in valid_dirs.iter() {
                                     if dir.name.len() < selected_dir.len() {
@@ -387,7 +382,6 @@ impl App <'_> {
                             else if (self.substring == "basename" && forced_substring == "none")
                                 || forced_substring == "basename"
                             {
-                                println!("Basename");
                                 for dir in valid_dirs.iter() {
                                     // Access the basename of the dir that matches the substring(s)
                                     let basename = PathBuf::from(dir.name.clone());
