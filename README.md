@@ -228,7 +228,7 @@ max_results = 9
 abs_paths = true
 compact_paths = true
 database_path = $HOME/.local/share/contemporary-z/directories.dir
-substring = shortest
+substring = score
 show_files = none
 nav_start_number = 1
 -------------------------------------------------------------------
