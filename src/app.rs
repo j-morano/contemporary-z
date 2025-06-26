@@ -366,7 +366,8 @@ impl App <'_> {
                             // app.direct_cd(&conn, selected_dir.clone());
                             self.direct_cd(selected_dir);
                         } else {
-                            // Access the uppermost dir that matches the substring(s)
+                            // Access the top dir that matches the substring(s)
+                            // Top depends on criteria
                             if (self.substring == "shortest" && forced_substring == "none")
                                 || forced_substring == "shortest"
                             {
@@ -382,6 +383,7 @@ impl App <'_> {
                             else if (self.substring == "basename" && forced_substring == "none")
                                 || forced_substring == "basename"
                             {
+                                let mut cded = false;
                                 for dir in valid_dirs.iter() {
                                     // Access the basename of the dir that matches the substring(s)
                                     let basename = PathBuf::from(dir.name.clone());
@@ -395,8 +397,12 @@ impl App <'_> {
                                     }
                                     if all_match {
                                         self.direct_cd(dir.name.clone());
+                                        cded = true;
                                         break;
                                     }
+                                }
+                                if !cded {
+                                    self.show_exit_message("No dirs");
                                 }
                             } else {
                                 // Interactively select dir among all the dirs that
