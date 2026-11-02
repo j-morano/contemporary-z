@@ -4,7 +4,6 @@ use crate::get_home_dir;
 use crate::app::App;
 use crate::strings::DEFAULT_CONFIG;
 use std::path::Path;
-use std::env;
 use crate::app::get_current_seconds;
 
 
@@ -22,54 +21,64 @@ fn init_dir_file(database_fn: String, dirs: &mut Vec<Directory>) {
             );
     }
 
-    let current_seconds = get_current_seconds();
+    let db_string = fs::read_to_string(database_fn).unwrap();
+    dirs.extend(parse_database(&db_string, get_current_seconds()));
+}
+
+
+/// Serialize directories to the database text format.
+pub(crate) fn serialize_database(dirs: &[Directory]) -> String {
+    let mut db_string = String::new();
+    for dir in dirs {
+        db_string.push_str(&format!("{}\n{}\n{}\n", dir.name, dir.counter, dir.last_access));
+        if !dir.alias.is_empty() {
+            db_string.push_str(&format!("{}\n", dir.alias));
+        }
+        db_string.push_str("---\n");
+    }
+    db_string
+}
+
+
+/// Parse the database text format (see `serialize_database`).
+fn parse_database(db_string: &str, current_seconds: i64) -> Vec<Directory> {
+    let mut dirs = Vec::new();
     // Current seconds minus 2 months
     let limit = current_seconds - (60 * 60 * 24 * 30 * 2);
-    // Read database_fn and parse it
-    let db_string = fs::read_to_string(database_fn).unwrap();
-    // println!("db_string:\n{}", db_string);
-    /* The string is like this:
-     * name1
-     * counter1
-     * last_access1
-     * score1
-     * alias1 // alias is optional
-     * ---
-     * name2
-     * counter2
-     * last_access2
-     * score2
-     * ---
-     * ...
-     */
-    let dir_strings = db_string.split("---");
-    for dir_string in dir_strings {
-        let dir_string = dir_string.trim();
-        if dir_string.len() == 0 {
+    // Blocks are terminated by a line that is exactly "---". Malformed blocks
+    // are skipped instead of aborting the program.
+    let mut block: Vec<&str> = Vec::new();
+    for line in db_string.lines().chain(std::iter::once("---")) {
+        if line != "---" {
+            block.push(line);
             continue;
         }
-        let dir_string = dir_string.split("\n").collect::<Vec<&str>>();
-        let name = dir_string[0].to_string();
-        let counter = dir_string[1].parse::<i64>().unwrap();
-        let last_access = dir_string[2].parse::<i64>().unwrap();
-        if last_access < limit {
+        let fields = std::mem::take(&mut block);
+        if fields.len() < 3 {
+            continue;
+        }
+        let (counter, last_access) = match (
+            fields[1].parse::<i64>(),
+            fields[2].parse::<i64>(),
+        ) {
+            (Ok(c), Ok(l)) => (c, l),
+            _ => continue,
+        };
+        let alias = fields.get(3).map(|a| a.to_string()).unwrap_or_default();
+        // Drop stale directories, but never aliased ones.
+        if last_access < limit && alias.is_empty() {
             continue;
         }
         let score = 10000.0 * counter as f64 * (3.75 / ((0.0001 * (current_seconds - last_access) as f64 + 1.0) + 0.25));
-        let mut alias = String::from("");
-        if dir_string.len() == 4 {
-            // alias is optional
-            alias = dir_string[3].to_string();
-        }
-        let dir = Directory {
-            name,
+        dirs.push(Directory {
+            name: fields[0].to_string(),
             counter,
             last_access,
             score,
             alias,
-        };
-        dirs.push(dir);
+        });
     }
+    dirs
 }
 
 // Return either String, i64 or bool
@@ -118,44 +127,31 @@ impl<'a> Clone for Value<'a> {
 
 
 
-// The same with lifetimes
-fn parse_option_string<'a>(option_value: &Option<&'a (String, String)>) -> Value<'a> {
-    match option_value {
-        Some(x) => {
-            let option = &x.0;
-            let value = &x.1;
-            if option == "max_results" || option == "nav_start_number" {
-                Value::I64(value.parse::<i64>().unwrap())
-            } else if option == "abs_paths" || option == "compact_paths" {
-                Value::Bool(value.parse::<bool>().unwrap())
-            } else {
-                Value::String(&value)
-            }
-        }
-        None => {
-            panic!("Option not found in default config");
-        }
+fn parse_option_string<'a>(option_value: &Option<&'a (String, String)>) -> Option<Value<'a>> {
+    let entry: &'a (String, String) = (*option_value)?;
+    let (option, value) = (&entry.0, &entry.1);
+    let value = value.trim();
+    if option == "max_results" || option == "nav_start_number" {
+        value.parse::<i64>().ok().filter(|v| *v >= 0).map(Value::I64)
+    } else if option == "abs_paths" || option == "compact_paths" {
+        value.parse::<bool>().ok().map(Value::Bool)
+    } else {
+        Some(Value::String(value))
     }
 }
 
 
 fn get_option<'a>(user_value: &'a Vec<(String, String)>, default_value: &'a Vec<(String, String)>, option: &str) -> Value<'a> {
-    // If the option is not in the user config, use the default value
-    let mut option_value = user_value.iter().find(|&x| x.0 == option);
-    let default_value = default_value.iter().find(|&x| x.0 == option);
-    if option_value.is_none() {
-        option_value = default_value;
+    // Use the user value if present and valid; otherwise the default.
+    let user = user_value.iter().find(|&x| x.0 == option);
+    let default = default_value.iter().find(|&x| x.0 == option);
+    if let Some(v) = parse_option_string(&user) {
+        return v;
     }
-    let mut value = parse_option_string(&option_value);
-    // If the option is "database_path", also check if the path exists. If it
-    //  does not exist, use the default value.
-    if option == "database_path" {
-        let path = value.clone();
-        if !fs::metadata(path.to_string()).is_ok() {
-            value = parse_option_string(&default_value);
-        }
+    if user.is_some() {
+        eprintln!("cz: invalid value for config option '{}', using default", option);
     }
-    value
+    parse_option_string(&default).expect("Option not found in default config")
 }
 
 
@@ -170,12 +166,11 @@ fn build_app(
     nav_start_number: i64,
     dirs: &mut Vec<Directory>,
 ) -> App {
-    let mut database_path = database_path.clone();
-
     // Replace typical environment variables
-    let home_dir = env::var("HOME").unwrap();
-    database_path = database_path.replace("$HOME", &home_dir);
-    // If config database not available, use default
+    let home_dir = get_home_dir();
+    let database_path = database_path.replace("$HOME", &home_dir);
+    // Avoid divisions by zero when paginating
+    let max_results = max_results.max(1);
     // Create application user-specific data dir if it does not exist
     let database_file_parent = Path::new(database_path.as_str()).parent().unwrap();
     fs::create_dir_all(database_file_parent).unwrap_or_else(
@@ -217,9 +212,13 @@ fn parse_config(config_string: String) -> Vec<(String, String)> {
         if config_option.len() == 0 {
             continue;
         }
-        let config_option = config_option.split(" = ").collect::<Vec<&str>>();
-        let option = config_option[0];
-        let value = config_option[1];
+        if config_option.starts_with('#') {
+            continue;
+        }
+        let (option, value) = match config_option.split_once('=') {
+            Some((o, v)) => (o.trim(), v.trim()),
+            None => continue,
+        };
         option_values.push((option.to_string(), value.to_string()));
     }
     return option_values;
@@ -246,4 +245,107 @@ pub(crate) fn app_from_config(dirs: &mut Vec<Directory>) -> App {
         get_option(&user_value, &default_value, "nav_start_number").to_i64(),
         dirs,
     )
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const NOW: i64 = 1_800_000_000;
+
+    fn dir(name: &str, counter: i64, last_access: i64, alias: &str) -> Directory {
+        Directory {
+            name: name.to_string(),
+            counter,
+            last_access,
+            score: 0.0,
+            alias: alias.to_string(),
+        }
+    }
+
+    #[test]
+    fn database_round_trip() {
+        let dirs = vec![
+            dir("/home/u/a", 3, NOW - 10, ""),
+            dir("/home/u/b", 1, NOW - 20, "bee"),
+        ];
+        let parsed = parse_database(&serialize_database(&dirs), NOW);
+        assert_eq!(parsed.len(), 2);
+        for (p, d) in parsed.iter().zip(dirs.iter()) {
+            assert_eq!(p.name, d.name);
+            assert_eq!(p.counter, d.counter);
+            assert_eq!(p.last_access, d.last_access);
+            assert_eq!(p.alias, d.alias);
+        }
+        assert!(parsed[0].score > 0.0);
+    }
+
+    #[test]
+    fn database_names_containing_separator() {
+        let dirs = vec![dir("/home/u/my---proj", 2, NOW, "a-b")];
+        let parsed = parse_database(&serialize_database(&dirs), NOW);
+        assert_eq!(parsed.len(), 1);
+        assert_eq!(parsed[0].name, "/home/u/my---proj");
+    }
+
+    #[test]
+    fn database_skips_malformed_blocks() {
+        let db = format!("/a\nnot_a_number\n5\n---\n/b\n---\n/c\n1\n{}\n---\n", NOW);
+        let parsed = parse_database(&db, NOW);
+        assert_eq!(parsed.len(), 1);
+        assert_eq!(parsed[0].name, "/c");
+        assert!(parse_database("", NOW).is_empty());
+    }
+
+    #[test]
+    fn database_prunes_stale_but_keeps_aliased() {
+        let old = NOW - 60 * 60 * 24 * 90;
+        let dirs = vec![dir("/old", 1, old, ""), dir("/old_alias", 1, old, "x")];
+        let parsed = parse_database(&serialize_database(&dirs), NOW);
+        assert_eq!(parsed.len(), 1);
+        assert_eq!(parsed[0].name, "/old_alias");
+    }
+
+    #[test]
+    fn config_skips_comments_and_bad_lines() {
+        let opts = parse_config(
+            "# comment\n\ntheme = bright\nnonsense\nmax_results=5\n".to_string()
+        );
+        assert_eq!(
+            opts,
+            vec![
+                ("theme".to_string(), "bright".to_string()),
+                ("max_results".to_string(), "5".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn config_user_values_override_defaults() {
+        let user = parse_config("theme = bright\nmax_results = 4".to_string());
+        let defaults = parse_config(DEFAULT_CONFIG.to_string());
+        assert_eq!(get_option(&user, &defaults, "theme").to_string(), "bright");
+        assert_eq!(get_option(&user, &defaults, "max_results").to_i64(), 4);
+        // Not set by the user: default
+        assert!(get_option(&user, &defaults, "abs_paths").to_bool());
+    }
+
+    #[test]
+    fn config_invalid_values_fall_back_to_default() {
+        let user = parse_config("max_results = abc\nabs_paths = maybe\nnav_start_number = -3".to_string());
+        let defaults = parse_config(DEFAULT_CONFIG.to_string());
+        assert_eq!(get_option(&user, &defaults, "max_results").to_i64(), 9);
+        assert!(get_option(&user, &defaults, "abs_paths").to_bool());
+        assert_eq!(get_option(&user, &defaults, "nav_start_number").to_i64(), 1);
+    }
+
+    #[test]
+    fn default_config_is_complete() {
+        let defaults = parse_config(DEFAULT_CONFIG.to_string());
+        for opt in ["theme", "abs_paths", "compact_paths", "max_results",
+                    "database_path", "substring", "show_files", "nav_start_number"] {
+            assert!(defaults.iter().any(|(o, _)| o == opt), "missing {}", opt);
+        }
+    }
 }

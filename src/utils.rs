@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 use std::fs;
-use std::io::Write;
+use std::env;
 
 
 
@@ -8,8 +8,7 @@ pub(crate) fn canonicalize_dir_str(dir_str_name: &str) -> String {
     let mut dir_str = dir_str_name;
 
     // Canonicalize path
-    let dir_pathbuf;
-    dir_pathbuf = PathBuf::from(dir_str).canonicalize().unwrap();
+    let dir_pathbuf = PathBuf::from(dir_str).canonicalize().unwrap();
     dir_str = dir_pathbuf.to_str().unwrap();
 
     // If dir name ends with '/', remove it, in order to avoid
@@ -30,52 +29,18 @@ pub(crate) fn canonicalize_dir_str(dir_str_name: &str) -> String {
 }
 
 
+/// Path of the file through which `cz` tells the shell function where to `cd`.
+/// Must match the logic in `z.sh`.
+pub(crate) fn path_file() -> String {
+    match env::var("XDG_RUNTIME_DIR") {
+        Ok(dir) if !dir.is_empty() => format!("{}/cz_path", dir),
+        _ => format!("/tmp/cz_path_{}", env::var("USER").unwrap_or_default()),
+    }
+}
+
+
 pub(crate) fn write_dir(path: String) {
-    // Open file in read mode
-    let mut z_file = match fs::OpenOptions::new()
-        .read(true)
-        .write(false)
-        .open("/tmp/cz_path") {
-            Err(_) => {
-                // Open file in write mode
-                fs::OpenOptions::new()
-                    .read(true)
-                    .write(true)
-                    .create(true)
-                    .truncate(true)
-                    .open("/tmp/cz_path")
-                    .expect("Could not open file")
-            },
-            Ok(file) => {
-                // Set writeable
-                let mut permissions = file.metadata().expect(
-                    "Could not get metadata"
-                    ).permissions();
-                permissions.set_readonly(false);
-                file.set_permissions(permissions.clone()).expect(
-                    "Could not set permissions."
-                    );
-                // Open file in write mode
-                fs::OpenOptions::new()
-                    .read(true)
-                    .write(true)
-                    .truncate(true)
-                    .open("/tmp/cz_path")
-                    .expect("Could not open file")
-            }
-        };
-    // Write action
-    z_file.write_all(
-        format!("{}", path).as_bytes()
-        ).expect("Could not write to file");
-    // Set read-only again
-    let mut permissions = z_file.metadata().expect(
-        "Could not get metadata"
-        ).permissions();
-    permissions.set_readonly(false);
-    z_file.set_permissions(permissions.clone()).expect(
-        "Could not set permissions."
-        );
-    permissions.set_readonly(true);
-    z_file.set_permissions(permissions).expect("Could not set permissions.");
+    fs::write(path_file(), path).unwrap_or_else(
+        |e| panic!("Could not write to {}: {}", path_file(), e)
+    );
 }

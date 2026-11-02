@@ -48,7 +48,7 @@ fn main() {
         }
         // Command option: list directories
         else if args[1] == "-l" {
-            app.list_existent();
+            app.list_existent(&args);
         }
         else if args[1] == "-i" {
             // Command option: interactive subdir selection
@@ -99,19 +99,10 @@ fn main() {
         app.interactive_cd(&args);
     }
     // Write dirs to database_dir_fn
-    let mut db_string = String::new();
-    for dir in app.dirs.iter() {
-        db_string.push_str(&format!("{}\n", dir.name));
-        db_string.push_str(&format!("{}\n", dir.counter));
-        db_string.push_str(&format!("{}\n", dir.last_access));
-        // Score must be a float in the format x.y
-        // db_string.push_str(&format!("{:.10}\n", dir.score));
-        if dir.alias.len() > 0 {
-            db_string.push_str(&format!("{}\n", dir.alias));
-        }
-        db_string.push_str("---\n");
-    }
-    fs::write(app.database_path.clone(), db_string).unwrap_or_else(
-        |e| panic!("Error writing file: {}", e)
-        );
+    let db_string = config::serialize_database(app.dirs);
+    // Write atomically: a crash mid-write must not truncate the database.
+    let tmp_path = format!("{}.tmp", app.database_path);
+    fs::write(&tmp_path, db_string)
+        .and_then(|_| fs::rename(&tmp_path, &app.database_path))
+        .unwrap_or_else(|e| panic!("Error writing file: {}", e));
 }

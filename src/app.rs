@@ -20,13 +20,25 @@ pub(crate) fn get_current_seconds() -> i64 {
 }
 
 pub(crate) fn get_home_dir() -> String {
-    let current_home_dir = env::var("HOME").unwrap();
-    return current_home_dir;
+    return env::var("HOME").unwrap_or_default();
 }
 
 pub(crate) fn get_user() -> String {
-    let current_user = env::var("USER").unwrap();
-    return current_user;
+    return env::var("USER").unwrap_or_default();
+}
+
+/// Replace `prefix` by `replacement` only if `path` is `prefix` itself or
+/// lies inside it (so `/home/jo` does not match `/home/john`).
+fn replace_path_prefix(path: &str, prefix: &str, replacement: &str) -> Option<String> {
+    if prefix.is_empty() {
+        return None;
+    }
+    let rest = path.strip_prefix(prefix)?;
+    if rest.is_empty() || rest.starts_with('/') {
+        Some(format!("{}{}", replacement, rest))
+    } else {
+        None
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -129,15 +141,19 @@ impl App <'_> {
 
                 if self.compact_paths {
                     // Replace /home/<user> with '~'
-                    let current_home_dir = get_home_dir();
-                    dir_name = dir_name.replace(current_home_dir.as_str(), "~");
-
                     // Replace (/run)/media/<user> with '>'
                     let user = get_user();
-                    let media_user = format!("/media/{}", user);
-                    let run_media_user = format!("/run/media/{}", user);
-                    dir_name = dir_name.replace(run_media_user.as_str(), ">");
-                    dir_name = dir_name.replace(media_user.as_str(), ">");
+                    let candidates = [
+                        (get_home_dir(), "~"),
+                        (format!("/run/media/{}", user), ">"),
+                        (format!("/media/{}", user), ">"),
+                    ];
+                    for (prefix, replacement) in candidates.iter() {
+                        if let Some(r) = replace_path_prefix(&dir_name, prefix, replacement) {
+                            dir_name = r;
+                            break;
+                        }
+                    }
                 }
 
                 let mut alias = String::new();
@@ -146,14 +162,12 @@ impl App <'_> {
                 }
 
                 println!(
-                    "{}) {}{} {}",
+                    "{}) {}{}",
                     self.format("bold", "", (i+start).to_string()),
                     alias,
                     self.format("bold", "blue", dir_name),
-                    (i+start),
-                    // dir.score
                 );
-                if i == (max_results - start) {
+                if i + 1 >= max_results {
                     break;
                 }
             }
@@ -216,7 +230,7 @@ impl App <'_> {
         // Select dirs by numbers
         let selected_dirs_string = self.select_dir();
         // parse list of numbers separated by spaces
-        let selected_dirs_nums_str: Vec<&str> = selected_dirs_string.split(' ').collect();
+        let selected_dirs_nums_str: Vec<&str> = selected_dirs_string.split_whitespace().collect();
         // selected dirs names strs
         let mut selected_dirs_strings: Vec<String> = Vec::new();
 
@@ -290,7 +304,10 @@ impl App <'_> {
             dirs_to_show = &valid_dirs[starting_index..];
         }
 
-        let selected_dir_num = self.parse_and_validate_dir_number(&selected_dir, dirs_to_show.len()).unwrap();
+        let selected_dir_num = self.parse_and_validate_dir_number(
+            &selected_dir,
+            dirs_to_show.len().min(self.max_results),
+        ).unwrap();
 
         // Get name of the selected dir
         let dir_name = format!("{}", valid_dirs[starting_index+selected_dir_num-1].name);
@@ -314,6 +331,9 @@ impl App <'_> {
         let mut starting_index = 1;
         if forced_substring != "none" {
             starting_index = 2;
+        }
+        if args.len() <= starting_index {
+            self.show_error("No directory or substring provided", "");
         }
         let mut dir_str = args[starting_index].as_str();
 
@@ -386,8 +406,10 @@ impl App <'_> {
                                 let mut cded = false;
                                 for dir in valid_dirs.iter() {
                                     // Access the basename of the dir that matches the substring(s)
-                                    let basename = PathBuf::from(dir.name.clone());
-                                    let basename_str = basename.file_name().unwrap().to_str().unwrap().to_string();
+                                    let basename_str = match Path::new(&dir.name).file_name() {
+                                        Some(b) => b.to_string_lossy().to_string(),
+                                        None => continue,
+                                    };
                                     let mut all_match = true;
                                     for pattern in args[starting_index..].iter() {
                                         if !basename_str.contains(pattern) {
@@ -481,11 +503,13 @@ impl App <'_> {
                 // If the dir is not in the table and it does exists in the
                 //   FS, add it
                 if let Err(_err) = dir {
-                    // Do not store '..' or '.' dirs
-                    if !(dir_str == "." || dir_str == "..") {
+                    {
                         self.insert_with_alias(dir_str, Some(alias.as_str()));
                         let details = format!("{}->{}", alias, dir_str);
-                        self.show_exit_detailed_message("Removed dir alias", details.as_str());
+                        self.show_exit_detailed_message(
+                            if alias.is_empty() { "Added dir (no alias)" } else { "Added dir alias" },
+                            details.as_str(),
+                        );
                     }
                 } else {
                     if args.len() < 4 {
@@ -650,9 +674,10 @@ impl App <'_> {
     }
 
 
-    pub(crate) fn list_existent(&mut self) {
+    pub(crate) fn list_existent(&mut self, args: &[String]) {
         let all_dirs = self.get_all_dirs(true);
-        self.list_dirs(&all_dirs, 0, 1);
+        let max_num = args.get(2).and_then(|n| n.parse::<usize>().ok()).unwrap_or(0);
+        self.list_dirs(&all_dirs, max_num, 1);
     }
 
 
@@ -691,6 +716,10 @@ impl App <'_> {
         // Sort by last access
         self.dirs.sort_by(|a, b| b.last_access.partial_cmp(&a.last_access).unwrap());
         // Get the first dir
+        if self.dirs.is_empty() {
+            self.show_exit_message("No dirs");
+            return;
+        }
         let dir = self.dirs[0].name.clone();
         self.direct_cd(dir);
     }
