@@ -30,13 +30,6 @@ def is_valid_shell(shell):
     return any(valid_shell in shell for valid_shell in valid_shells)
 
 
-def ask_yes_no(question):
-    try:
-        return input(f'{question} [y/N]: ').strip().lower() in ('y', 'yes')
-    except EOFError:
-        return False
-
-
 def fetch(name):
     """Contents of a file of the repository: the local copy when installing
     from source, otherwise the one from GitHub."""
@@ -54,19 +47,15 @@ def write_file(file_path, contents):
         fp.write(contents)
 
 
-def setup_fish(hook):
+def setup_fish():
     print('Setting up cz for fish shell.')
     # The function file is ours, so it is always replaced (also on updates)
     z_fish_func_path = expandvars('$HOME/.config/fish/functions/z.fish')
     print(f' - Writing the z function to {z_fish_func_path}.')
     write_file(z_fish_func_path, fetch('z.fish'))
-    if hook:
-        hook_path = expandvars('$HOME/.config/fish/conf.d/cz_hook.fish')
-        print(f' - Writing the cd hook to {hook_path}.')
-        write_file(hook_path, fetch('hook.fish'))
 
 
-def setup_posix(shell_name, hook):
+def setup_posix(shell_name):
     rc_path = expandvars(f'$HOME/.{shell_name}rc')
     print(f'Setting up cz for {shell_name} ({rc_path}).')
     rc_contents = ''
@@ -74,7 +63,6 @@ def setup_posix(shell_name, hook):
         with open(rc_path) as fp:
             rc_contents = fp.read()
 
-    additions = ''
     if re.search(r'^\s*(function\s+)?z\s*\(\s*\)', rc_contents, re.MULTILINE):
         print(
             f'Warning: a function `z` already exists in {rc_path}, so it was not',
@@ -84,16 +72,8 @@ def setup_posix(shell_name, hook):
         )
     else:
         print(' - Adding the z function.')
-        additions += '\n' + fetch('z.sh')
-    if hook:
-        if '__cz_hook' in rc_contents:
-            print(' - The cd hook is already there.')
-        else:
-            print(' - Adding the cd hook.')
-            additions += '\n' + fetch('hook.sh')
-    if additions:
         with open(rc_path, 'a') as fp:
-            fp.write(additions)
+            fp.write('\n' + fetch('z.sh'))
 
 
 # Offer all options and ask user to select one
@@ -197,15 +177,12 @@ if shell is None or not is_valid_shell(shell):
         except ValueError:
             print('Invalid shell.')
 
-hook = ask_yes_no(
-    'Also learn the directories you reach with a plain `cd` (shell hook)?'
-)
 if 'fish' in shell:
-    setup_fish(hook)
+    setup_fish()
 elif 'zsh' in shell:
-    setup_posix('zsh', hook)
+    setup_posix('zsh')
 elif 'bash' in shell:
-    setup_posix('bash', hook)
+    setup_posix('bash')
 
 print('''\
 Done! Please restart your shell.

@@ -62,7 +62,7 @@ impl Database {
 
     /// Write the database to a temporary file and then rename it, so that
     /// the file is never left half-written. If several `cz` save at the same
-    /// time (e.g., hooks of several shells), the last one wins: there is no
+    /// time (from several shells), the last one wins: there is no
     /// locking, so a visit may occasionally be lost.
     pub(crate) fn save(&self, path: &str) {
         if let Some(parent) = Path::new(path).parent() {

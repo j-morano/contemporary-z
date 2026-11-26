@@ -41,12 +41,8 @@ fn main() {
         Err(message) => usage_error(&message),
     };
 
-    // Tell the shell not to cd anywhere unless a command says otherwise.
-    // `--add` runs from shell hooks, possibly while another shell is waiting
-    // for the cd target of its own command: it must not touch the file.
-    if !matches!(command, Command::Add(_)) {
-        write_dir("".to_string());
-    }
+    // Tell the shell not to cd anywhere unless a command says otherwise
+    write_dir("".to_string());
 
     // These do not need the database
     match command {
@@ -75,7 +71,6 @@ fn main() {
         Command::Navigate { hidden, dirs_only } => app.interactive_navigation(hidden, dirs_only),
         Command::Remove(patterns) => app.remove_dirs(&patterns),
         Command::Alias(alias_args) => app.add_alias(alias_args),
-        Command::Add(dir) => app.add_visit(&dir),
         Command::RemoveAlias => app.remove_alias_interactive(),
         // Remove directories which do not exist
         Command::Sync => app.sync_dirs(),

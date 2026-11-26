@@ -127,13 +127,6 @@ Add the code from `z.sh` to `.bashrc` (or `.zshrc`). For example:
 cat z.sh >> $HOME/.bashrc
 ```
 
-### Learn from plain `cd` (optional)
-
-By default, `cz` only learns the directories you reach with `z`. To also register the ones you reach with a plain `cd`, add a hook to your shell. It calls `cz --add "$PWD"` whenever the directory changes.
-
-* Fish: copy `hook.fish` to `$HOME/.config/fish/conf.d/cz_hook.fish`.
-* Bash/Zsh: add the code from `hook.sh` to `.bashrc`/`.zshrc`, after the `z` function.
-
 > [!NOTE]
 > Since version 0.6.0, the shell function gives `cz` a private temporary file (`CZ_PATH_FILE`) to write the directory to `cd` to, instead of the shared `/tmp/cz_path`. If you installed the function before, update it with the current `z.fish` or `z.sh`. (Older functions still work through `$XDG_RUNTIME_DIR/cz_path` or `/tmp/cz_path_$USER`.)
 
@@ -171,8 +164,6 @@ Mandatory arguments to long options are mandatory for short options too.
                                introduced, its alias is removed; if only an
                                alias is introduced, the programs shows the
                                directory list to select one of them.
-      --add DIRECTORY        register a visit to DIRECTORY in the database,
-                               without changing directory (see 'hook' files).
       --clear                clear the directories database.
   -b SUBSTRING               force substring matching by basename.
   --database-path            show the path of the directories database.

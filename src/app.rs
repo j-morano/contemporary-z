@@ -36,21 +36,6 @@ impl App {
     }
 
 
-    /// `--add`: register a visit to a directory the shell is already in (so
-    /// there is no cd). Meant for shell hooks: it silently ignores anything
-    /// that is not a directory, and a directory that is already the most
-    /// recent one (the visit was just registered, e.g., by `z`).
-    pub(crate) fn add_visit(&mut self, dir: &str) {
-        let dir = match canonical_dir(dir) {
-            Some(dir) => dir,
-            None => return,
-        };
-        if self.db.by_recency().first() != Some(&dir) {
-            self.db.insert(&dir, None);
-        }
-    }
-
-
     /// Existing directories that match, best score first.
     fn existing(&self, patterns: &[String], alias_only: bool) -> Vec<Directory> {
         let mut dirs = self.db.matching(patterns, alias_only);

@@ -22,8 +22,6 @@ Mandatory arguments to long options are mandatory for short options too.
                                introduced, its alias is removed; if only an
                                alias is introduced, the programs shows the
                                directory list to select one of them.
-      --add DIRECTORY        register a visit to DIRECTORY in the database,
-                               without changing directory (see 'hook' files).
       --clear                clear the directories database.
   -b SUBSTRING               force substring matching by basename.
   --database-path            show the path of the directories database.
