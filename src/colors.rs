@@ -44,7 +44,7 @@ pub(crate) fn color_code(color: &str) -> &str {
             return c.1;
         }
     }
-    return "30";
+    "30"
 }
 
 pub(crate) fn sgr_code(sgr: &str) -> &str{
@@ -53,5 +53,5 @@ pub(crate) fn sgr_code(sgr: &str) -> &str{
             return c.1;
         }
     }
-    return "0";
+    "0"
 }

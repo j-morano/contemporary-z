@@ -14,7 +14,7 @@ pub(crate) fn canonicalize_dir_str(dir_str_name: &str) -> String {
     // If dir name ends with '/', remove it, in order to avoid
     //   having duplicated dirs (with and without '/' versions)
     if dir_str.len() > 1
-        && dir_str.chars().last().unwrap() == '/'
+        && dir_str.ends_with('/')
     {
         dir_str = &dir_str[..dir_str.len() - 1];
     }

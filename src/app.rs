@@ -11,21 +11,20 @@ use std::io;
 use std::time::{SystemTime, UNIX_EPOCH};
 use crate::colors::{color_code, sgr_code};
 use std::path::Path;
-use std::path::PathBuf;
 use std::fs;
 
 
 
 pub(crate) fn get_current_seconds() -> i64 {
-    return SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64;
+    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64
 }
 
 pub(crate) fn get_home_dir() -> String {
-    return env::var("HOME").unwrap_or_default();
+    env::var("HOME").unwrap_or_default()
 }
 
 pub(crate) fn get_user() -> String {
-    return env::var("USER").unwrap_or_default();
+    env::var("USER").unwrap_or_default()
 }
 
 /// Replace `prefix` by `replacement` only if `path` is `prefix` itself or
@@ -58,15 +57,15 @@ impl App {
             full_color = format!("{}_fg", color);
         }
         if color.is_empty() {
-            return format!(
+            format!(
                 "\x1b[{}m{}\x1b[0m",
                 sgr_code(sgr), text
-            );
+            )
         } else {
-            return format!(
+            format!(
                 "\x1b[{};{}m{}\x1b[0m",
                 sgr_code(sgr), color_code(full_color.as_str()), text
-            );
+            )
         }
     }
 
@@ -92,6 +91,12 @@ impl App {
     }
 
 
+    /// Like `show_error`, but does not exit.
+    fn show_warning(&self, text: &str, error: &str) {
+        println!("{}: {}", self.format("bold", "magenta", text.to_string()), error);
+    }
+
+
     pub(crate) fn show_exit_message(&self, text: &str) {
         self.printf("bold", "green", String::from(text));
     }
@@ -111,94 +116,81 @@ impl App {
         print!("Number: ");
         io::stdout().flush().expect("Could not flush output");
         std::io::stdin().read_line(&mut line).unwrap();
-        return line.replace('\n', "");
+        line.replace('\n', "")
     }
 
 
-    pub(crate) fn list_dirs(&self, valid_dirs: &[Directory], max_num: usize, start: usize) {
-        let mut max_results = max_num;
-        if max_num == 0 {
-            max_results = self.config.max_results;
-        }
-        // If there are no dirs, exit
-        if valid_dirs.len() == 0 {
-            self.show_exit_message("No dirs");
-        } else {
-            // Show valid dirs
-            for (i, dir) in valid_dirs.iter().enumerate() {
-                let mut dir_name = dir.name.clone();
-
-                if self.config.compact_paths {
-                    // Replace /home/<user> with '~'
-                    // Replace (/run)/media/<user> with '>'
-                    let user = get_user();
-                    let candidates = [
-                        (get_home_dir(), "~"),
-                        (format!("/run/media/{}", user), ">"),
-                        (format!("/media/{}", user), ">"),
-                    ];
-                    for (prefix, replacement) in candidates.iter() {
-                        if let Some(r) = replace_path_prefix(&dir_name, prefix, replacement) {
-                            dir_name = r;
-                            break;
-                        }
-                    }
-                }
-
-                let mut alias = String::new();
-                if !dir.alias.is_empty() {
-                    alias = format!("{}:", dir.alias);
-                }
-
-                println!(
-                    "{}) {}{}",
-                    self.format("bold", "", (i+start).to_string()),
-                    alias,
-                    self.format("bold", "blue", dir_name),
-                );
-                if i + 1 >= max_results {
-                    break;
-                }
-            }
-        }
+    pub(crate) fn list_dirs(&self, dirs: &[Directory], max_num: usize, start: usize) {
+        self.list_entries(
+            dirs.iter().map(|dir| (dir.alias.as_str(), dir.name.as_str())),
+            dirs.len(),
+            max_num,
+            start,
+        );
     }
 
 
-    fn print_files(files: Vec<String>) {
-        // check if files is empty
-        if files.len() > 0 {
-            for file in files {
-                println!("{}", file.to_string());
-            }
-        }
-    }
-
-
-    /// Like `select_valid_dir`, but returns `None` on invalid input instead of
-    /// exiting (used by interactive navigation).
-    pub(crate) fn select_valid_dir_no_exit(
+    /// Print a numbered list of `(alias, name)` entries; at most `max_num`
+    /// (or `max_results` if it is 0) of the `count` entries.
+    fn list_entries<'a>(
         &self,
-        valid_dirs: Vec<Directory>,
+        entries: impl Iterator<Item = (&'a str, &'a str)>,
+        count: usize,
         max_num: usize,
         start: usize,
-        files: Vec<String>,
-    ) -> Option<String>
-    {
-        if self.config.show_files == ShowFiles::Top {
-            App::print_files(files.clone());
+    ) {
+        if count == 0 {
+            self.show_exit_message("No dirs");
+            return;
         }
-        self.list_dirs(&valid_dirs, max_num, start);
+        let max_results = if max_num == 0 { self.config.max_results } else { max_num };
+
+        // Replace /home/<user> with '~' and (/run)/media/<user> with '>'
+        let mut prefixes: Vec<(String, &str)> = Vec::new();
+        if self.config.compact_paths {
+            let user = get_user();
+            prefixes.push((get_home_dir(), "~"));
+            prefixes.push((format!("/run/media/{}", user), ">"));
+            prefixes.push((format!("/media/{}", user), ">"));
+        }
+
+        for (i, (alias, name)) in entries.take(max_results).enumerate() {
+            let name = prefixes
+                .iter()
+                .find_map(|(prefix, replacement)| replace_path_prefix(name, prefix, replacement))
+                .unwrap_or_else(|| name.to_string());
+            let alias = if alias.is_empty() { String::new() } else { format!("{}:", alias) };
+            println!(
+                "{}) {}{}",
+                self.format("bold", "", (i + start).to_string()),
+                alias,
+                self.format("bold", "blue", name),
+            );
+        }
+    }
+
+
+    /// Show the subdirectories (and the files, depending on `show_files`) and
+    /// ask for one of the subdirectories. Returns `None` on invalid input
+    /// instead of exiting.
+    fn select_entry(&self, dirs: &[String], files: &[String]) -> Option<String> {
+        let start = self.config.nav_start_number;
+        if self.config.show_files == ShowFiles::Top {
+            files.iter().for_each(|file| println!("{}", file));
+        }
+        self.list_entries(
+            dirs.iter().map(|dir| ("", dir.as_str())),
+            dirs.len(),
+            usize::MAX,
+            start,
+        );
         if self.config.show_files == ShowFiles::Bottom {
-            App::print_files(files.clone());
+            files.iter().for_each(|file| println!("{}", file));
         }
         println!();
 
-        let selected_dir = self.select_dir().parse::<usize>().ok()?;
-        // Check if the introduced number is valid
-        if selected_dir < start || selected_dir > valid_dirs.len() + start - 1 {
-            return None;
-        }
-        Some(valid_dirs[selected_dir - start].name.clone())
+        let number = self.select_dir().parse::<usize>().ok()?;
+        dirs.get(number.checked_sub(start)?).cloned()
     }
 
 
@@ -243,7 +235,7 @@ impl App {
             return None;
         }
         let page_size = self.config.max_results;
-        let number_of_pages = (valid_dirs.len() + page_size - 1) / page_size;
+        let number_of_pages = valid_dirs.len().div_ceil(page_size);
         let mut page = 0;
 
         loop {
@@ -425,10 +417,7 @@ impl App {
         }
         // If not, add it
         if !found {
-            let alias = match alias {
-                Some(alias) => alias,
-                None => "",
-            };
+            let alias = alias.unwrap_or_default();
             let dir = Directory {
                 name: dir.to_string(),
                 counter: 1.0,
@@ -487,7 +476,7 @@ impl App {
             all_dirs.push(dir.clone());
         }
         all_dirs.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
-        return all_dirs;
+        all_dirs
     }
 
 
@@ -504,33 +493,20 @@ impl App {
 
 
     pub(crate) fn sync_dirs(&mut self) {
-        let mut dirs_to_remove: Vec<String> = Vec::new();
-        for dir in self.dirs.iter() {
-            if !Path::new(&dir.name).exists() {
-                dirs_to_remove.push(dir.name.clone());
-            }
-        }
-        for dir in dirs_to_remove.iter() {
-            self.remove(dir);
-        }
+        self.dirs.retain(|dir| Path::new(&dir.name).exists());
     }
 
 
     pub(crate) fn remove(&mut self, dir_str: &str) {
-        let mut i = 0;
-        for dir in self.dirs.iter() {
-            if dir.name == dir_str {
-                self.dirs.remove(i);
-                break;
-            }
-            i += 1;
+        if let Some(i) = self.dirs.iter().position(|dir| dir.name == dir_str) {
+            self.dirs.remove(i);
         }
     }
 
 
     pub(crate) fn go_to_last(&mut self) {
         // Sort by last access
-        self.dirs.sort_by(|a, b| b.last_access.partial_cmp(&a.last_access).unwrap());
+        self.dirs.sort_by_key(|dir| std::cmp::Reverse(dir.last_access));
         // Get the first dir
         if self.dirs.is_empty() {
             self.show_exit_message("No dirs");
@@ -543,7 +519,7 @@ impl App {
 
     pub(crate) fn go_to_previous(&mut self) {
         // Sort by last access
-        self.dirs.sort_by(|a, b| b.last_access.partial_cmp(&a.last_access).unwrap());
+        self.dirs.sort_by_key(|dir| std::cmp::Reverse(dir.last_access));
         // Get the second dir
         if self.dirs.len() > 1 {
             let dir = self.dirs[1].name.clone();
@@ -588,97 +564,76 @@ impl App {
     }
 
 
-    pub(crate) fn interactive_navigation(
-        &mut self,
-        hidden: bool,
-        force_dir_only: bool,
-    ) {
-        let mut dir_to_read = String::from(".");
+    /// Browse the subdirectories of the current directory, one level at a
+    /// time, and cd to the last one that was selected. Only that final
+    /// directory is recorded in the database.
+    pub(crate) fn interactive_navigation(&mut self, hidden: bool, dirs_only: bool) {
+        let mut selected_dir: Option<String> = None;
         loop {
-            let paths = fs::read_dir(dir_to_read.as_str()).unwrap();
-            let mut valid_dirs: Vec<Directory> = Vec::new();
-            let mut files: Vec<String> = Vec::new();
-
-            for result_path in paths {
-                let dir_path = result_path.unwrap().path();
-                if dir_path.exists()
-                {
-                    if dir_path.is_dir() {
-                        let filename = String::from(
-                            dir_path.file_name().unwrap().to_str().unwrap()
-                        );
-                        if (hidden && filename != ".")
-                            || (!hidden  && !filename.starts_with("."))
-                        {
-                            let directory = Directory{
-                                name: filename.clone(),
-                                counter: 0.0,
-                                last_access: 0,
-                                score: 0.0,
-                                alias: String::new()
-                            };
-                            valid_dirs.push(directory);
-                        }
-                    } else {
-                        if !force_dir_only {
-                            // Add to files
-                            let filename = String::from(
-                                dir_path.file_name().unwrap().to_str().unwrap()
-                            );
-                            files.push(filename);
-                        }
-                    }
+            let base = selected_dir.as_deref().unwrap_or(".");
+            let (mut dirs, files) = match read_entries(Path::new(base), hidden, dirs_only) {
+                Ok(entries) => entries,
+                Err(error) => {
+                    self.show_warning("Cannot read directory", &error.to_string());
+                    break;
                 }
-            }
-            // Parent directory
-            let directory = Directory{
-                name: "..".to_string(),
-                counter: 0.0,
-                last_access: 0,
-                score: 0.0,
-                alias: String::new()
             };
-            valid_dirs.push(directory);
-            // Sort dirs by name
-            valid_dirs.sort_by_key(|dir| dir.name.clone());
+            dirs.push("..".to_string());
+            dirs.sort();
 
-            if valid_dirs.is_empty() {
-                break;
-            }
-
-            let dir_name: String; //= String::new();
-            match self.select_valid_dir_no_exit(valid_dirs, usize::MAX, self.config.nav_start_number, files) {
-                Some(dir_string) => dir_name = dir_string,
+            let name = match self.select_entry(&dirs, &files) {
+                Some(name) => name,
                 None => break,
             };
             println!();
 
-            let dir_name_str = dir_name.as_str();
-            let base_dir_str = dir_to_read.as_str();
-            let dir_path = Path::new(base_dir_str);
-            let dir_path_buf = dir_path.join(dir_name_str);
-            let mut dir_str = dir_path_buf.to_str().unwrap();
-
-            let dir_pathbuf;
+            let mut path = Path::new(base).join(name);
             if self.config.abs_paths {
-                dir_pathbuf = PathBuf::from(dir_str).canonicalize().unwrap();
-                dir_str = dir_pathbuf.to_str().unwrap();
+                path = match path.canonicalize() {
+                    Ok(path) => path,
+                    Err(error) => {
+                        self.show_warning("Cannot access directory", &error.to_string());
+                        break;
+                    }
+                };
             }
-
-            // If the dir is not in the table, add it
-            dir_to_read = match self.get(dir_str) {
-                Some(dir) => dir.name,
-                None => {
-                    self.insert(dir_str);
-                    String::from(dir_str)
-                }
+            let path = match path.to_str() {
+                Some(path) => path.to_string(),
+                None => break,
             };
-            // print in bold dir_to_read
-            println!("{}", self.format("bold", "", dir_to_read.to_string()));
-            // println!("{}", dir_to_read);
+            println!("{}", self.format("bold", "", path.clone()));
+            selected_dir = Some(path);
         }
-        self.direct_cd(dir_to_read);
+        if let Some(dir) = selected_dir {
+            self.direct_cd(dir);
+        }
     }
+}
+
+
+/// Subdirectory names and file names of `dir` (names that are not valid
+/// UTF-8 are skipped). Hidden entries are only included if `hidden`; files are
+/// not included if `dirs_only`.
+fn read_entries(dir: &Path, hidden: bool, dirs_only: bool) -> io::Result<(Vec<String>, Vec<String>)> {
+    let mut dirs = Vec::new();
+    let mut files = Vec::new();
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let name = match entry.file_name().into_string() {
+            Ok(name) => name,
+            Err(_) => continue,
+        };
+        if !hidden && name.starts_with('.') {
+            continue;
+        }
+        let path = entry.path();
+        if path.is_dir() {
+            dirs.push(name);
+        } else if !dirs_only && path.exists() {
+            files.push(name);
+        }
+    }
+    Ok((dirs, files))
 }
 
 

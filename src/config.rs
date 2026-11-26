@@ -28,7 +28,10 @@ fn init_dir_file(database_fn: String, dirs: &mut Vec<Directory>) {
 pub(crate) fn serialize_database(dirs: &[Directory]) -> String {
     let mut db_string = String::new();
     for dir in dirs {
-        db_string.push_str(&format!("{}\n{}\n{}\n", dir.name, dir.counter, dir.last_access));
+        // Aging produces long fractions: keep a few decimals (whole counters
+        // are written as integers)
+        let counter = (dir.counter * 10_000.0).round() / 10_000.0;
+        db_string.push_str(&format!("{}\n{}\n{}\n", dir.name, counter, dir.last_access));
         if !dir.alias.is_empty() {
             db_string.push_str(&format!("{}\n", dir.alias));
         }
@@ -329,6 +332,12 @@ mod tests {
         let parsed = parse_database(&text, NOW);
         assert_eq!(parsed[0].counter, 2.5);
         assert_eq!(parsed[1].counter, 3.0);
+    }
+
+    #[test]
+    fn database_rounds_long_fractions() {
+        let text = serialize_database(&[dir("/a", 1.0 / 3.0, NOW, "")]);
+        assert!(text.contains("/a\n0.3333\n"), "{}", text);
     }
 
     #[test]
