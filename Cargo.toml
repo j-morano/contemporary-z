@@ -1,6 +1,6 @@
 [package]
 name = "cz"
-version = "0.6.0"
+version = "0.7.0"
 edition = "2018"
 # File::try_lock
 rust-version = "1.89"
