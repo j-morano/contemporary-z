@@ -5,7 +5,7 @@ use std::io;
 use std::io::prelude::*;
 use std::process::exit;
 
-use crate::config::{Config, ShowFiles, Theme};
+use crate::config::{Config, Theme};
 use crate::db::Directory;
 use crate::utils::{get_home_dir, get_user, write_dir};
 
@@ -64,12 +64,6 @@ impl Ui {
     }
 
 
-    /// Like `show_error`, but does not exit.
-    pub(crate) fn show_warning(&self, text: &str, error: &str) {
-        println!("{}: {}", self.colored(MAGENTA, text), error);
-    }
-
-
     pub(crate) fn show_message(&self, text: &str) {
         println!("{}", self.colored(GREEN, text));
     }
@@ -77,11 +71,6 @@ impl Ui {
 
     pub(crate) fn show_detailed_message(&self, message: &str, details: &str) {
         println!("{}: {}", self.colored(GREEN, message), details);
-    }
-
-
-    pub(crate) fn show_bold(&self, text: &str) {
-        println!("{}", bold(text));
     }
 
 
@@ -94,26 +83,10 @@ impl Ui {
     }
 
 
-    pub(crate) fn list_dirs(&self, dirs: &[Directory], max_num: usize, start: usize) {
-        self.list_entries(
-            dirs.iter().map(|dir| (dir.alias.as_str(), dir.name.as_str())),
-            dirs.len(),
-            max_num,
-            start,
-        );
-    }
-
-
-    /// Print a numbered list of `(alias, name)` entries; at most `max_num`
-    /// (or `max_results` if it is 0) of the `count` entries.
-    fn list_entries<'a>(
-        &self,
-        entries: impl Iterator<Item = (&'a str, &'a str)>,
-        count: usize,
-        max_num: usize,
-        start: usize,
-    ) {
-        if count == 0 {
+    /// Print a numbered list (from 1) of `dirs`: at most `max_num` of them, or
+    /// `max_results` if `max_num` is 0.
+    pub(crate) fn list_dirs(&self, dirs: &[Directory], max_num: usize) {
+        if dirs.is_empty() {
             self.show_message("No dirs");
             return;
         }
@@ -128,50 +101,21 @@ impl Ui {
             prefixes.push((format!("/media/{}", user), ">"));
         }
 
-        for (i, (alias, name)) in entries.take(max_results).enumerate() {
+        for (i, dir) in dirs.iter().take(max_results).enumerate() {
             let name = prefixes
                 .iter()
-                .find_map(|(prefix, replacement)| replace_path_prefix(name, prefix, replacement))
-                .unwrap_or_else(|| name.to_string());
-            let alias = if alias.is_empty() { String::new() } else { format!("{}:", alias) };
-            println!(
-                "{}) {}{}",
-                bold(&(i + start).to_string()),
-                alias,
-                self.colored(BLUE, &name),
-            );
+                .find_map(|(prefix, replacement)| replace_path_prefix(&dir.name, prefix, replacement))
+                .unwrap_or_else(|| dir.name.clone());
+            let alias = if dir.alias.is_empty() { String::new() } else { format!("{}:", dir.alias) };
+            println!("{}) {}{}", bold(&(i + 1).to_string()), alias, self.colored(BLUE, &name));
         }
-    }
-
-
-    /// Show the subdirectories (and the files, depending on `show_files`) and
-    /// ask for one of the subdirectories. Returns `None` on invalid input
-    /// instead of exiting.
-    pub(crate) fn select_entry(&self, dirs: &[String], files: &[String]) -> Option<String> {
-        let start = self.config.nav_start_number;
-        if self.config.show_files == ShowFiles::Top {
-            files.iter().for_each(|file| println!("{}", file));
-        }
-        self.list_entries(
-            dirs.iter().map(|dir| ("", dir.as_str())),
-            dirs.len(),
-            usize::MAX,
-            start,
-        );
-        if self.config.show_files == ShowFiles::Bottom {
-            files.iter().for_each(|file| println!("{}", file));
-        }
-        println!();
-
-        let number = self.prompt().parse::<usize>().ok()?;
-        dirs.get(number.checked_sub(start)?).cloned()
     }
 
 
     /// Ask for several numbers (separated by whitespace). Exits with an error
     /// message on invalid input.
     pub(crate) fn select_dirs(&self, dirs: &[Directory]) -> Vec<String> {
-        self.list_dirs(dirs, 0, 1);
+        self.list_dirs(dirs, 0);
         println!();
 
         self.prompt()
@@ -213,7 +157,7 @@ impl Ui {
             let start = page * page_size;
             let dirs_to_show = &dirs[start..];
             println!("[{}/{}]", page + 1, number_of_pages);
-            self.list_dirs(dirs_to_show, 0, 1);
+            self.list_dirs(dirs_to_show, 0);
             println!();
 
             let selected = self.prompt();

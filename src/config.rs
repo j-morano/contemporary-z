@@ -26,27 +26,13 @@ pub(crate) enum Mode {
 
 
 
-/// Where to show non-directory files in interactive navigation.
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub(crate) enum ShowFiles {
-    Top,
-    Bottom,
-    /// Config value: `none`.
-    Off,
-}
-
-
-
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct Config {
     pub(crate) theme: Theme,
-    pub(crate) abs_paths: bool,
     pub(crate) compact_paths: bool,
     pub(crate) max_results: usize,
     pub(crate) database_path: String,
     pub(crate) substring: Mode,
-    pub(crate) show_files: ShowFiles,
-    pub(crate) nav_start_number: usize,
     /// Limit of the sum of all the visit counters (see `Database::age`).
     pub(crate) max_age: usize,
 }
@@ -60,13 +46,10 @@ impl Default for Config {
     fn default() -> Config {
         Config {
             theme: Theme::Dark,
-            abs_paths: true,
             compact_paths: true,
             max_results: 9,
             database_path: expand_home("$HOME/.local/share/contemporary-z/directories.dir"),
             substring: Mode::Score,
-            show_files: ShowFiles::Off,
-            nav_start_number: 1,
             max_age: 10000,
         }
     }
@@ -84,7 +67,6 @@ impl Config {
                     _ => return Err(()),
                 }
             }
-            "abs_paths" => self.abs_paths = value.parse().map_err(|_| ())?,
             "compact_paths" => self.compact_paths = value.parse().map_err(|_| ())?,
             "max_results" => {
                 // Zero would break pagination
@@ -94,7 +76,6 @@ impl Config {
                 }
                 self.max_results = n;
             }
-            "nav_start_number" => self.nav_start_number = value.parse().map_err(|_| ())?,
             "max_age" => {
                 let n: usize = value.parse().map_err(|_| ())?;
                 if n == 0 {
@@ -109,14 +90,6 @@ impl Config {
                     "score" => Mode::Score,
                     "basename" => Mode::Basename,
                     "none" => Mode::Select,
-                    _ => return Err(()),
-                }
-            }
-            "show_files" => {
-                self.show_files = match value {
-                    "top" => ShowFiles::Top,
-                    "bottom" => ShowFiles::Bottom,
-                    "none" => ShowFiles::Off,
                     _ => return Err(()),
                 }
             }
@@ -198,20 +171,19 @@ mod tests {
 
     #[test]
     fn config_user_values_override_defaults() {
-        let c = Config::parse("theme = bright\nmax_results = 4\nsubstring = none\nshow_files = top");
+        let c = Config::parse("theme = bright\nmax_results = 4\nsubstring = none");
         assert_eq!(c.theme, Theme::Bright);
         assert_eq!(c.max_results, 4);
         assert_eq!(c.max_age, 10000);
         assert_eq!(c.substring, Mode::Select);
-        assert_eq!(c.show_files, ShowFiles::Top);
         // Not set by the user: default
-        assert!(c.abs_paths);
+        assert!(c.compact_paths);
     }
 
     #[test]
     fn config_invalid_values_fall_back_to_default() {
         let c = Config::parse(
-            "max_results = abc\nabs_paths = maybe\nnav_start_number = -3\nsubstring = nope\nmax_results = 0\nmax_age = 0"
+            "max_results = abc\ncompact_paths = maybe\nsubstring = nope\nmax_results = 0\nmax_age = 0"
         );
         assert_eq!(c, Config::default());
     }

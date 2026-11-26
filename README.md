@@ -169,12 +169,6 @@ Mandatory arguments to long options are mandatory for short options too.
   --database-path            show the path of the directories database.
   -e SUBSTRING               force substring matching by score.
   -f SUBSTRING               force substring match list for SUBSTRING
-  -i                         interactive selection (using a numbered list) of
-                               the subdirectories of the current directory.
-      --ih                   interactive selection, but including hidden
-                               directories.
-      --id                   interactive selection, for directories only
-                               (ignore configuration option 'show_files').
   -l [NUMBER]                list a certain NUMBER of directories by 'frecency';
                                if no NUMBER is provided, the max_results number
                                from configuration is used.
@@ -202,9 +196,6 @@ with the following path: '~/.config/contemporary-z/cz.conf' using the format
 Configuration options:
   theme: string. Color theme.
       * Allowed values: 'dark', 'bright'
-  abs_paths: bool. Record directories using full paths or relative paths.
-      With the latter option, shown directories will vary from one directory to
-      another.
   compact_paths: bool. Replace '/home/<username>' by '~' and
       '/run/media/<username>' by '>'.
   max_results: int. Maximum results to show in the directory list.
@@ -218,15 +209,6 @@ Configuration options:
           - 'none': show selection list.
           - 'basename': go to the directory with the highest score (most 'frecent'
               dir) whose _basename_ matches the substring(s).
-  show_files: string. Whether to show non-dir files, and where, in
-      interactive selection.
-      * Allowed values:
-          - 'top': show files on top of dirs.
-          - 'bottom': show files under the dirs.
-          - 'none': do not show files.
-  nav_start_number: int. Start number for interactive navigation, that is,
-      the number that the parent directory will have.
-      * Recommended values: 1 or 0.
   max_age: int. Maximum sum of the visit counters of all the directories. When
       it is exceeded, all the counters are scaled down (to 90% of max_age) and
       the directories that fall below 1 visit are forgotten (except for the
@@ -239,12 +221,9 @@ Default config:
 
 theme = dark
 max_results = 9
-abs_paths = true
 compact_paths = true
 database_path = $HOME/.local/share/contemporary-z/directories.dir
 substring = score
-show_files = none
-nav_start_number = 1
 max_age = 10000
 -------------------------------------------------------------------
 

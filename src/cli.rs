@@ -27,8 +27,6 @@ pub(crate) enum Command {
     RemoveAlias,
     /// `-l [NUMBER]`
     List(Option<usize>),
-    /// `-i`, `--id`, `--ih`
-    Navigate { hidden: bool, dirs_only: bool },
     /// `-r [SUBSTRING]...`
     Remove(Vec<String>),
     Alias(AliasArgs),
@@ -61,9 +59,6 @@ pub(crate) fn parse(args: &[String]) -> Result<Command, String> {
         "--list-all" => alone(Command::ListAll),
         "--sync" => alone(Command::Sync),
         "--remove-alias" => alone(Command::RemoveAlias),
-        "-i" => alone(Command::Navigate { hidden: false, dirs_only: false }),
-        "--id" => alone(Command::Navigate { hidden: false, dirs_only: true }),
-        "--ih" => alone(Command::Navigate { hidden: true, dirs_only: false }),
         "-l" => match rest {
             [] => Ok(Command::List(None)),
             [number] => number

@@ -1,7 +1,5 @@
 //! The commands: they combine the configuration, the database and the UI.
 
-use std::fs;
-use std::io;
 use std::path::Path;
 
 use crate::cli::AliasArgs;
@@ -185,12 +183,12 @@ impl App {
 
     /// `-l [NUMBER]`
     pub(crate) fn list_existent(&self, max_num: Option<usize>) {
-        self.ui.list_dirs(&self.existing(&[], false), max_num.unwrap_or(0), 1);
+        self.ui.list_dirs(&self.existing(&[], false), max_num.unwrap_or(0));
     }
 
 
     pub(crate) fn list_all(&self) {
-        self.ui.list_dirs(&self.db.matching(&[], false), 0, 1);
+        self.ui.list_dirs(&self.db.matching(&[], false), 0);
     }
 
 
@@ -229,74 +227,5 @@ impl App {
     }
 
 
-    /// Browse the subdirectories of the current directory, one level at a
-    /// time, and cd to the last one that was selected. Only that final
-    /// directory is recorded in the database.
-    pub(crate) fn interactive_navigation(&mut self, hidden: bool, dirs_only: bool) {
-        let mut selected_dir: Option<String> = None;
-        loop {
-            let base = selected_dir.as_deref().unwrap_or(".");
-            let (mut dirs, files) = match read_entries(Path::new(base), hidden, dirs_only) {
-                Ok(entries) => entries,
-                Err(error) => {
-                    self.ui.show_warning("Cannot read directory", &error.to_string());
-                    break;
-                }
-            };
-            dirs.push("..".to_string());
-            dirs.sort();
 
-            let name = match self.ui.select_entry(&dirs, &files) {
-                Some(name) => name,
-                None => break,
-            };
-            println!();
-
-            let mut path = Path::new(base).join(name);
-            if self.config.abs_paths {
-                path = match path.canonicalize() {
-                    Ok(path) => path,
-                    Err(error) => {
-                        self.ui.show_warning("Cannot access directory", &error.to_string());
-                        break;
-                    }
-                };
-            }
-            let path = match path.to_str() {
-                Some(path) => path.to_string(),
-                None => break,
-            };
-            self.ui.show_bold(&path);
-            selected_dir = Some(path);
-        }
-        if let Some(dir) = selected_dir {
-            self.direct_cd(dir);
-        }
-    }
-}
-
-
-/// Subdirectory names and file names of `dir` (names that are not valid
-/// UTF-8 are skipped). Hidden entries are only included if `hidden`; files are
-/// not included if `dirs_only`.
-fn read_entries(dir: &Path, hidden: bool, dirs_only: bool) -> io::Result<(Vec<String>, Vec<String>)> {
-    let mut dirs = Vec::new();
-    let mut files = Vec::new();
-    for entry in fs::read_dir(dir)? {
-        let entry = entry?;
-        let name = match entry.file_name().into_string() {
-            Ok(name) => name,
-            Err(_) => continue,
-        };
-        if !hidden && name.starts_with('.') {
-            continue;
-        }
-        let path = entry.path();
-        if path.is_dir() {
-            dirs.push(name);
-        } else if !dirs_only && path.exists() {
-            files.push(name);
-        }
-    }
-    Ok((dirs, files))
 }
