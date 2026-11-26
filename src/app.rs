@@ -414,7 +414,7 @@ impl App {
         let mut found = false;
         for d in self.dirs.iter_mut() {
             if d.name == dir {
-                d.counter += 1;
+                d.counter += 1.0;
                 d.last_access = get_current_seconds();
                 if let Some(alias) = alias {
                     d.alias = alias.to_string();
@@ -431,7 +431,7 @@ impl App {
             };
             let dir = Directory {
                 name: dir.to_string(),
-                counter: 1,
+                counter: 1.0,
                 last_access: get_current_seconds(),
                 score: 0.0,
                 alias: alias.to_string(),
@@ -612,7 +612,7 @@ impl App {
                         {
                             let directory = Directory{
                                 name: filename.clone(),
-                                counter: 0,
+                                counter: 0.0,
                                 last_access: 0,
                                 score: 0.0,
                                 alias: String::new()
@@ -633,7 +633,7 @@ impl App {
             // Parent directory
             let directory = Directory{
                 name: "..".to_string(),
-                counter: 0,
+                counter: 0.0,
                 last_access: 0,
                 score: 0.0,
                 alias: String::new()

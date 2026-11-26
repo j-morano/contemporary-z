@@ -65,6 +65,7 @@ fn main() {
         Command::Select => app.interactive_cd(),
     }
     // Write dirs to database_dir_fn
+    data::age(&mut app.dirs, app.config.max_age as f64);
     let db_string = config::serialize_database(&app.dirs);
     // Write atomically: a crash mid-write must not truncate the database.
     let tmp_path = format!("{}.tmp", app.config.database_path);

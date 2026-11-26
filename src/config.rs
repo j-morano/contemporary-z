@@ -41,8 +41,6 @@ pub(crate) fn serialize_database(dirs: &[Directory]) -> String {
 /// Parse the database text format (see `serialize_database`).
 fn parse_database(db_string: &str, current_seconds: i64) -> Vec<Directory> {
     let mut dirs = Vec::new();
-    // Current seconds minus 2 months
-    let limit = current_seconds - (60 * 60 * 24 * 30 * 2);
     // Blocks are terminated by a line that is exactly "---". Malformed blocks
     // are skipped instead of aborting the program.
     let mut block: Vec<&str> = Vec::new();
@@ -56,18 +54,14 @@ fn parse_database(db_string: &str, current_seconds: i64) -> Vec<Directory> {
             continue;
         }
         let (counter, last_access) = match (
-            fields[1].parse::<i64>(),
+            fields[1].parse::<f64>(),
             fields[2].parse::<i64>(),
         ) {
             (Ok(c), Ok(l)) => (c, l),
             _ => continue,
         };
         let alias = fields.get(3).map(|a| a.to_string()).unwrap_or_default();
-        // Drop stale directories, but never aliased ones.
-        if last_access < limit && alias.is_empty() {
-            continue;
-        }
-        let score = 10000.0 * counter as f64 * (3.75 / ((0.0001 * (current_seconds - last_access) as f64 + 1.0) + 0.25));
+        let score = 10000.0 * counter * (3.75 / ((0.0001 * (current_seconds - last_access) as f64 + 1.0) + 0.25));
         dirs.push(Directory {
             name: fields[0].to_string(),
             counter,
@@ -156,6 +150,8 @@ pub(crate) struct Config {
     pub(crate) substring: Mode,
     pub(crate) show_files: ShowFiles,
     pub(crate) nav_start_number: usize,
+    /// Limit of the sum of all the visit counters (see `data::age`).
+    pub(crate) max_age: usize,
 }
 
 fn expand_home(path: &str) -> String {
@@ -174,6 +170,7 @@ impl Default for Config {
             substring: Mode::Score,
             show_files: ShowFiles::Off,
             nav_start_number: 1,
+            max_age: 10000,
         }
     }
 }
@@ -195,6 +192,13 @@ impl Config {
                 self.max_results = n;
             }
             "nav_start_number" => self.nav_start_number = value.parse().map_err(|_| ())?,
+            "max_age" => {
+                let n: usize = value.parse().map_err(|_| ())?;
+                if n == 0 {
+                    return Err(());
+                }
+                self.max_age = n;
+            }
             "database_path" => self.database_path = expand_home(value),
             "substring" => self.substring = value.parse()?,
             "show_files" => self.show_files = value.parse()?,
@@ -262,7 +266,7 @@ mod tests {
 
     const NOW: i64 = 1_800_000_000;
 
-    fn dir(name: &str, counter: i64, last_access: i64, alias: &str) -> Directory {
+    fn dir(name: &str, counter: f64, last_access: i64, alias: &str) -> Directory {
         Directory {
             name: name.to_string(),
             counter,
@@ -275,8 +279,8 @@ mod tests {
     #[test]
     fn database_round_trip() {
         let dirs = vec![
-            dir("/home/u/a", 3, NOW - 10, ""),
-            dir("/home/u/b", 1, NOW - 20, "bee"),
+            dir("/home/u/a", 3.0, NOW - 10, ""),
+            dir("/home/u/b", 1.0, NOW - 20, "bee"),
         ];
         let parsed = parse_database(&serialize_database(&dirs), NOW);
         assert_eq!(parsed.len(), 2);
@@ -291,7 +295,7 @@ mod tests {
 
     #[test]
     fn database_names_containing_separator() {
-        let dirs = vec![dir("/home/u/my---proj", 2, NOW, "a-b")];
+        let dirs = vec![dir("/home/u/my---proj", 2.0, NOW, "a-b")];
         let parsed = parse_database(&serialize_database(&dirs), NOW);
         assert_eq!(parsed.len(), 1);
         assert_eq!(parsed[0].name, "/home/u/my---proj");
@@ -307,12 +311,30 @@ mod tests {
     }
 
     #[test]
-    fn database_prunes_stale_but_keeps_aliased() {
-        let old = NOW - 60 * 60 * 24 * 90;
-        let dirs = vec![dir("/old", 1, old, ""), dir("/old_alias", 1, old, "x")];
+    fn database_keeps_old_entries() {
+        // Bounding the database is the job of `data::age`, not of loading
+        let old = NOW - 60 * 60 * 24 * 365 * 3;
+        let dirs = vec![dir("/old", 1.0, old, "")];
         let parsed = parse_database(&serialize_database(&dirs), NOW);
         assert_eq!(parsed.len(), 1);
-        assert_eq!(parsed[0].name, "/old_alias");
+        assert!(parsed[0].score > 0.0);
+    }
+
+    #[test]
+    fn database_fractional_counters() {
+        let dirs = vec![dir("/a", 2.5, NOW, ""), dir("/b", 3.0, NOW, "")];
+        let text = serialize_database(&dirs);
+        // Whole counters are written as before, so older versions can read them
+        assert!(text.contains("/b\n3\n"), "{}", text);
+        let parsed = parse_database(&text, NOW);
+        assert_eq!(parsed[0].counter, 2.5);
+        assert_eq!(parsed[1].counter, 3.0);
+    }
+
+    #[test]
+    fn database_reads_counters_written_by_older_versions() {
+        let parsed = parse_database(&format!("/a\n7\n{}\n---\n", NOW), NOW);
+        assert_eq!(parsed[0].counter, 7.0);
     }
 
     #[test]
@@ -337,6 +359,7 @@ mod tests {
         let c = Config::parse("theme = bright\nmax_results = 4\nsubstring = none\nshow_files = top");
         assert_eq!(c.theme, Theme::Bright);
         assert_eq!(c.max_results, 4);
+        assert_eq!(c.max_age, 10000);
         assert_eq!(c.substring, Mode::Select);
         assert_eq!(c.show_files, ShowFiles::Top);
         // Not set by the user: default
@@ -346,7 +369,7 @@ mod tests {
     #[test]
     fn config_invalid_values_fall_back_to_default() {
         let c = Config::parse(
-            "max_results = abc\nabs_paths = maybe\nnav_start_number = -3\nsubstring = nope\nmax_results = 0"
+            "max_results = abc\nabs_paths = maybe\nnav_start_number = -3\nsubstring = nope\nmax_results = 0\nmax_age = 0"
         );
         assert_eq!(c, Config::default());
     }

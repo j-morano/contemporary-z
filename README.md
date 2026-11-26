@@ -217,6 +217,10 @@ Configuration options:
   nav_start_number: int. Start number for interactive navigation, that is,
       the number that the parent directory will have.
       * Recommended values: 1 or 0.
+  max_age: int. Maximum sum of the visit counters of all the directories. When
+      it is exceeded, all the counters are scaled down (to 90% of max_age) and
+      the directories that fall below 1 visit are forgotten (except for the
+      ones with an alias). Higher values keep more history.
 
 
 Default config:
@@ -231,6 +235,7 @@ database_path = $HOME/.local/share/contemporary-z/directories.dir
 substring = score
 show_files = none
 nav_start_number = 1
+max_age = 10000
 -------------------------------------------------------------------
 
 Source code: <https://github.com/j-morano/contemporary-z>
