@@ -69,11 +69,6 @@ impl Ui {
     }
 
 
-    pub(crate) fn show_detailed_message(&self, message: &str, details: &str) {
-        println!("{}: {}", self.colored(GREEN, message), details);
-    }
-
-
     fn prompt(&self) -> String {
         let mut line = String::new();
         print!("Number: ");
@@ -106,8 +101,7 @@ impl Ui {
                 .iter()
                 .find_map(|(prefix, replacement)| replace_path_prefix(&dir.name, prefix, replacement))
                 .unwrap_or_else(|| dir.name.clone());
-            let alias = if dir.alias.is_empty() { String::new() } else { format!("{}:", dir.alias) };
-            println!("{}) {}{}", bold(&(i + 1).to_string()), alias, self.colored(BLUE, &name));
+            println!("{}) {}", bold(&(i + 1).to_string()), self.colored(BLUE, &name));
         }
     }
 

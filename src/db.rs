@@ -15,7 +15,6 @@ pub(crate) struct Directory {
     pub last_access: i64,
     /// Frecency, computed when the database is loaded.
     pub score: f64,
-    pub alias: String,
 }
 
 
@@ -26,13 +25,6 @@ fn frecency(counter: f64, last_access: i64, now: i64) -> f64 {
 }
 
 
-/// Whether `alias` can be stored: it must fit in one line of the database
-/// file and not be mistaken for the block separator.
-pub(crate) fn valid_alias(alias: &str) -> bool {
-    !alias.is_empty() && !alias.contains('\n') && alias != "---"
-}
-
-
 /// The directories database, stored as a text file with one block per
 /// directory:
 ///
@@ -40,7 +32,6 @@ pub(crate) fn valid_alias(alias: &str) -> bool {
 /// name
 /// counter
 /// last_access
-/// alias        (optional)
 /// ---
 /// ```
 pub(crate) struct Database {
@@ -103,11 +94,7 @@ impl Database {
             // Aging produces long fractions: keep 4 decimals (whole counters
             // are written as integers)
             let counter = (dir.counter * 10_000.0).round() / 10_000.0;
-            text.push_str(&format!("{}\n{}\n{}\n", dir.name, counter, dir.last_access));
-            if !dir.alias.is_empty() {
-                text.push_str(&format!("{}\n", dir.alias));
-            }
-            text.push_str("---\n");
+            text.push_str(&format!("{}\n{}\n{}\n---\n", dir.name, counter, dir.last_access));
         }
         text
     }
@@ -116,7 +103,7 @@ impl Database {
     /// Keep the database bounded (same idea as zoxide's aging): when the sum
     /// of all counters exceeds `max_age`, scale them all down so that the sum
     /// is 90% of `max_age`, and drop the directories whose counter falls below
-    /// 1. Aliased directories are never dropped.
+    /// 1.
     pub(crate) fn age(&mut self, max_age: f64) {
         let total: f64 = self.dirs.iter().map(|dir| dir.counter).sum();
         if total <= max_age {
@@ -126,7 +113,7 @@ impl Database {
         for dir in self.dirs.iter_mut() {
             dir.counter *= factor;
         }
-        self.dirs.retain(|dir| dir.counter >= 1.0 || !dir.alias.is_empty());
+        self.dirs.retain(|dir| dir.counter >= 1.0);
     }
 
 
@@ -141,27 +128,14 @@ impl Database {
     }
 
 
-    pub(crate) fn contains(&self, name: &str) -> bool {
-        self.dirs.iter().any(|dir| dir.name == name)
-    }
-
-
-    pub(crate) fn by_alias(&self, alias: &str) -> Option<&Directory> {
-        if alias.is_empty() {
-            return None;
-        }
-        self.dirs.iter().find(|dir| dir.alias == alias)
-    }
-
-
     /// Register a visit to `name` (adding it if needed). Names that do not
     /// fit in one line of the database file are ignored.
-    pub(crate) fn insert(&mut self, name: &str, alias: Option<&str>) {
-        self.insert_at(name, alias, get_current_seconds());
+    pub(crate) fn insert(&mut self, name: &str) {
+        self.insert_at(name, get_current_seconds());
     }
 
 
-    fn insert_at(&mut self, name: &str, alias: Option<&str>, now: i64) {
+    fn insert_at(&mut self, name: &str, now: i64) {
         if name.contains('\n') {
             return;
         }
@@ -172,38 +146,13 @@ impl Database {
                 counter: 0.0,
                 last_access: now,
                 score: 0.0,
-                alias: String::new(),
             },
         };
         dir.counter += 1.0;
         dir.last_access = now;
-        if let Some(alias) = alias {
-            dir.alias = alias.to_string();
-        }
         // Visited directories go to the end, so the list is in visit order:
         // that orders visits that happen within the same second
         self.dirs.push(dir);
-    }
-
-
-    /// Give `dir` the alias `alias`; aliases are unique, so any other
-    /// directory that had it loses it.
-    pub(crate) fn set_alias(&mut self, dir: &str, alias: &str) {
-        for d in self.dirs.iter_mut() {
-            if d.alias == alias {
-                d.alias.clear();
-            }
-            if d.name == dir {
-                d.alias = alias.to_string();
-            }
-        }
-    }
-
-
-    pub(crate) fn remove_alias(&mut self, dir: &str) {
-        if let Some(d) = self.dirs.iter_mut().find(|d| d.name == dir) {
-            d.alias.clear();
-        }
     }
 
 
@@ -212,14 +161,13 @@ impl Database {
     }
 
 
-    /// Directories (best score first) that contain all the `patterns`; if
-    /// `alias_only`, only those with an alias. Existence is not checked.
-    pub(crate) fn matching(&self, patterns: &[String], alias_only: bool) -> Vec<Directory> {
+    /// Directories (best score first) that contain all the `patterns`.
+    /// Existence is not checked.
+    pub(crate) fn matching(&self, patterns: &[String]) -> Vec<Directory> {
         let mut dirs: Vec<Directory> = self
             .dirs
             .iter()
             .filter(|dir| patterns.iter().all(|p| dir.name.contains(p.as_str())))
-            .filter(|dir| !alias_only || !dir.alias.is_empty())
             .cloned()
             .collect();
         dirs.sort_by(|a, b| b.score.total_cmp(&a.score));
@@ -238,7 +186,8 @@ impl Database {
 
 
 /// The directory described by the lines of one block of the database file,
-/// or `None` if the block is malformed.
+/// or `None` if the block is malformed. A fourth line (the alias, in versions
+/// before 0.8.0) is ignored.
 fn parse_block(lines: &[&str], now: i64) -> Option<Directory> {
     if lines.len() < 3 {
         return None;
@@ -250,7 +199,6 @@ fn parse_block(lines: &[&str], now: i64) -> Option<Directory> {
         counter,
         last_access,
         score: frecency(counter, last_access, now),
-        alias: lines.get(3).unwrap_or(&"").to_string(),
     })
 }
 
@@ -290,13 +238,12 @@ mod tests {
 
     const NOW: i64 = 1_800_000_000;
 
-    fn dir(name: &str, counter: f64, last_access: i64, alias: &str) -> Directory {
+    fn dir(name: &str, counter: f64, last_access: i64) -> Directory {
         Directory {
             name: name.to_string(),
             counter,
             last_access,
             score: frecency(counter, last_access, NOW),
-            alias: alias.to_string(),
         }
     }
 
@@ -321,8 +268,8 @@ mod tests {
     #[test]
     fn round_trip() {
         let original = db(vec![
-            dir("/home/u/a", 3.0, NOW - 10, ""),
-            dir("/home/u/b", 1.0, NOW - 20, "bee"),
+            dir("/home/u/a", 3.0, NOW - 10),
+            dir("/home/u/b", 1.0, NOW - 20),
         ]);
         let parsed = Database::parse(&original.serialize(), NOW);
         assert_eq!(parsed.dirs.len(), 2);
@@ -330,14 +277,13 @@ mod tests {
             assert_eq!(p.name, d.name);
             assert_eq!(p.counter, d.counter);
             assert_eq!(p.last_access, d.last_access);
-            assert_eq!(p.alias, d.alias);
         }
         assert!(parsed.dirs[0].score > 0.0);
     }
 
     #[test]
     fn names_containing_separator() {
-        let original = db(vec![dir("/home/u/my---proj", 2.0, NOW, "a-b")]);
+        let original = db(vec![dir("/home/u/my---proj", 2.0, NOW)]);
         let parsed = Database::parse(&original.serialize(), NOW);
         assert_eq!(parsed.dirs.len(), 1);
         assert_eq!(parsed.dirs[0].name, "/home/u/my---proj");
@@ -355,14 +301,14 @@ mod tests {
     fn keeps_old_entries() {
         // Bounding the database is the job of `age`, not of loading
         let old = NOW - 60 * 60 * 24 * 365 * 3;
-        let parsed = Database::parse(&db(vec![dir("/old", 1.0, old, "")]).serialize(), NOW);
+        let parsed = Database::parse(&db(vec![dir("/old", 1.0, old)]).serialize(), NOW);
         assert_eq!(parsed.dirs.len(), 1);
         assert!(parsed.dirs[0].score > 0.0);
     }
 
     #[test]
     fn fractional_counters() {
-        let text = db(vec![dir("/a", 2.5, NOW, ""), dir("/b", 3.0, NOW, "")]).serialize();
+        let text = db(vec![dir("/a", 2.5, NOW), dir("/b", 3.0, NOW)]).serialize();
         // Whole counters are written as before, so older versions can read them
         assert!(text.contains("/b\n3\n"), "{}", text);
         let parsed = Database::parse(&text, NOW);
@@ -372,8 +318,15 @@ mod tests {
 
     #[test]
     fn rounds_long_fractions() {
-        let text = db(vec![dir("/a", 1.0 / 3.0, NOW, "")]).serialize();
+        let text = db(vec![dir("/a", 1.0 / 3.0, NOW)]).serialize();
         assert!(text.contains("/a\n0.3333\n"), "{}", text);
+    }
+
+    #[test]
+    fn ignores_aliases_written_by_older_versions() {
+        let parsed = Database::parse(&format!("/a\n2\n{}\nmy_alias\n---\n/b\n1\n{}\n---\n", NOW, NOW), NOW);
+        assert_eq!(names(&parsed.dirs), vec!["/a", "/b"]);
+        assert_eq!(parsed.serialize(), format!("/a\n2\n{}\n---\n/b\n1\n{}\n---\n", NOW, NOW));
     }
 
     #[test]
@@ -386,7 +339,7 @@ mod tests {
 
     #[test]
     fn age_does_nothing_under_the_limit() {
-        let mut d = db(vec![dir("/a", 60.0, NOW, ""), dir("/b", 40.0, NOW, "")]);
+        let mut d = db(vec![dir("/a", 60.0, NOW), dir("/b", 40.0, NOW)]);
         d.age(100.0);
         assert_eq!(d.dirs.len(), 2);
         assert_eq!(d.dirs.iter().map(|x| x.counter).sum::<f64>(), 100.0);
@@ -394,7 +347,7 @@ mod tests {
 
     #[test]
     fn age_scales_down_to_ninety_percent() {
-        let mut d = db(vec![dir("/a", 150.0, NOW, ""), dir("/b", 50.0, NOW, "")]);
+        let mut d = db(vec![dir("/a", 150.0, NOW), dir("/b", 50.0, NOW)]);
         d.age(100.0);
         assert!((d.dirs.iter().map(|x| x.counter).sum::<f64>() - 90.0).abs() < 1e-9);
         // Relative order is preserved
@@ -402,14 +355,10 @@ mod tests {
     }
 
     #[test]
-    fn age_drops_small_counters_but_keeps_aliased() {
-        let mut d = db(vec![
-            dir("/big", 1000.0, NOW, ""),
-            dir("/small", 1.0, NOW, ""),
-            dir("/small_alias", 1.0, NOW, "s"),
-        ]);
+    fn age_drops_small_counters() {
+        let mut d = db(vec![dir("/big", 1000.0, NOW), dir("/small", 1.0, NOW)]);
         d.age(100.0);
-        assert_eq!(names(&d.dirs), vec!["/big", "/small_alias"]);
+        assert_eq!(names(&d.dirs), vec!["/big"]);
     }
 
     // ---- queries and updates
@@ -417,20 +366,19 @@ mod tests {
     #[test]
     fn insert_adds_then_counts_visits() {
         let mut d = db(vec![]);
-        d.insert_at("/a", None, 100);
-        d.insert_at("/a", None, 200);
-        d.insert_at("/b", Some("bee"), 300);
+        d.insert_at("/a", 100);
+        d.insert_at("/a", 200);
+        d.insert_at("/b", 300);
+        assert_eq!(names(&d.dirs), vec!["/a", "/b"]);
         assert_eq!(d.dirs[0].counter, 2.0);
         assert_eq!(d.dirs[0].last_access, 200);
-        assert_eq!(d.dirs[1].alias, "bee");
-        assert!(d.contains("/a") && !d.contains("/c"));
     }
 
     #[test]
     fn visits_within_the_same_second_keep_their_order() {
         let mut d = db(vec![]);
         for name in ["/a", "/b", "/a", "/c"] {
-            d.insert_at(name, None, 100);
+            d.insert_at(name, 100);
         }
         assert_eq!(nth_recent(&d, 0).as_deref(), Some("/c"));
         assert_eq!(nth_recent(&d, 1).as_deref(), Some("/a"));
@@ -439,43 +387,27 @@ mod tests {
     }
 
     #[test]
-    fn names_and_aliases_that_would_break_the_file_are_rejected() {
+    fn names_that_would_break_the_file_are_rejected() {
         let mut d = db(vec![]);
-        d.insert("/a\nb", None);
+        d.insert("/a\nb");
         assert!(d.dirs.is_empty());
-        assert!(valid_alias("x") && valid_alias("my alias"));
-        assert!(!valid_alias("") && !valid_alias("a\nb") && !valid_alias("---"));
-    }
-
-    #[test]
-    fn aliases_are_unique() {
-        let mut d = db(vec![dir("/a", 1.0, NOW, "x"), dir("/b", 1.0, NOW, "")]);
-        assert_eq!(d.by_alias("x").unwrap().name, "/a");
-        d.set_alias("/b", "x");
-        assert_eq!(d.by_alias("x").unwrap().name, "/b");
-        assert_eq!(d.dirs[0].alias, "");
-        d.remove_alias("/b");
-        assert!(d.by_alias("x").is_none());
-        // An empty alias never matches
-        assert!(d.by_alias("").is_none());
     }
 
     #[test]
     fn matching_filters_and_sorts_by_score() {
         let d = db(vec![
-            dir("/proj/old", 1.0, NOW - 100_000, ""),
-            dir("/proj/new", 5.0, NOW, "n"),
-            dir("/other", 9.0, NOW, ""),
+            dir("/proj/old", 1.0, NOW - 100_000),
+            dir("/proj/new", 5.0, NOW),
+            dir("/other", 9.0, NOW),
         ]);
-        assert_eq!(names(&d.matching(&[], false)), vec!["/other", "/proj/new", "/proj/old"]);
-        assert_eq!(names(&d.matching(&strings(&["proj"]), false)), vec!["/proj/new", "/proj/old"]);
-        assert_eq!(names(&d.matching(&strings(&["proj", "old"]), false)), vec!["/proj/old"]);
-        assert_eq!(names(&d.matching(&[], true)), vec!["/proj/new"]);
+        assert_eq!(names(&d.matching(&[])), vec!["/other", "/proj/new", "/proj/old"]);
+        assert_eq!(names(&d.matching(&strings(&["proj"]))), vec!["/proj/new", "/proj/old"]);
+        assert_eq!(names(&d.matching(&strings(&["proj", "old"]))), vec!["/proj/old"]);
     }
 
     #[test]
     fn nth_recent_orders_by_last_access() {
-        let d = db(vec![dir("/a", 1.0, 10, ""), dir("/b", 1.0, 30, ""), dir("/c", 1.0, 20, "")]);
+        let d = db(vec![dir("/a", 1.0, 10), dir("/b", 1.0, 30), dir("/c", 1.0, 20)]);
         assert_eq!(nth_recent(&d, 0).as_deref(), Some("/b"));
         assert_eq!(nth_recent(&d, 1).as_deref(), Some("/c"));
         assert_eq!(nth_recent(&d, 3), None);
@@ -483,7 +415,7 @@ mod tests {
 
     #[test]
     fn remove_and_retain() {
-        let mut d = db(vec![dir("/a", 1.0, NOW, ""), dir("/b", 1.0, NOW, "")]);
+        let mut d = db(vec![dir("/a", 1.0, NOW), dir("/b", 1.0, NOW)]);
         d.remove("/a");
         d.remove("/missing");
         assert_eq!(names(&d.dirs), vec!["/b"]);
@@ -496,9 +428,9 @@ mod tests {
     #[test]
     fn pick_by_mode() {
         let dirs = vec![
-            dir("/very/long/path/proj", 9.0, NOW, ""),
-            dir("/p/other_proj", 5.0, NOW, ""),
-            dir("/proj", 1.0, NOW, ""),
+            dir("/very/long/path/proj", 9.0, NOW),
+            dir("/p/other_proj", 5.0, NOW),
+            dir("/proj", 1.0, NOW),
         ];
         let patterns = strings(&["proj"]);
         let name = |mode| pick(&dirs, &patterns, mode).map(|d| d.name.as_str());
@@ -512,7 +444,7 @@ mod tests {
 
     #[test]
     fn pick_single_result_is_always_chosen() {
-        let dirs = vec![dir("/a/b", 1.0, NOW, "")];
+        let dirs = vec![dir("/a/b", 1.0, NOW)];
         for mode in [Mode::Score, Mode::Shortest, Mode::Basename, Mode::Select] {
             assert!(pick(&dirs, &strings(&["a"]), mode).is_some());
         }

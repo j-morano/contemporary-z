@@ -2,17 +2,6 @@ use crate::config::Mode;
 
 
 #[derive(Debug, PartialEq)]
-pub(crate) enum AliasArgs {
-    /// `-a`: choose among the aliased dirs and go to it.
-    Select,
-    /// `-a DIR`: remove the alias of DIR.
-    Remove(String),
-    /// `-a ALIAS DIR`: set the alias of DIR.
-    Set { alias: String, dir: String },
-}
-
-
-#[derive(Debug, PartialEq)]
 pub(crate) enum Command {
     /// No arguments: choose among the stored dirs.
     Select,
@@ -24,15 +13,13 @@ pub(crate) enum Command {
     Last,
     ListAll,
     Sync,
-    RemoveAlias,
     /// `-l [NUMBER]`
     List(Option<usize>),
     /// `-r [SUBSTRING]...`
     Remove(Vec<String>),
-    Alias(AliasArgs),
     /// `-f SUBSTRING...`
     Find(Vec<String>),
-    /// A dir, an alias or substrings; `mode` overrides the configured one.
+    /// A dir or substrings; `mode` overrides the configured one.
     Cd { patterns: Vec<String>, mode: Option<Mode> },
 }
 
@@ -58,7 +45,6 @@ pub(crate) fn parse(args: &[String]) -> Result<Command, String> {
         "=" => alone(Command::Last),
         "--list-all" => alone(Command::ListAll),
         "--sync" => alone(Command::Sync),
-        "--remove-alias" => alone(Command::RemoveAlias),
         "-l" => match rest {
             [] => Ok(Command::List(None)),
             [number] => number
@@ -68,15 +54,6 @@ pub(crate) fn parse(args: &[String]) -> Result<Command, String> {
             _ => Err("'-l' takes at most one number".to_string()),
         },
         "-r" => Ok(Command::Remove(rest.to_vec())),
-        "-a" => match rest {
-            [] => Ok(Command::Alias(AliasArgs::Select)),
-            [dir] => Ok(Command::Alias(AliasArgs::Remove(dir.clone()))),
-            [alias, dir] => Ok(Command::Alias(AliasArgs::Set {
-                alias: alias.clone(),
-                dir: dir.clone(),
-            })),
-            _ => Err("'-a' takes at most an alias and a directory".to_string()),
-        },
         "-f" => Ok(Command::Find(substrings(first, rest)?)),
         "-t" => forced(Mode::Shortest),
         "-e" => forced(Mode::Score),
@@ -166,17 +143,6 @@ mod tests {
         assert_eq!(parse_str("-l 5"), Ok(Command::List(Some(5))));
         assert!(parse_str("-l five").is_err());
         assert!(parse_str("-l 1 2").is_err());
-    }
-
-    #[test]
-    fn alias_forms() {
-        assert_eq!(parse_str("-a"), Ok(Command::Alias(AliasArgs::Select)));
-        assert_eq!(parse_str("-a d"), Ok(Command::Alias(AliasArgs::Remove("d".into()))));
-        assert_eq!(
-            parse_str("-a x d"),
-            Ok(Command::Alias(AliasArgs::Set { alias: "x".into(), dir: "d".into() }))
-        );
-        assert!(parse_str("-a x d y").is_err());
     }
 
     #[test]

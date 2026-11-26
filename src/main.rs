@@ -69,8 +69,6 @@ fn main() {
         Command::List(max_num) => app.list_existent(max_num),
         Command::ListAll => app.list_all(),
         Command::Remove(patterns) => app.remove_dirs(&patterns),
-        Command::Alias(alias_args) => app.add_alias(alias_args),
-        Command::RemoveAlias => app.remove_alias_interactive(),
         // Remove directories which do not exist
         Command::Sync => app.sync_dirs(),
         Command::Find(patterns) => app.list_matching_dirs(&patterns),

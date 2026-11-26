@@ -147,7 +147,6 @@ FUNCTIONALITY:
   * If no option nor directory or substrings are specified, 'cz' prints a
     numbered list of the most 'frecent' directories to select one of them by
     introducing its number.
-  * If a directory alias is introduced, 'cz' does 'cd' to the directory.
   * If a directory name is introduced, 'cz' jumps to the directory (if
     available) and adds it to the directories database (if it is not already
     added).
@@ -160,10 +159,6 @@ OPTIONS:
 Mandatory arguments to long options are mandatory for short options too.
   -                          go to the previous directory.
   =                          go to the current directory.
-  -a [ALIAS] DIRECTORY       add directory alias; if only the directory is
-                               introduced, its alias is removed; if only an
-                               alias is introduced, the programs shows the
-                               directory list to select one of them.
       --clear                clear the directories database.
   -b SUBSTRING               force substring matching by basename.
   --database-path            show the path of the directories database.
@@ -174,7 +169,6 @@ Mandatory arguments to long options are mandatory for short options too.
                                from configuration is used.
       --list-all             list all the directories of the database
   -r                         remove a directory from the database, interactively.
-      --remove-alias         remove an alias, interactively.
   -t SUBSTRING               force substring matching by shortest path.
       --                     treat all the following arguments as directory or
                                substrings, even if they start with '-'.
@@ -211,8 +205,8 @@ Configuration options:
               dir) whose _basename_ matches the substring(s).
   max_age: int. Maximum sum of the visit counters of all the directories. When
       it is exceeded, all the counters are scaled down (to 90% of max_age) and
-      the directories that fall below 1 visit are forgotten (except for the
-      ones with an alias). Higher values keep more history.
+      the directories that fall below 1 visit are forgotten. Higher values keep
+      more history.
 
 
 Default config:
