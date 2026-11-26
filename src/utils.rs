@@ -1,32 +1,17 @@
-use std::path::PathBuf;
 use std::fs;
 use std::env;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 
 
-pub(crate) fn canonicalize_dir_str(dir_str_name: &str) -> String {
-    let mut dir_str = dir_str_name;
-
-    // Canonicalize path
-    let dir_pathbuf = PathBuf::from(dir_str).canonicalize().unwrap();
-    dir_str = dir_pathbuf.to_str().unwrap();
-
-    // If dir name ends with '/', remove it, in order to avoid
-    //   having duplicated dirs (with and without '/' versions)
-    if dir_str.len() > 1
-        && dir_str.ends_with('/')
-    {
-        dir_str = &dir_str[..dir_str.len() - 1];
+/// The canonical (absolute, without symlinks) form of `path`, if it is an
+/// existing directory whose path is valid UTF-8.
+pub(crate) fn canonical_dir(path: &str) -> Option<String> {
+    let path = fs::canonicalize(path).ok()?;
+    if !path.is_dir() {
+        return None;
     }
-
-    // Do the same with a loop
-    let mut dir_str = String::from(dir_str);
-    while dir_str.contains("//") {
-        dir_str = dir_str.replace("//", "/");
-    }
-
-    dir_str
+    path.into_os_string().into_string().ok()
 }
 
 
@@ -46,8 +31,14 @@ pub(crate) fn get_user() -> String {
 
 
 /// Path of the file through which `cz` tells the shell function where to `cd`.
-/// Must match the logic in `z.sh`.
+/// The shell functions (`z.sh`, `z.fish`) pass a private temporary file in
+/// `CZ_PATH_FILE`; the fallback is for functions from older versions.
 pub(crate) fn path_file() -> String {
+    if let Ok(file) = env::var("CZ_PATH_FILE") {
+        if !file.is_empty() {
+            return file;
+        }
+    }
     match env::var("XDG_RUNTIME_DIR") {
         Ok(dir) if !dir.is_empty() => format!("{}/cz_path", dir),
         _ => format!("/tmp/cz_path_{}", env::var("USER").unwrap_or_default()),

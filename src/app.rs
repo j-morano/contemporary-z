@@ -3,12 +3,13 @@
 use std::fs;
 use std::io;
 use std::path::Path;
+use std::time::Duration;
 
 use crate::cli::AliasArgs;
 use crate::config::{Config, Mode};
-use crate::db::{pick, Database, Directory};
+use crate::db::{pick, valid_alias, Database, Directory};
 use crate::ui::Ui;
-use crate::utils::{canonicalize_dir_str, write_dir};
+use crate::utils::{canonical_dir, write_dir};
 
 
 pub(crate) struct App {
@@ -24,10 +25,12 @@ impl App {
     }
 
 
-    /// Age the database and write it to disk.
-    pub(crate) fn save(&mut self) {
-        self.db.age(self.config.max_age as f64);
-        self.db.save(&self.config.database_path);
+    /// Save the changes to the database (see `Database::commit`). `false` if
+    /// the database stayed locked by another process for `timeout`.
+    pub(crate) fn save(&self, timeout: Duration) -> bool {
+        self.db
+            .commit(&self.config.database_path, self.config.max_age as f64, timeout)
+            .is_ok()
     }
 
 
@@ -41,11 +44,11 @@ impl App {
     /// that is not a directory, and a directory that is already the most
     /// recent one (the visit was just registered, e.g., by `z`).
     pub(crate) fn add_visit(&mut self, dir: &str) {
-        if !Path::new(dir).is_dir() {
-            return;
-        }
-        let dir = canonicalize_dir_str(dir);
-        if self.db.nth_recent(0).as_deref() != Some(dir.as_str()) {
+        let dir = match canonical_dir(dir) {
+            Some(dir) => dir,
+            None => return,
+        };
+        if self.db.by_recency().first() != Some(&dir) {
             self.db.insert(&dir, None);
         }
     }
@@ -78,14 +81,15 @@ impl App {
         // If string is an alias, then cd to the directory, if exists
         if let Some(dir) = self.db.by_alias(first) {
             let name = dir.name.clone();
-            if Path::new(&name).is_dir() {
-                self.direct_cd(name);
+            if !Path::new(&name).is_dir() {
+                self.ui.show_error("Aliased directory does not exist", &name);
             }
+            self.direct_cd(name);
             return;
         }
         // If it is a dir AND exists in the FS, cd to it (adding it to the table)
-        if Path::new(first).is_dir() {
-            self.direct_cd(canonicalize_dir_str(first));
+        if let Some(dir) = canonical_dir(first) {
+            self.direct_cd(dir);
             return;
         }
         let mode = forced.unwrap_or(self.config.substring);
@@ -95,9 +99,7 @@ impl App {
 
     fn cd_by_substrings(&mut self, patterns: &[String], mode: Mode) {
         let dirs = self.existing(patterns, false);
-        let selected = if dirs.is_empty() {
-            None
-        } else if mode == Mode::Select && dirs.len() > 1 {
+        let selected = if mode == Mode::Select && dirs.len() > 1 {
             // Interactively select among all the dirs that match
             self.ui.select_dir(&dirs)
         } else {
@@ -105,8 +107,7 @@ impl App {
         };
         match selected {
             Some(dir) => self.direct_cd(dir),
-            None if mode != Mode::Select || dirs.is_empty() => self.ui.show_message("No dirs"),
-            None => {}
+            None => self.ui.show_message("No dirs"),
         }
     }
 
@@ -142,8 +143,10 @@ impl App {
             return;
         }
 
-        if Path::new(dir_str).is_dir() {
-            let dir_str = canonicalize_dir_str(dir_str);
+        if let Some(dir_str) = canonical_dir(dir_str) {
+            if !remove && !valid_alias(alias) {
+                self.ui.show_error("Invalid alias", alias);
+            }
             let details = format!("{}->{}", alias, dir_str);
             if !self.db.contains(&dir_str) {
                 self.db.insert(&dir_str, Some(alias));
@@ -161,6 +164,9 @@ impl App {
         } else {
             // Not a directory: use the argument as the alias of a dir that is
             // selected from the list
+            if !valid_alias(dir_str) {
+                self.ui.show_error("Invalid alias", dir_str);
+            }
             println!("Select directory to alias");
             let dirs = self.existing(&[], false);
             if let Some(dir_name) = self.ui.select_dir(&dirs) {
@@ -217,9 +223,15 @@ impl App {
     }
 
 
+    /// The `n`-th most recently accessed directory that still exists.
+    fn nth_recent(&self, n: usize) -> Option<String> {
+        self.db.by_recency().into_iter().filter(|dir| Path::new(dir).is_dir()).nth(n)
+    }
+
+
     /// `=`: the most recently accessed directory.
     pub(crate) fn go_to_last(&mut self) {
-        match self.db.nth_recent(0) {
+        match self.nth_recent(0) {
             Some(dir) => self.direct_cd(dir),
             None => self.ui.show_message("No dirs"),
         }
@@ -228,8 +240,9 @@ impl App {
 
     /// `-`: the directory accessed before the last one.
     pub(crate) fn go_to_previous(&mut self) {
-        if let Some(dir) = self.db.nth_recent(1) {
-            self.direct_cd(dir);
+        match self.nth_recent(1) {
+            Some(dir) => self.direct_cd(dir),
+            None => self.ui.show_message("No dirs"),
         }
     }
 

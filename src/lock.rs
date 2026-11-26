@@ -1,6 +1,6 @@
 //! Advisory lock on the database, so that several `cz` processes (for
 //! example, the hooks of several shells) do not overwrite each other's
-//! changes: every run loads, modifies and saves the database while holding it.
+//! changes. It is only held while saving (see `Database::commit`).
 
 use std::fs::{self, File, OpenOptions, TryLockError};
 use std::path::Path;

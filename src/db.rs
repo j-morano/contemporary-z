@@ -1,8 +1,10 @@
 use std::fs;
 use std::io::ErrorKind;
 use std::path::Path;
+use std::time::Duration;
 
 use crate::config::Mode;
+use crate::lock::Lock;
 use crate::utils::get_current_seconds;
 
 
@@ -23,6 +25,26 @@ fn frecency(counter: f64, last_access: i64, now: i64) -> f64 {
 }
 
 
+/// Whether `alias` can be stored: it must fit in one line of the database
+/// file and not be mistaken for the block separator.
+pub(crate) fn valid_alias(alias: &str) -> bool {
+    !alias.is_empty() && !alias.contains('\n') && alias != "---"
+}
+
+
+/// A change to the database. Changes are applied to the in-memory database
+/// immediately and also recorded, so that `commit` can re-apply them to the
+/// latest version on disk (another `cz` may have saved it in the meantime).
+#[derive(Clone, Debug)]
+enum Change {
+    Visit { name: String, alias: Option<String>, now: i64 },
+    SetAlias { dir: String, alias: String },
+    RemoveAlias(String),
+    Remove(String),
+    Clear,
+}
+
+
 /// The directories database. The text format is:
 ///
 /// ```text
@@ -36,6 +58,7 @@ fn frecency(counter: f64, last_access: i64, now: i64) -> f64 {
 /// ```
 pub(crate) struct Database {
     dirs: Vec<Directory>,
+    changes: Vec<Change>,
 }
 
 
@@ -56,8 +79,28 @@ impl Database {
     }
 
 
+    /// Save the changes merged with the latest version on disk: under the
+    /// lock, reload the database, re-apply the changes, age it and write it.
+    /// The lock is only held for that, never while waiting for the user.
+    /// Nothing is written if there are no changes. `Err` if the lock could not
+    /// be acquired within `timeout`.
+    pub(crate) fn commit(&self, path: &str, max_age: f64, timeout: Duration) -> Result<(), ()> {
+        if self.changes.is_empty() {
+            return Ok(());
+        }
+        let _lock = Lock::acquire(path, timeout).ok_or(())?;
+        let mut latest = Database::load(path);
+        for change in &self.changes {
+            latest.apply(change);
+        }
+        latest.age(max_age);
+        latest.write(path);
+        Ok(())
+    }
+
+
     /// Write atomically: a crash mid-write must not truncate the database.
-    pub(crate) fn save(&self, path: &str) {
+    fn write(&self, path: &str) {
         let tmp_path = format!("{}.tmp", path);
         fs::write(&tmp_path, self.serialize())
             .and_then(|_| fs::rename(&tmp_path, path))
@@ -94,7 +137,7 @@ impl Database {
                 alias: fields.get(3).map(|a| a.to_string()).unwrap_or_default(),
             });
         }
-        Database { dirs }
+        Database { dirs, changes: Vec::new() }
     }
 
 
@@ -118,7 +161,7 @@ impl Database {
     /// of all counters exceeds `max_age`, scale them all down so that the sum
     /// is 90% of `max_age`, and drop the directories whose counter falls below
     /// 1. Aliased directories are never dropped.
-    pub(crate) fn age(&mut self, max_age: f64) {
+    fn age(&mut self, max_age: f64) {
         let total: f64 = self.dirs.iter().map(|dir| dir.counter).sum();
         if total <= max_age {
             return;
@@ -131,13 +174,56 @@ impl Database {
     }
 
 
-    pub(crate) fn clear(&mut self) {
-        self.dirs.clear();
+    fn record(&mut self, change: Change) {
+        self.apply(&change);
+        self.changes.push(change);
     }
 
 
-    pub(crate) fn retain(&mut self, keep: impl FnMut(&Directory) -> bool) {
-        self.dirs.retain(keep);
+    fn apply(&mut self, change: &Change) {
+        match change {
+            Change::Visit { name, alias, now } => self.insert_at(name, alias.as_deref(), *now),
+            Change::SetAlias { dir, alias } => {
+                for d in self.dirs.iter_mut() {
+                    if d.alias == *alias {
+                        d.alias.clear();
+                    }
+                    if d.name == *dir {
+                        d.alias = alias.clone();
+                    }
+                }
+            }
+            Change::RemoveAlias(dir) => {
+                if let Some(d) = self.dirs.iter_mut().find(|d| d.name == *dir) {
+                    d.alias.clear();
+                }
+            }
+            Change::Remove(name) => {
+                if let Some(i) = self.dirs.iter().position(|dir| dir.name == *name) {
+                    self.dirs.remove(i);
+                }
+            }
+            Change::Clear => self.dirs.clear(),
+        }
+    }
+
+
+    pub(crate) fn clear(&mut self) {
+        self.record(Change::Clear);
+    }
+
+
+    /// Remove the directories for which `keep` is false.
+    pub(crate) fn retain(&mut self, mut keep: impl FnMut(&Directory) -> bool) {
+        let removed: Vec<String> = self
+            .dirs
+            .iter()
+            .filter(|dir| !keep(dir))
+            .map(|dir| dir.name.clone())
+            .collect();
+        for name in removed {
+            self.remove(&name);
+        }
     }
 
 
@@ -154,9 +240,17 @@ impl Database {
     }
 
 
-    /// Register a visit to `name` (adding it if needed).
+    /// Register a visit to `name` (adding it if needed). Names that do not
+    /// fit in one line of the database file are ignored.
     pub(crate) fn insert(&mut self, name: &str, alias: Option<&str>) {
-        self.insert_at(name, alias, get_current_seconds());
+        if name.contains('\n') {
+            return;
+        }
+        self.record(Change::Visit {
+            name: name.to_string(),
+            alias: alias.map(String::from),
+            now: get_current_seconds(),
+        });
     }
 
 
@@ -188,28 +282,17 @@ impl Database {
     /// Give `dir` the alias `alias`; aliases are unique, so any other
     /// directory that had it loses it.
     pub(crate) fn set_alias(&mut self, dir: &str, alias: &str) {
-        for d in self.dirs.iter_mut() {
-            if d.alias == alias {
-                d.alias.clear();
-            }
-            if d.name == dir {
-                d.alias = alias.to_string();
-            }
-        }
+        self.record(Change::SetAlias { dir: dir.to_string(), alias: alias.to_string() });
     }
 
 
     pub(crate) fn remove_alias(&mut self, dir: &str) {
-        if let Some(d) = self.dirs.iter_mut().find(|d| d.name == dir) {
-            d.alias.clear();
-        }
+        self.record(Change::RemoveAlias(dir.to_string()));
     }
 
 
     pub(crate) fn remove(&mut self, name: &str) {
-        if let Some(i) = self.dirs.iter().position(|dir| dir.name == name) {
-            self.dirs.remove(i);
-        }
+        self.record(Change::Remove(name.to_string()));
     }
 
 
@@ -228,12 +311,12 @@ impl Database {
     }
 
 
-    /// The `n`-th most recently accessed directory (0 is the most recent).
-    pub(crate) fn nth_recent(&self, n: usize) -> Option<String> {
+    /// Directory names, most recently accessed first.
+    pub(crate) fn by_recency(&self) -> Vec<String> {
         // The stable sort keeps the order of insert for equal times
         let mut dirs: Vec<&Directory> = self.dirs.iter().rev().collect();
         dirs.sort_by_key(|dir| std::cmp::Reverse(dir.last_access));
-        dirs.get(n).map(|dir| dir.name.clone())
+        dirs.into_iter().map(|dir| dir.name.clone()).collect()
     }
 }
 
@@ -284,7 +367,19 @@ mod tests {
     }
 
     fn db(dirs: Vec<Directory>) -> Database {
-        Database { dirs }
+        Database { dirs, changes: Vec::new() }
+    }
+
+    fn nth_recent(d: &Database, n: usize) -> Option<String> {
+        d.by_recency().get(n).cloned()
+    }
+
+    /// A database file in a fresh temporary directory.
+    fn temp_db_path(test: &str) -> (std::path::PathBuf, String) {
+        let dir = std::env::temp_dir().join(format!("cz-db-test-{}-{}", test, std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        let path = dir.join("db.dir").to_str().unwrap().to_string();
+        (dir, path)
     }
 
     fn names(dirs: &[Directory]) -> Vec<&str> {
@@ -411,10 +506,58 @@ mod tests {
         for name in ["/a", "/b", "/a", "/c"] {
             d.insert_at(name, None, 100);
         }
-        assert_eq!(d.nth_recent(0).as_deref(), Some("/c"));
-        assert_eq!(d.nth_recent(1).as_deref(), Some("/a"));
-        assert_eq!(d.nth_recent(2).as_deref(), Some("/b"));
+        assert_eq!(nth_recent(&d, 0).as_deref(), Some("/c"));
+        assert_eq!(nth_recent(&d, 1).as_deref(), Some("/a"));
+        assert_eq!(nth_recent(&d, 2).as_deref(), Some("/b"));
         assert_eq!(d.dirs.iter().find(|x| x.name == "/a").unwrap().counter, 2.0);
+    }
+
+    #[test]
+    fn names_and_aliases_that_would_break_the_file_are_rejected() {
+        let mut d = db(vec![]);
+        d.insert("/a\nb", None);
+        assert!(d.dirs.is_empty());
+        assert!(valid_alias("x") && valid_alias("my alias"));
+        assert!(!valid_alias("") && !valid_alias("a\nb") && !valid_alias("---"));
+    }
+
+    // ---- saving
+
+    #[test]
+    fn commit_merges_with_changes_saved_meanwhile() {
+        let (dir, path) = temp_db_path("merge");
+        let long = Duration::from_secs(5);
+        let mut setup = Database::load(&path);
+        setup.insert("/shared", None);
+        setup.insert("/gone", None);
+        setup.commit(&path, 1e9, long).unwrap();
+
+        // Two processes load the same version...
+        let mut first = Database::load(&path);
+        let mut second = Database::load(&path);
+        first.insert("/first", None);
+        first.insert("/shared", None);
+        second.insert("/second", Some("s"));
+        second.remove("/gone");
+        // ...and save one after the other: no change is lost
+        first.commit(&path, 1e9, long).unwrap();
+        second.commit(&path, 1e9, long).unwrap();
+
+        let result = Database::load(&path);
+        let mut result_names: Vec<&str> = result.dirs.iter().map(|d| d.name.as_str()).collect();
+        result_names.sort();
+        assert_eq!(result_names, vec!["/first", "/second", "/shared"]);
+        assert_eq!(result.dirs.iter().find(|d| d.name == "/shared").unwrap().counter, 2.0);
+        assert_eq!(result.by_alias("s").unwrap().name, "/second");
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn commit_without_changes_writes_nothing() {
+        let (dir, path) = temp_db_path("nochange");
+        Database::load(&path).commit(&path, 1e9, Duration::from_secs(1)).unwrap();
+        assert!(!Path::new(&path).exists());
+        let _ = fs::remove_dir_all(dir);
     }
 
     #[test]
@@ -446,9 +589,9 @@ mod tests {
     #[test]
     fn nth_recent_orders_by_last_access() {
         let d = db(vec![dir("/a", 1.0, 10, ""), dir("/b", 1.0, 30, ""), dir("/c", 1.0, 20, "")]);
-        assert_eq!(d.nth_recent(0).as_deref(), Some("/b"));
-        assert_eq!(d.nth_recent(1).as_deref(), Some("/c"));
-        assert_eq!(d.nth_recent(3), None);
+        assert_eq!(nth_recent(&d, 0).as_deref(), Some("/b"));
+        assert_eq!(nth_recent(&d, 1).as_deref(), Some("/c"));
+        assert_eq!(nth_recent(&d, 3), None);
     }
 
     #[test]

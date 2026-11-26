@@ -1,9 +1,10 @@
 z() {
     local zfile zout
-    zfile="${XDG_RUNTIME_DIR:+$XDG_RUNTIME_DIR/cz_path}"
-    zfile="${zfile:-/tmp/cz_path_$USER}"
-    cz "$@"
-    zout=$(cat "$zfile" 2>/dev/null)
+    # cz writes the directory to cd to in a private temporary file
+    zfile=$(mktemp) || return
+    CZ_PATH_FILE="$zfile" cz "$@"
+    zout=$(cat "$zfile")
+    rm -f "$zfile"
     if [[ -n "$zout" ]]; then
         cd -- "$zout"
     fi

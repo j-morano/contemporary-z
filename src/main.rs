@@ -18,14 +18,16 @@ use crate::cli::Command;
 use crate::app::App;
 use crate::config::Config;
 use crate::db::Database;
-use crate::lock::Lock;
 use crate::strings::HELP;
 
 
 
 fn main() {
-    let args: Vec<String> = env::args().skip(1).collect();
-    let command = match cli::parse(&args) {
+    // Not env::args(): it panics on arguments that are not valid UTF-8
+    let args: Result<Vec<String>, _> = env::args_os().skip(1).map(|a| a.into_string()).collect();
+    let command = match args.map_err(|_| "arguments must be valid UTF-8".to_string())
+        .and_then(|args| cli::parse(&args))
+    {
         Ok(command) => command,
         Err(message) => {
             write_dir("".to_string());
@@ -55,20 +57,9 @@ fn main() {
     }
 
     let config = Config::load();
-
-    // Hold the lock from loading to saving. A hook must never delay the
-    // shell for long, so it gives up quickly (losing one visit).
+    // A hook must never delay the shell for long: if the database is busy, it
+    // gives up quickly (losing one visit)
     let is_hook = matches!(command, Command::Add(_));
-    let timeout = Duration::from_millis(if is_hook { 200 } else { 5000 });
-    let _lock = match Lock::acquire(&config.database_path, timeout) {
-        Some(lock) => lock,
-        None if is_hook => return,
-        None => {
-            eprintln!("cz: the database is locked by another cz process");
-            exit(1);
-        }
-    };
-
     let db = Database::load(&config.database_path);
     let app = &mut App::new(config, db);
     match command {
@@ -91,5 +82,9 @@ fn main() {
         // No arguments: list stored dirs to select one interactively
         Command::Select => app.interactive_cd(),
     }
-    app.save();
+    let timeout = Duration::from_millis(if is_hook { 200 } else { 5000 });
+    if !app.save(timeout) && !is_hook {
+        eprintln!("cz: could not save the database: it is locked by another cz process");
+        exit(1);
+    }
 }
