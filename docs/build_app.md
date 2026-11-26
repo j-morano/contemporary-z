@@ -5,14 +5,14 @@
 ### Debian-based
 
 * `musl-tools`
-* `libsqlite3-dev`
 
 ### Arch
 
 * `musl`
-* `sqlite3`
 
 ### Rust
+
+Rust 1.89 or newer.
 
 ```sh
 rustup target add x86_64-unknown-linux-musl

@@ -67,7 +67,7 @@ wget https://github.com/j-morano/contemporary-z/releases/latest/download/cz
 chmod +x cz
 mv cz $HOME/.local/bin/
 wget https://raw.githubusercontent.com/j-morano/contemporary-z/main/z.sh
-cat z.sh >> $HOME/.bashrc
+cat z.sh >> $HOME/.bashrc  # or $HOME/.zshrc
 ```
 
 #### Update
@@ -77,6 +77,11 @@ wget https://github.com/j-morano/contemporary-z/releases/latest/download/cz
 chmod +x cz
 mv cz $HOME/.local/bin/
 ```
+
+Then update the shell function too, since it may have changed:
+
+* Fish: download `z.fish` again and move it to `$HOME/.config/fish/functions`, as above.
+* Bash/Zsh: replace the `z` function in your `.bashrc`/`.zshrc` with the contents of [`z.sh`](https://raw.githubusercontent.com/j-morano/contemporary-z/main/z.sh).
 
 ### Install manually from source
 
@@ -116,7 +121,7 @@ mv z.fish $HOME/.config/fish/functions
 
 ##### Bash/Zsh
 
-Add the code from `z.sh` to `.bashrc`. For example:
+Add the code from `z.sh` to `.bashrc` (or `.zshrc`). For example:
 
 ```shell
 cat z.sh >> $HOME/.bashrc
