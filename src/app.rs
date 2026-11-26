@@ -1,3 +1,4 @@
+use crate::cli::AliasArgs;
 use crate::config::{Config, Mode, ShowFiles, Theme};
 use crate::data::Directory;
 use crate::utils::canonicalize_dir_str;
@@ -336,14 +337,10 @@ impl App {
     }
 
 
-    pub(crate) fn list_matching_dirs(&mut self, args: &[String]) {
-        if args.len() < 3 {
-            self.show_error("No substring provided", "");
-        } else {
-            let valid_dirs = self.get_valid(&args[2..], false);
-            if let Some(dir_name) = self.select_valid_dir(valid_dirs, 0) {
-                self.direct_cd(dir_name);
-            }
+    pub(crate) fn list_matching_dirs(&mut self, patterns: &[String]) {
+        let valid_dirs = self.get_valid(patterns, false);
+        if let Some(dir_name) = self.select_valid_dir(valid_dirs, 0) {
+            self.direct_cd(dir_name);
         }
     }
 
@@ -360,8 +357,14 @@ impl App {
     }
 
 
-    pub(crate) fn add_alias(&mut self, args: &[String]) {
-        if args.len() < 3 {
+    pub(crate) fn add_alias(&mut self, args: AliasArgs) {
+        // `-a DIR` removes the alias of DIR; `-a ALIAS DIR` sets it
+        let (alias, dir_str, remove) = match &args {
+            AliasArgs::Select => ("", "", false),
+            AliasArgs::Remove(dir) => ("", dir.as_str(), true),
+            AliasArgs::Set { alias, dir } => (alias.as_str(), dir.as_str(), false),
+        };
+        if args == AliasArgs::Select {
             println!("Aliased dirs");
             let valid_dirs = self.get_valid(&[], true);
             if let Some(dir_name) = self.select_valid_dir(valid_dirs, 0) {
@@ -369,14 +372,6 @@ impl App {
             }
             return;
         }
-
-        // `-a DIR` removes the alias of DIR; `-a ALIAS DIR` sets it
-        let remove = args.len() < 4;
-        let (alias, dir_str) = if remove {
-            ("", args[2].as_str())
-        } else {
-            (args[2].as_str(), args[3].as_str())
-        };
 
         if Path::new(dir_str).is_dir() {
             let dir_str = canonicalize_dir_str(dir_str);
@@ -496,10 +491,9 @@ impl App {
     }
 
 
-    pub(crate) fn list_existent(&mut self, args: &[String]) {
+    pub(crate) fn list_existent(&mut self, max_num: Option<usize>) {
         let all_dirs = self.get_all_dirs(true);
-        let max_num = args.get(2).and_then(|n| n.parse::<usize>().ok()).unwrap_or(0);
-        self.list_dirs(&all_dirs, max_num, 1);
+        self.list_dirs(&all_dirs, max_num.unwrap_or(0), 1);
     }
 
 
@@ -573,16 +567,16 @@ impl App {
     }
 
 
-    pub(crate) fn interactive_cd(&mut self, args: &[String]) {
-        let valid_dirs = self.get_valid(&args[1..], false);
+    pub(crate) fn interactive_cd(&mut self) {
+        let valid_dirs = self.get_valid(&[], false);
         if let Some(dir_name) = self.select_valid_dir(valid_dirs, 0) {
             self.direct_cd(dir_name);
         }
     }
 
 
-    pub(crate) fn remove_dirs(&mut self, args: &[String]) {
-        let valid_dirs = self.get_valid(&args[2..], false);
+    pub(crate) fn remove_dirs(&mut self, patterns: &[String]) {
+        let valid_dirs = self.get_valid(patterns, false);
         if valid_dirs.is_empty() {
             self.show_exit_message("No dirs");
             return;

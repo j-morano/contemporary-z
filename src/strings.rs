@@ -46,7 +46,7 @@ Mandatory arguments to long options are mandatory for short options too.
       --ih                   interactive selection, but including hidden
                                directories.
       --id                   interactive selection, for directories only
-                               (ignore congifuration option 'show_files').
+                               (ignore configuration option 'show_files').
   -l [NUMBER]                list a certain NUMBER of directories by 'frecency';
                                if no NUMBER is provided, the max_results number
                                from configuration is used.
@@ -54,6 +54,8 @@ Mandatory arguments to long options are mandatory for short options too.
   -r                         remove a directory from the database, interactively.
       --remove-alias         remove an alias, interactively.
   -t SUBSTRING               force substring matching by shortest path.
+      --                     treat all the following arguments as directory or
+                               substrings, even if they start with '-'.
       --sync                 sync directories (remove all non-existent
                                 directories).
       --help     display this help and exit.
