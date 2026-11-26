@@ -1,3 +1,5 @@
+// Only used by tests: the help text documents it and `Config::default` mirrors it.
+#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) const DEFAULT_CONFIG: &str = "\
 theme = dark
 max_results = 9

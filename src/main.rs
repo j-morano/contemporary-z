@@ -10,8 +10,7 @@ use utils::write_dir;
 
 use std::env;
 use std::fs;
-use crate::app::get_home_dir;
-use crate::config::app_from_config;
+use crate::config::{app_from_config, Mode};
 use crate::strings::HELP;
 
 
@@ -21,8 +20,7 @@ fn main() {
     let args: Vec<_> = env::args().collect();
 
     // Initialize dirs and app
-    let dirs = &mut Vec::new();
-    let app = &mut app_from_config(dirs);
+    let app = &mut app_from_config();
 
     write_dir("".to_string());
 
@@ -32,7 +30,7 @@ fn main() {
             println!("{} {}", "Version:", env!("CARGO_PKG_VERSION"));
         }
         else if args[1] == "--database-path" {
-            println!("{}", app.database_path);
+            println!("{}", app.config.database_path);
         }
         else if args[1] == "--clear" {
             app.clear_database();
@@ -83,26 +81,26 @@ fn main() {
             app.list_matching_dirs(&args);
         }
         else if args[1] == "-t" {
-            app.do_cd(&args, "shortest");
+            app.do_cd(&args[2..], Some(Mode::Shortest));
         }
         else if args[1] == "-e" {
-            app.do_cd(&args, "score");
+            app.do_cd(&args[2..], Some(Mode::Score));
         }
         else if args[1] == "-b" {
-            app.do_cd(&args, "basename");
+            app.do_cd(&args[2..], Some(Mode::Basename));
         }
         else {
-            app.do_cd(&args, "none");
+            app.do_cd(&args[1..], None);
         }
     } else {
         // If there is no argument, list stored dirs to select one interactively
         app.interactive_cd(&args);
     }
     // Write dirs to database_dir_fn
-    let db_string = config::serialize_database(app.dirs);
+    let db_string = config::serialize_database(&app.dirs);
     // Write atomically: a crash mid-write must not truncate the database.
-    let tmp_path = format!("{}.tmp", app.database_path);
+    let tmp_path = format!("{}.tmp", app.config.database_path);
     fs::write(&tmp_path, db_string)
-        .and_then(|_| fs::rename(&tmp_path, &app.database_path))
+        .and_then(|_| fs::rename(&tmp_path, &app.config.database_path))
         .unwrap_or_else(|e| panic!("Error writing file: {}", e));
 }

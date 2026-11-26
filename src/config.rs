@@ -1,10 +1,8 @@
 use std::fs;
-use crate::data::Directory;
-use crate::get_home_dir;
-use crate::app::App;
-use crate::strings::DEFAULT_CONFIG;
 use std::path::Path;
-use crate::app::get_current_seconds;
+use std::str::FromStr;
+use crate::app::{get_current_seconds, get_home_dir, App};
+use crate::data::Directory;
 
 
 
@@ -81,176 +79,186 @@ fn parse_database(db_string: &str, current_seconds: i64) -> Vec<Directory> {
     dirs
 }
 
-// Return either String, i64 or bool
-enum Value<'a> {
-    String(&'a str),
-    I64(i64),
-    Bool(bool),
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub(crate) enum Theme {
+    Dark,
+    Bright,
 }
-// Implement Value to String
-impl<'a> ToString for Value<'a> {
-    fn to_string(&self) -> String {
-        match self {
-            Value::String(x) => { x.to_string() }
-            Value::I64(x) => { x.to_string() }
-            Value::Bool(x) => { x.to_string() }
-        }
-    }
-}
-// Method to_bool from Value
-impl<'a> Value<'a> {
-    fn to_bool(&self) -> bool {
-        match self {
-            Value::Bool(x) => { x.clone() }
-            _ => { panic!("Value is not bool") }
-        }
-    }
-}
-impl<'a> Value<'a> {
-    fn to_i64(&self) -> i64 {
-        match self {
-            Value::I64(x) => { x.clone() }
-            _ => { panic!("Value is not i64") }
-        }
-    }
-}
-impl<'a> Clone for Value<'a> {
-    fn clone(&self) -> Value<'a> {
-        match self {
-            Value::String(x) => { Value::String(x) }
-            Value::I64(x) => { Value::I64(x.clone()) }
-            Value::Bool(x) => { Value::Bool(x.clone()) }
+
+impl FromStr for Theme {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, ()> {
+        match s {
+            "dark" => Ok(Theme::Dark),
+            "bright" => Ok(Theme::Bright),
+            _ => Err(()),
         }
     }
 }
 
 
+/// How to choose among the directories that match the given substring(s).
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub(crate) enum Mode {
+    /// Directory with the shortest path.
+    Shortest,
+    /// Directory with the highest score (most 'frecent').
+    Score,
+    /// Best-scored directory whose basename matches.
+    Basename,
+    /// Show a selection list (config value: `none`).
+    Select,
+}
 
-
-fn parse_option_string<'a>(option_value: &Option<&'a (String, String)>) -> Option<Value<'a>> {
-    let entry: &'a (String, String) = (*option_value)?;
-    let (option, value) = (&entry.0, &entry.1);
-    let value = value.trim();
-    if option == "max_results" || option == "nav_start_number" {
-        value.parse::<i64>().ok().filter(|v| *v >= 0).map(Value::I64)
-    } else if option == "abs_paths" || option == "compact_paths" {
-        value.parse::<bool>().ok().map(Value::Bool)
-    } else {
-        Some(Value::String(value))
+impl FromStr for Mode {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, ()> {
+        match s {
+            "shortest" => Ok(Mode::Shortest),
+            "score" => Ok(Mode::Score),
+            "basename" => Ok(Mode::Basename),
+            "none" => Ok(Mode::Select),
+            _ => Err(()),
+        }
     }
 }
 
 
-fn get_option<'a>(user_value: &'a Vec<(String, String)>, default_value: &'a Vec<(String, String)>, option: &str) -> Value<'a> {
-    // Use the user value if present and valid; otherwise the default.
-    let user = user_value.iter().find(|&x| x.0 == option);
-    let default = default_value.iter().find(|&x| x.0 == option);
-    if let Some(v) = parse_option_string(&user) {
-        return v;
+/// Where to show non-directory files in interactive navigation.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub(crate) enum ShowFiles {
+    Top,
+    Bottom,
+    /// Config value: `none`.
+    Off,
+}
+
+impl FromStr for ShowFiles {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, ()> {
+        match s {
+            "top" => Ok(ShowFiles::Top),
+            "bottom" => Ok(ShowFiles::Bottom),
+            "none" => Ok(ShowFiles::Off),
+            _ => Err(()),
+        }
     }
-    if user.is_some() {
-        eprintln!("cz: invalid value for config option '{}', using default", option);
-    }
-    parse_option_string(&default).expect("Option not found in default config")
 }
 
 
-fn build_app(
-    theme: String,
-    abs_paths: bool,
-    compact_paths: bool,
-    max_results: i64,
-    database_path: String,
-    substring: String,
-    show_files: String,
-    nav_start_number: i64,
-    dirs: &mut Vec<Directory>,
-) -> App {
-    // Replace typical environment variables
-    let home_dir = get_home_dir();
-    let database_path = database_path.replace("$HOME", &home_dir);
-    // Avoid divisions by zero when paginating
-    let max_results = max_results.max(1);
-    // Create application user-specific data dir if it does not exist
-    let database_file_parent = Path::new(database_path.as_str()).parent().unwrap();
-    fs::create_dir_all(database_file_parent).unwrap_or_else(
-        |e| panic!("Error creating dir: {}", e)
-        );
+#[derive(Clone, PartialEq, Debug)]
+pub(crate) struct Config {
+    pub(crate) theme: Theme,
+    pub(crate) abs_paths: bool,
+    pub(crate) compact_paths: bool,
+    pub(crate) max_results: usize,
+    pub(crate) database_path: String,
+    pub(crate) substring: Mode,
+    pub(crate) show_files: ShowFiles,
+    pub(crate) nav_start_number: usize,
+}
 
-    init_dir_file(database_path.clone(), dirs);
-    let app = App {
-        theme,
-        abs_paths,
-        compact_paths,
-        max_results: max_results as usize,
-        database_path,
-        substring,
-        show_files,
-        nav_start_number: nav_start_number as usize,
-        dirs,
-    };
-    return app;
+fn expand_home(path: &str) -> String {
+    path.replace("$HOME", &get_home_dir())
+}
+
+impl Default for Config {
+    /// Must match `DEFAULT_CONFIG` (checked by a test).
+    fn default() -> Config {
+        Config {
+            theme: Theme::Dark,
+            abs_paths: true,
+            compact_paths: true,
+            max_results: 9,
+            database_path: expand_home("$HOME/.local/share/contemporary-z/directories.dir"),
+            substring: Mode::Score,
+            show_files: ShowFiles::Off,
+            nav_start_number: 1,
+        }
+    }
+}
+
+impl Config {
+    /// Set one option. Unknown options are ignored (forward compatibility);
+    /// an invalid value is an error and leaves the option unchanged.
+    fn set(&mut self, option: &str, value: &str) -> Result<(), ()> {
+        match option {
+            "theme" => self.theme = value.parse()?,
+            "abs_paths" => self.abs_paths = value.parse().map_err(|_| ())?,
+            "compact_paths" => self.compact_paths = value.parse().map_err(|_| ())?,
+            "max_results" => {
+                // Zero would break pagination
+                let n: usize = value.parse().map_err(|_| ())?;
+                if n == 0 {
+                    return Err(());
+                }
+                self.max_results = n;
+            }
+            "nav_start_number" => self.nav_start_number = value.parse().map_err(|_| ())?,
+            "database_path" => self.database_path = expand_home(value),
+            "substring" => self.substring = value.parse()?,
+            "show_files" => self.show_files = value.parse()?,
+            _ => {}
+        }
+        Ok(())
+    }
+
+    /// Defaults overridden by the options in `config_string`. Invalid values
+    /// are reported and replaced by the default.
+    fn parse(config_string: &str) -> Config {
+        let mut config = Config::default();
+        for (option, value) in parse_config(config_string) {
+            if config.set(&option, &value).is_err() {
+                eprintln!("cz: invalid value for config option '{}', using default", option);
+            }
+        }
+        config
+    }
 }
 
 
-fn parse_config(config_string: String) -> Vec<(String, String)> {
-    /* File format:
-     * theme = dark
-     * max_results = 9
-     * abs_paths = true
-     * compact_paths = true
-     * database_path = $HOME/.local/share/contemporary-z/directories.dir
-     * substring = shortest
-     * show_files = none
-     * nav_start_number = 1
+fn parse_config(config_string: &str) -> Vec<(String, String)> {
+    /* File format (see DEFAULT_CONFIG):
+     * option = value
+     * Lines starting with '#' and malformed lines are ignored.
      */
-
     let mut option_values = Vec::new();
-    let config_options = config_string.split("\n");
-    for config_option in config_options {
+    for config_option in config_string.lines() {
         let config_option = config_option.trim();
-        if config_option.len() == 0 {
+        if config_option.is_empty() || config_option.starts_with('#') {
             continue;
         }
-        if config_option.starts_with('#') {
-            continue;
+        if let Some((option, value)) = config_option.split_once('=') {
+            option_values.push((option.trim().to_string(), value.trim().to_string()));
         }
-        let (option, value) = match config_option.split_once('=') {
-            Some((o, v)) => (o.trim(), v.trim()),
-            None => continue,
-        };
-        option_values.push((option.to_string(), value.to_string()));
     }
-    return option_values;
+    option_values
 }
 
 
-pub(crate) fn app_from_config(dirs: &mut Vec<Directory>) -> App {
+pub(crate) fn app_from_config() -> App {
     let path = format!("{}/.config/contemporary-z/cz.conf", get_home_dir());
-    let config_string = match fs::read_to_string(path) {
-        Ok(contents) => { contents }
-        Err(_) => { DEFAULT_CONFIG.to_string() }
+    let config = match fs::read_to_string(path) {
+        Ok(contents) => Config::parse(&contents),
+        Err(_) => Config::default(),
     };
-    let user_value = parse_config(config_string);
-    let default_value = parse_config(DEFAULT_CONFIG.to_string());
 
-    return build_app(
-        get_option(&user_value, &default_value, "theme").to_string(),
-        get_option(&user_value, &default_value, "abs_paths").to_bool(),
-        get_option(&user_value, &default_value, "compact_paths").to_bool(),
-        get_option(&user_value, &default_value, "max_results").to_i64(),
-        get_option(&user_value, &default_value, "database_path").to_string(),
-        get_option(&user_value, &default_value, "substring").to_string(),
-        get_option(&user_value, &default_value, "show_files").to_string(),
-        get_option(&user_value, &default_value, "nav_start_number").to_i64(),
-        dirs,
-    )
+    // Create application user-specific data dir if it does not exist
+    if let Some(parent) = Path::new(&config.database_path).parent() {
+        fs::create_dir_all(parent).unwrap_or_else(
+            |e| panic!("Error creating dir: {}", e)
+        );
+    }
+    let mut dirs = Vec::new();
+    init_dir_file(config.database_path.clone(), &mut dirs);
+    App { config, dirs }
 }
 
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::strings::DEFAULT_CONFIG;
 
     const NOW: i64 = 1_800_000_000;
 
@@ -309,9 +317,7 @@ mod tests {
 
     #[test]
     fn config_skips_comments_and_bad_lines() {
-        let opts = parse_config(
-            "# comment\n\ntheme = bright\nnonsense\nmax_results=5\n".to_string()
-        );
+        let opts = parse_config("# comment\n\ntheme = bright\nnonsense\nmax_results=5\n");
         assert_eq!(
             opts,
             vec![
@@ -322,30 +328,37 @@ mod tests {
     }
 
     #[test]
+    fn config_default_matches_default_config_text() {
+        assert_eq!(Config::parse(DEFAULT_CONFIG), Config::default());
+    }
+
+    #[test]
     fn config_user_values_override_defaults() {
-        let user = parse_config("theme = bright\nmax_results = 4".to_string());
-        let defaults = parse_config(DEFAULT_CONFIG.to_string());
-        assert_eq!(get_option(&user, &defaults, "theme").to_string(), "bright");
-        assert_eq!(get_option(&user, &defaults, "max_results").to_i64(), 4);
+        let c = Config::parse("theme = bright\nmax_results = 4\nsubstring = none\nshow_files = top");
+        assert_eq!(c.theme, Theme::Bright);
+        assert_eq!(c.max_results, 4);
+        assert_eq!(c.substring, Mode::Select);
+        assert_eq!(c.show_files, ShowFiles::Top);
         // Not set by the user: default
-        assert!(get_option(&user, &defaults, "abs_paths").to_bool());
+        assert!(c.abs_paths);
     }
 
     #[test]
     fn config_invalid_values_fall_back_to_default() {
-        let user = parse_config("max_results = abc\nabs_paths = maybe\nnav_start_number = -3".to_string());
-        let defaults = parse_config(DEFAULT_CONFIG.to_string());
-        assert_eq!(get_option(&user, &defaults, "max_results").to_i64(), 9);
-        assert!(get_option(&user, &defaults, "abs_paths").to_bool());
-        assert_eq!(get_option(&user, &defaults, "nav_start_number").to_i64(), 1);
+        let c = Config::parse(
+            "max_results = abc\nabs_paths = maybe\nnav_start_number = -3\nsubstring = nope\nmax_results = 0"
+        );
+        assert_eq!(c, Config::default());
     }
 
     #[test]
-    fn default_config_is_complete() {
-        let defaults = parse_config(DEFAULT_CONFIG.to_string());
-        for opt in ["theme", "abs_paths", "compact_paths", "max_results",
-                    "database_path", "substring", "show_files", "nav_start_number"] {
-            assert!(defaults.iter().any(|(o, _)| o == opt), "missing {}", opt);
-        }
+    fn config_expands_home_in_database_path() {
+        let c = Config::parse("database_path = $HOME/db/x.dir");
+        assert_eq!(c.database_path, format!("{}/db/x.dir", get_home_dir()));
+    }
+
+    #[test]
+    fn config_ignores_unknown_options() {
+        assert_eq!(Config::parse("future_option = 1"), Config::default());
     }
 }

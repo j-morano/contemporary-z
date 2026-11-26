@@ -1,8 +1,8 @@
+use crate::config::{Config, Mode, ShowFiles, Theme};
 use crate::data::Directory;
 use crate::utils::canonicalize_dir_str;
 use crate::utils::write_dir;
 
-use std::fs::metadata;
 use std::process::exit;
 use std::env;
 use std::io::prelude::*;
@@ -41,27 +41,15 @@ fn replace_path_prefix(path: &str, prefix: &str, replacement: &str) -> Option<St
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct SelectionError;
-
-
-#[allow(dead_code)]
-pub(crate) struct App <'a> {
-    pub(crate) theme: String,
-    pub(crate) abs_paths: bool,
-    pub(crate) compact_paths: bool,
-    pub(crate) max_results: usize,
-    pub(crate) database_path: String,
-    pub(crate) substring: String,
-    pub(crate) show_files: String,
-    pub(crate) nav_start_number: usize,
-    pub(crate) dirs: &'a mut Vec<Directory>,
+pub(crate) struct App {
+    pub(crate) config: Config,
+    pub(crate) dirs: Vec<Directory>,
 }
 
-impl App <'_> {
+impl App {
     pub(crate) fn format(&self, sgr: &str, color: &str, text: String) -> String {
         let mut full_color ;
-        if self.theme == "bright" {
+        if self.config.theme == Theme::Bright {
             full_color = format!("bright_{}_fg", color);
             // If a black fg is forced, replace it by white
             full_color = full_color.replace("black", "white");
@@ -126,10 +114,10 @@ impl App <'_> {
     }
 
 
-    pub(crate) fn list_dirs(&self, valid_dirs: &Vec<Directory>, max_num: usize, start: usize) {
+    pub(crate) fn list_dirs(&self, valid_dirs: &[Directory], max_num: usize, start: usize) {
         let mut max_results = max_num;
         if max_num == 0 {
-            max_results = self.max_results;
+            max_results = self.config.max_results;
         }
         // If there are no dirs, exit
         if valid_dirs.len() == 0 {
@@ -139,7 +127,7 @@ impl App <'_> {
             for (i, dir) in valid_dirs.iter().enumerate() {
                 let mut dir_name = dir.name.clone();
 
-                if self.compact_paths {
+                if self.config.compact_paths {
                     // Replace /home/<user> with '~'
                     // Replace (/run)/media/<user> with '>'
                     let user = get_user();
@@ -185,134 +173,98 @@ impl App <'_> {
     }
 
 
+    /// Like `select_valid_dir`, but returns `None` on invalid input instead of
+    /// exiting (used by interactive navigation).
     pub(crate) fn select_valid_dir_no_exit(
         &self,
         valid_dirs: Vec<Directory>,
         max_num: usize,
         start: usize,
         files: Vec<String>,
-    ) -> Result<String, SelectionError>
+    ) -> Option<String>
     {
-        if self.show_files == "top" {
+        if self.config.show_files == ShowFiles::Top {
             App::print_files(files.clone());
         }
         self.list_dirs(&valid_dirs, max_num, start);
-        if self.show_files == "bottom" {
+        if self.config.show_files == ShowFiles::Bottom {
             App::print_files(files.clone());
         }
         println!();
 
-        // Select dir by number
-        let selected_dir = match self.select_dir().parse::<usize>() {
-            Ok(number)  => number,
-            Err(_) => {
-                return Err(SelectionError);
-            },
-        };
-
+        let selected_dir = self.select_dir().parse::<usize>().ok()?;
         // Check if the introduced number is valid
-        if selected_dir > valid_dirs.len() + start - 1 || selected_dir < start {
-            return Err(SelectionError);
+        if selected_dir < start || selected_dir > valid_dirs.len() + start - 1 {
+            return None;
         }
-
-        // Get name of the selected dir
-        let dir_name = format!("{}", valid_dirs[selected_dir-start].name);
-
-        return Ok(dir_name);
+        Some(valid_dirs[selected_dir - start].name.clone())
     }
 
 
-    pub(crate) fn select_valid_dirs(&self, valid_dirs: Vec<Directory>, max_num: usize) -> Result<Vec<String>, String> {
-
+    /// Ask for several numbers (separated by whitespace). Exits with an error
+    /// message on invalid input.
+    pub(crate) fn select_valid_dirs(&self, valid_dirs: Vec<Directory>, max_num: usize) -> Vec<String> {
         self.list_dirs(&valid_dirs, max_num, 1);
         println!();
 
-        // Select dirs by numbers
-        let selected_dirs_string = self.select_dir();
-        // parse list of numbers separated by spaces
-        let selected_dirs_nums_str: Vec<&str> = selected_dirs_string.split_whitespace().collect();
-        // selected dirs names strs
-        let mut selected_dirs_strings: Vec<String> = Vec::new();
-
-        for selected_dir_num_str in selected_dirs_nums_str {
-
-            let selected_dir_num = self.parse_and_validate_dir_number(&selected_dir_num_str, valid_dirs.len()).unwrap();
-
-            // Get name of the selected dir and add it to the list
-            selected_dirs_strings.push(valid_dirs[selected_dir_num-1].name.clone());
-            // let dir_name = format!("{}", valid_dirs[selected_dir_num-1].name);
-        }
-
-        return Ok(selected_dirs_strings);
+        self.select_dir()
+            .split_whitespace()
+            .map(|num| {
+                let n = self.parse_and_validate_dir_number(num, valid_dirs.len());
+                valid_dirs[n - 1].name.clone()
+            })
+            .collect()
     }
 
 
-    fn parse_and_validate_dir_number(
-        &self,
-        selected_dir: &str,
-        max_num: usize
-    ) -> Result<usize, SelectionError>
-    {
-
-        // Select dir by number
-        let selected_dir = match selected_dir.parse::<usize>() {
-            Ok(number)  => number,
+    /// Parse a 1-based selection. Exits with an error message if it is not a
+    /// number in `1..=max_num`.
+    fn parse_and_validate_dir_number(&self, selected_dir: &str, max_num: usize) -> usize {
+        let number = match selected_dir.parse::<usize>() {
+            Ok(number) => number,
             Err(error) => {
                 self.show_error("No dir selected", error.to_string().as_str());
-                1 as usize
+                unreachable!("show_error exits");
             },
         };
-
-        // Check if the introduced number is valid
-        if selected_dir > max_num || selected_dir < 1 {
-            self.show_error(
-                "Invalid number",
-                format!(
-                    "{} > {}",
-                    selected_dir, max_num
-                ).as_str()
-            );
-            return Err(SelectionError);
-        } else {
-            return Ok(selected_dir);
+        if number > max_num || number < 1 {
+            self.show_error("Invalid number", &format!("{} > {}", number, max_num));
         }
+        number
     }
 
 
-    pub(crate) fn select_valid_dir(&self, valid_dirs: Vec<Directory>, max_num: usize) -> Result<String, String> {
-        let mut i = 0;
-        let mut selected_dir: String;
-        let mut dirs_to_show = &valid_dirs[0..];
-        let mut starting_index = 0;
-        let number_of_pages = (valid_dirs.len() + self.max_results - 1) / self.max_results;
+    /// Show the directories, paginated, and ask for one of them (`e` shows the
+    /// next page). Returns `None` if there are no directories.
+    pub(crate) fn select_valid_dir(&self, valid_dirs: Vec<Directory>, max_num: usize) -> Option<String> {
+        if valid_dirs.is_empty() {
+            self.show_exit_message("No dirs");
+            return None;
+        }
+        let page_size = self.config.max_results;
+        let number_of_pages = (valid_dirs.len() + page_size - 1) / page_size;
+        let mut page = 0;
 
         loop {
-            if number_of_pages > 0 {
-                println!("[{}/{}]", i+1, number_of_pages);
-            }
-            self.list_dirs(&dirs_to_show.to_vec(), max_num, 1);
+            let start = page * page_size;
+            let dirs_to_show = &valid_dirs[start..];
+            println!("[{}/{}]", page + 1, number_of_pages);
+            self.list_dirs(dirs_to_show, max_num, 1);
             println!();
 
-            selected_dir = self.select_dir();
-            if selected_dir != "e" { break; }
-            i = i + 1;
-            starting_index = i * self.max_results;
-            if starting_index >= valid_dirs.len() {
-                starting_index = 0;
-                i = 0;
+            let selected = self.select_dir();
+            if selected != "e" {
+                let n = self.parse_and_validate_dir_number(
+                    &selected,
+                    dirs_to_show.len().min(page_size),
+                );
+                return Some(valid_dirs[start + n - 1].name.clone());
             }
-            dirs_to_show = &valid_dirs[starting_index..];
+            page += 1;
+            if page >= number_of_pages {
+                page = 0;
+            }
         }
-
-        let selected_dir_num = self.parse_and_validate_dir_number(
-            &selected_dir,
-            dirs_to_show.len().min(self.max_results),
-        ).unwrap();
-
-        // Get name of the selected dir
-        let dir_name = format!("{}", valid_dirs[starting_index+selected_dir_num-1].name);
-
-        return Ok(dir_name);
     }
 
 
@@ -322,122 +274,65 @@ impl App <'_> {
     }
 
 
-    pub(crate) fn do_cd(
-        &mut self,
-        args: &[String],
-        forced_substring: &str,
-    ) {
-        // Directory argument
-        let mut starting_index = 1;
-        if forced_substring != "none" {
-            starting_index = 2;
-        }
-        if args.len() <= starting_index {
-            self.show_error("No directory or substring provided", "");
-        }
-        let mut dir_str = args[starting_index].as_str();
+    /// `patterns[0]` is tried as an alias, then as a directory, and finally all
+    /// the patterns are used as substrings. `forced` overrides the configured
+    /// substring mode.
+    pub(crate) fn do_cd(&mut self, patterns: &[String], forced: Option<Mode>) {
+        let first = match patterns.first() {
+            Some(first) => first.as_str(),
+            None => {
+                self.show_error("No directory or substring provided", "");
+                return;
+            }
+        };
 
         // If string is an alias, then cd to the directory, if exists
-        match self.get_by_alias(dir_str) {
-            Ok(dir) => {
-                let dir_str = dir.name.as_str();
-                if Path::new(dir_str).exists()
-                    && metadata(dir_str).unwrap().is_dir()
-                {
-                    self.direct_cd(dir.name);
-                }
-            },
-            Err(_) => {
-                // If it is a dir AND exists in the FS
-                if Path::new(dir_str).exists()
-                    && metadata(dir_str).unwrap().is_dir()
-                {
-                    let canonical_dir = canonicalize_dir_str(dir_str);
-                    dir_str = canonical_dir.as_str();
+        if let Some(dir) = self.get_by_alias(first) {
+            if Path::new(&dir.name).is_dir() {
+                self.direct_cd(dir.name);
+            }
+            return;
+        }
+        // If it is a dir AND exists in the FS, cd to it (adding it to the table)
+        if Path::new(first).is_dir() {
+            self.direct_cd(canonicalize_dir_str(first));
+            return;
+        }
+        let mode = forced.unwrap_or(self.config.substring);
+        self.cd_by_substrings(patterns, mode);
+    }
 
-                    // Check if dir is in the table
-                    match self.get(dir_str) {
-                        Ok(dir) => {
-                            // If the dir is not in the table and it does exists in the
-                            //   FS, add it
-                            self.direct_cd(dir.name);
-                        },
-                        Err(_) => {
-                            self.direct_cd(dir_str.to_string());
-                        }
-                    }
-                } else { // if arguments are substrings, go to the top results that matches
-                         // the substrings
-                    // Get shortest directory
-                    let valid_dirs = self.get_valid(
-                        Vec::from(&args[starting_index..]), false
-                    ).unwrap();
 
-                    if valid_dirs.is_empty() {
-                        self.show_exit_message("No dirs");
-                    } else {
-                        // If there is only one result, cd to it
-                        if valid_dirs.len() == 1
-                            || (self.substring == "score" && forced_substring == "none")
-                            || forced_substring == "score"
-                        {
-                            // Access the substring with the highest score
-                            let selected_dir = valid_dirs[0].name.clone();
-                            // app.direct_cd(&conn, selected_dir.clone());
-                            self.direct_cd(selected_dir);
-                        } else {
-                            // Access the top dir that matches the substring(s)
-                            // Top depends on criteria
-                            if (self.substring == "shortest" && forced_substring == "none")
-                                || forced_substring == "shortest"
-                            {
-                                let mut selected_dir = valid_dirs[0].name.as_str();
-                                for dir in valid_dirs.iter() {
-                                    if dir.name.len() < selected_dir.len() {
-                                        selected_dir = dir.name.as_str();
-                                    }
-                                }
-                                // app.direct_cd(&conn, selected_dir.to_string());
-                                self.direct_cd(selected_dir.to_string());
-                            }
-                            else if (self.substring == "basename" && forced_substring == "none")
-                                || forced_substring == "basename"
-                            {
-                                let mut cded = false;
-                                for dir in valid_dirs.iter() {
-                                    // Access the basename of the dir that matches the substring(s)
-                                    let basename_str = match Path::new(&dir.name).file_name() {
-                                        Some(b) => b.to_string_lossy().to_string(),
-                                        None => continue,
-                                    };
-                                    let mut all_match = true;
-                                    for pattern in args[starting_index..].iter() {
-                                        if !basename_str.contains(pattern) {
-                                            all_match = false;
-                                            break;
-                                        }
-                                    }
-                                    if all_match {
-                                        self.direct_cd(dir.name.clone());
-                                        cded = true;
-                                        break;
-                                    }
-                                }
-                                if !cded {
-                                    self.show_exit_message("No dirs");
-                                }
-                            } else {
-                                // Interactively select dir among all the dirs that
-                                // match the substring(s)
-                                let dir_name = self.select_valid_dir(valid_dirs, 0).unwrap();
-                                // app.direct_cd(&conn, dir_name.clone());
-                                self.direct_cd(dir_name);
-                            }
-                        }
-                    }
-                }
+    fn cd_by_substrings(&mut self, patterns: &[String], mode: Mode) {
+        let valid_dirs = self.get_valid(patterns, false);
+        let selected = match mode {
+            _ if valid_dirs.is_empty() => {
+                self.show_exit_message("No dirs");
+                None
             },
+            // With only one result, always cd to it
+            _ if valid_dirs.len() == 1 => Some(valid_dirs[0].name.clone()),
+            // Sorted by score
+            Mode::Score => Some(valid_dirs[0].name.clone()),
+            Mode::Shortest => valid_dirs
+                .iter()
+                .min_by_key(|dir| dir.name.len())
+                .map(|dir| dir.name.clone()),
+            Mode::Basename => {
+                let found = valid_dirs
+                    .iter()
+                    .find(|dir| basename_matches(&dir.name, patterns))
+                    .map(|dir| dir.name.clone());
+                if found.is_none() {
+                    self.show_exit_message("No dirs");
+                }
+                found
+            },
+            Mode::Select => self.select_valid_dir(valid_dirs, 0),
         };
+        if let Some(dir) = selected {
+            self.direct_cd(dir);
+        }
     }
 
 
@@ -445,14 +340,9 @@ impl App <'_> {
         if args.len() < 3 {
             self.show_error("No substring provided", "");
         } else {
-            let valid_dirs = self.get_valid(Vec::from(&args[2..]), false).unwrap();
-            if valid_dirs.is_empty() {
-                self.show_exit_message("No dirs");
-            } else {
-                // Interactively select dir among all the dirs that
-                // match the substring(s)
-                let dir_name = self.select_valid_dir(valid_dirs, 0).unwrap();
-                self.direct_cd(dir_name.clone());
+            let valid_dirs = self.get_valid(&args[2..], false);
+            if let Some(dir_name) = self.select_valid_dir(valid_dirs, 0) {
+                self.direct_cd(dir_name);
             }
         }
     }
@@ -473,69 +363,46 @@ impl App <'_> {
     pub(crate) fn add_alias(&mut self, args: &[String]) {
         if args.len() < 3 {
             println!("Aliased dirs");
-            let valid_dirs = self.get_valid(
-                Vec::new(), true
-            ).unwrap();
-
-            // Always list dirs
-            let dir_name = self.select_valid_dir(valid_dirs, 0).unwrap();
-            self.direct_cd(dir_name.clone());
-        } else {
-            let mut alias = &String::from("");
-            let mut dir_str;
-            if args.len() < 4 {
-                // Remove alias
-                dir_str = args[2].as_str();
-            } else {
-                alias = &args[2];
-                dir_str = args[3].as_str();
+            let valid_dirs = self.get_valid(&[], true);
+            if let Some(dir_name) = self.select_valid_dir(valid_dirs, 0) {
+                self.direct_cd(dir_name);
             }
+            return;
+        }
 
-            if Path::new(dir_str).exists()
-                && metadata(dir_str).unwrap().is_dir()
-            {
-                let canonical_dir = canonicalize_dir_str(dir_str);
-                dir_str = canonical_dir.as_str();
+        // `-a DIR` removes the alias of DIR; `-a ALIAS DIR` sets it
+        let remove = args.len() < 4;
+        let (alias, dir_str) = if remove {
+            ("", args[2].as_str())
+        } else {
+            (args[2].as_str(), args[3].as_str())
+        };
 
-                // Check if dir is in the table
-                let dir = self.get(dir_str);
-
-                // If the dir is not in the table and it does exists in the
-                //   FS, add it
-                if let Err(_err) = dir {
-                    {
-                        self.insert_with_alias(dir_str, Some(alias.as_str()));
-                        let details = format!("{}->{}", alias, dir_str);
-                        self.show_exit_detailed_message(
-                            if alias.is_empty() { "Added dir (no alias)" } else { "Added dir alias" },
-                            details.as_str(),
-                        );
-                    }
-                } else {
-                    if args.len() < 4 {
-                        self.remove_alias(dir_str);
-                        let details = format!("{}->{}", alias, dir_str);
-                        self.show_exit_detailed_message("Removed dir alias", details.as_str());
-                    } else {
-                        // add_alias_to_directory_unique(&conn, dir_str, alias.as_str()).unwrap();
-                        self.replace_alias(dir_str, alias.as_str());
-                        let details = format!("{}->{}", alias, dir_str);
-                        self.show_exit_detailed_message("Added dir alias", details.as_str());
-                    }
-                }
+        if Path::new(dir_str).is_dir() {
+            let dir_str = canonicalize_dir_str(dir_str);
+            let details = format!("{}->{}", alias, dir_str);
+            if self.get(&dir_str).is_none() {
+                self.insert_with_alias(&dir_str, Some(alias));
+                self.show_exit_detailed_message(
+                    if remove { "Added dir (no alias)" } else { "Added dir alias" },
+                    &details,
+                );
+            } else if remove {
+                self.remove_alias(&dir_str);
+                self.show_exit_detailed_message("Removed dir alias", &details);
             } else {
-                println!("Select directory to alias");
-                // app.show_error("The provided directory does not exist", "");
-                let valid_dirs = self.get_valid(
-                    Vec::new(), false
-                ).unwrap();
-
-                // Always list dirs
-                let dir_name = self.select_valid_dir(valid_dirs, 0).unwrap();
-                // add_alias_to_directory_unique(&conn, &dir_name, dir_str).unwrap();
+                self.replace_alias(&dir_str, alias);
+                self.show_exit_detailed_message("Added dir alias", &details);
+            }
+        } else {
+            // Not a directory: use the argument as the alias of a dir that is
+            // selected from the list
+            println!("Select directory to alias");
+            let valid_dirs = self.get_valid(&[], false);
+            if let Some(dir_name) = self.select_valid_dir(valid_dirs, 0) {
                 self.replace_alias(&dir_name, dir_str);
                 let details = format!("{}->{}", dir_str, dir_name);
-                self.show_exit_detailed_message("Added dir alias", details.as_str());
+                self.show_exit_detailed_message("Added dir alias", &details);
             }
         }
     }
@@ -579,75 +446,30 @@ impl App <'_> {
     }
 
 
-    pub(crate) fn get_by_alias(&mut self, alias: &str) -> Result<Directory, String> {
-        for dir in self.dirs.iter() {
-            if dir.alias == alias {
-                return Ok(dir.clone());
-            }
+    pub(crate) fn get_by_alias(&self, alias: &str) -> Option<Directory> {
+        if alias.is_empty() {
+            return None;
         }
-        Err("Alias not found".to_string())
+        self.dirs.iter().find(|dir| dir.alias == alias).cloned()
     }
 
 
-    pub(crate) fn get(&mut self, name: &str) -> Result<Directory, String> {
-        for d in self.dirs.iter() {
-            if d.name == name {
-                return Ok(d.clone());
-            }
-        }
-        Err("Directory not found".to_string())
+    pub(crate) fn get(&self, name: &str) -> Option<Directory> {
+        self.dirs.iter().find(|dir| dir.name == name).cloned()
     }
 
 
-    pub(crate) fn get_valid(
-        &mut self,
-        patterns: Vec<String>,
-        alias_only: bool,
-    ) -> Result<Vec<Directory>, String> {
-        // Filter invalid dirs from the current path
-        let mut valid_dirs: Vec<Directory> = Vec::new();
-
-        // Sort by score
-        self.dirs.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
-
-        // Filter by pattern
-        let mut filtered_dirs: Vec<Directory> = Vec::new();
-        for dir in self.dirs.iter() {
-            if patterns.is_empty() {
-                filtered_dirs.push(dir.clone());
-            } else {
-                let mut all_match = true;
-                for pattern in patterns.iter() {
-                    if !dir.name.contains(pattern) {
-                        all_match = false;
-                        break;
-                    }
-                }
-                if all_match {
-                    filtered_dirs.push(dir.clone());
-                }
-            }
-        }
-
-        // Filter by alias
-        if alias_only {
-            let mut alias_dirs: Vec<Directory> = Vec::new();
-            for dir in filtered_dirs.iter() {
-                if dir.alias != "" {
-                    alias_dirs.push(dir.clone());
-                }
-            }
-            filtered_dirs = alias_dirs;
-        }
-
-        // Filter by existence
-        for dir in filtered_dirs.iter() {
-            if Path::new(&dir.name).exists() {
-                valid_dirs.push(dir.clone());
-            }
-        }
-
-        Ok(valid_dirs)
+    /// Existing directories (best score first) that contain all the
+    /// `patterns`; if `alias_only`, only those with an alias.
+    pub(crate) fn get_valid(&mut self, patterns: &[String], alias_only: bool) -> Vec<Directory> {
+        self.dirs.sort_by(|a, b| b.score.total_cmp(&a.score));
+        self.dirs
+            .iter()
+            .filter(|dir| patterns.iter().all(|p| dir.name.contains(p.as_str())))
+            .filter(|dir| !alias_only || !dir.alias.is_empty())
+            .filter(|dir| Path::new(&dir.name).exists())
+            .cloned()
+            .collect()
     }
 
 
@@ -742,45 +564,33 @@ impl App <'_> {
 
 
     pub(crate) fn remove_alias_interactive(&mut self) {
-        let valid_dirs = self.get_valid(
-            Vec::new(), true
-        ).unwrap();
-
-        // Always list dirs
-        let dir_name = self.select_valid_dir(valid_dirs, 0).unwrap();
-        self.remove_alias(&dir_name);
-        let details = format!("{}->{}", "", dir_name);
-        self.show_exit_detailed_message("Removed dir alias", details.as_str());
+        let valid_dirs = self.get_valid(&[], true);
+        if let Some(dir_name) = self.select_valid_dir(valid_dirs, 0) {
+            self.remove_alias(&dir_name);
+            let details = format!("->{}", dir_name);
+            self.show_exit_detailed_message("Removed dir alias", &details);
+        }
     }
 
 
     pub(crate) fn interactive_cd(&mut self, args: &[String]) {
-        let valid_dirs = self.get_valid(
-            Vec::from(&args[1..]), false
-        ).unwrap();
-
-        // Always list dirs
-        let dir_name = self.select_valid_dir(valid_dirs, 0).unwrap();
-        self.direct_cd(dir_name.clone());
+        let valid_dirs = self.get_valid(&args[1..], false);
+        if let Some(dir_name) = self.select_valid_dir(valid_dirs, 0) {
+            self.direct_cd(dir_name);
+        }
     }
 
 
     pub(crate) fn remove_dirs(&mut self, args: &[String]) {
-        let valid_dirs = self.get_valid(
-            Vec::from(&args[2..]), false
-        ).unwrap();
-
-        let dir_names = self.select_valid_dirs(valid_dirs, 0).unwrap();
-
-        let all_dirs_removed = true;
-        for dir_name in dir_names {
+        let valid_dirs = self.get_valid(&args[2..], false);
+        if valid_dirs.is_empty() {
+            self.show_exit_message("No dirs");
+            return;
+        }
+        for dir_name in self.select_valid_dirs(valid_dirs, 0) {
             self.remove(&dir_name);
         }
-        if all_dirs_removed {
-            self.show_exit_message("Removed directories");
-        } else {
-            self.show_error("Could not remove directories", "");
-        }
+        self.show_exit_message("Removed directories");
     }
 
 
@@ -843,13 +653,9 @@ impl App <'_> {
             }
 
             let dir_name: String; //= String::new();
-            match self.select_valid_dir_no_exit(valid_dirs, usize::MAX, self.nav_start_number, files) {
-                Ok(dir_string)  => {
-                    dir_name = dir_string
-                }
-                Err(_error) => {
-                    break;
-                }
+            match self.select_valid_dir_no_exit(valid_dirs, usize::MAX, self.config.nav_start_number, files) {
+                Some(dir_string) => dir_name = dir_string,
+                None => break,
             };
             println!();
 
@@ -860,38 +666,35 @@ impl App <'_> {
             let mut dir_str = dir_path_buf.to_str().unwrap();
 
             let dir_pathbuf;
-            if self.abs_paths {
+            if self.config.abs_paths {
                 dir_pathbuf = PathBuf::from(dir_str).canonicalize().unwrap();
                 dir_str = dir_pathbuf.to_str().unwrap();
             }
 
-            // Check if dir is in the table
-            let dir = self.get(dir_str);
-
-            // If the dir is not in the table and it does exists in the
-            //   FS, add it
-            if let Err(_err) = dir {
-                // Do not store '..' or '.' dirs
-                if !(dir_str == "." || dir_str == "..") {
+            // If the dir is not in the table, add it
+            dir_to_read = match self.get(dir_str) {
+                Some(dir) => dir.name,
+                None => {
                     self.insert(dir_str);
+                    String::from(dir_str)
                 }
-                dir_to_read = String::from(dir_str);
-
-            } else { // if it is already present in the table, update its
-                     // counter
-                match dir {
-                    Ok(dir_string)  => {
-                        dir_to_read = dir_string.name.clone();
-                    }
-                    Err(error) => {
-                        self.show_error("Directory does not exist", error.to_string().as_str());
-                    }
-                };
-            }
+            };
             // print in bold dir_to_read
             println!("{}", self.format("bold", "", dir_to_read.to_string()));
             // println!("{}", dir_to_read);
         }
         self.direct_cd(dir_to_read);
+    }
+}
+
+
+/// Whether the basename of `path` contains all the `patterns`.
+fn basename_matches(path: &str, patterns: &[String]) -> bool {
+    match Path::new(path).file_name() {
+        Some(basename) => {
+            let basename = basename.to_string_lossy();
+            patterns.iter().all(|p| basename.contains(p.as_str()))
+        }
+        None => false,
     }
 }
