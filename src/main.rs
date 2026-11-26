@@ -1,19 +1,21 @@
 mod cli;
-mod data;
 mod app;
 mod config;
+mod db;
 mod colors;
 mod utils;
 mod strings;
+mod ui;
 
 
 use utils::write_dir;
 
 use std::env;
-use std::fs;
 use std::process::exit;
 use crate::cli::Command;
-use crate::config::app_from_config;
+use crate::app::App;
+use crate::config::Config;
+use crate::db::Database;
 use crate::strings::HELP;
 
 
@@ -44,10 +46,12 @@ fn main() {
         _ => {}
     }
 
-    let app = &mut app_from_config();
+    let config = Config::load();
+    let db = Database::load(&config.database_path);
+    let app = &mut App::new(config, db);
     match command {
         Command::Help | Command::Version => unreachable!(),
-        Command::DatabasePath => println!("{}", app.config.database_path),
+        Command::DatabasePath => app.show_database_path(),
         Command::Clear => app.clear_database(),
         Command::Previous => app.go_to_previous(),
         Command::Last => app.go_to_last(),
@@ -64,12 +68,5 @@ fn main() {
         // No arguments: list stored dirs to select one interactively
         Command::Select => app.interactive_cd(),
     }
-    // Write dirs to database_dir_fn
-    data::age(&mut app.dirs, app.config.max_age as f64);
-    let db_string = config::serialize_database(&app.dirs);
-    // Write atomically: a crash mid-write must not truncate the database.
-    let tmp_path = format!("{}.tmp", app.config.database_path);
-    fs::write(&tmp_path, db_string)
-        .and_then(|_| fs::rename(&tmp_path, &app.config.database_path))
-        .unwrap_or_else(|e| panic!("Error writing file: {}", e));
+    app.save();
 }

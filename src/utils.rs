@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 use std::fs;
 use std::env;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 
 
@@ -26,6 +27,21 @@ pub(crate) fn canonicalize_dir_str(dir_str_name: &str) -> String {
     }
 
     dir_str
+}
+
+
+pub(crate) fn get_current_seconds() -> i64 {
+    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64
+}
+
+
+pub(crate) fn get_home_dir() -> String {
+    env::var("HOME").unwrap_or_default()
+}
+
+
+pub(crate) fn get_user() -> String {
+    env::var("USER").unwrap_or_default()
 }
 
 
