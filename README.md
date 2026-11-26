@@ -122,6 +122,18 @@ Add the code from `z.sh` to `.bashrc`. For example:
 cat z.sh >> $HOME/.bashrc
 ```
 
+### Learn from plain `cd` (optional)
+
+By default, `cz` only learns the directories you reach with `z`. To also register the ones you reach with a plain `cd`, add a hook to your shell. It calls `cz --add "$PWD"` whenever the directory changes.
+
+* Fish: copy `hook.fish` to `$HOME/.config/fish/conf.d/cz_hook.fish`.
+* Bash/Zsh: add the code from `hook.sh` to `.bashrc`/`.zshrc`, after the `z` function.
+
+`cz` locks its database while it runs, so several shells can use it at the same time. A hook never waits more than a fraction of a second: if the database is busy (for example, another shell is showing a selection list), that visit is simply not registered.
+
+> [!NOTE]
+> Since version 0.6.0, the directory to `cd` to is communicated through `$XDG_RUNTIME_DIR/cz_path` (or `/tmp/cz_path_$USER`) instead of `/tmp/cz_path`. If you installed the shell function before, update it with the current `z.fish` or `z.sh`.
+
 ## How to use
 
 The default alias of Contemporary-z is `z`. However, if a different alias is preferred, it can be easily changed in the installation scripts. Hereafter, `cz` refers to the entire application, and `z` refers to the command.
@@ -156,6 +168,8 @@ Mandatory arguments to long options are mandatory for short options too.
                                introduced, its alias is removed; if only an
                                alias is introduced, the programs shows the
                                directory list to select one of them.
+      --add DIRECTORY        register a visit to DIRECTORY in the database,
+                               without changing directory (see 'hook' files).
       --clear                clear the directories database.
   -b SUBSTRING               force substring matching by basename.
   --database-path            show the path of the directories database.
@@ -174,6 +188,8 @@ Mandatory arguments to long options are mandatory for short options too.
   -r                         remove a directory from the database, interactively.
       --remove-alias         remove an alias, interactively.
   -t SUBSTRING               force substring matching by shortest path.
+      --                     treat all the following arguments as directory or
+                               substrings, even if they start with '-'.
       --sync                 sync directories (remove all non-existent
                                 directories).
       --help     display this help and exit.

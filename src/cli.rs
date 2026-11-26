@@ -32,6 +32,8 @@ pub(crate) enum Command {
     /// `-r [SUBSTRING]...`
     Remove(Vec<String>),
     Alias(AliasArgs),
+    /// `--add DIR`: register a visit without changing directory (for hooks).
+    Add(String),
     /// `-f SUBSTRING...`
     Find(Vec<String>),
     /// A dir, an alias or substrings; `mode` overrides the configured one.
@@ -94,6 +96,10 @@ pub(crate) fn parse(args: &[String]) -> Result<Command, String> {
                 dir: dir.clone(),
             })),
             _ => Err("'-a' takes at most an alias and a directory".to_string()),
+        },
+        "--add" => match rest {
+            [dir] => Ok(Command::Add(dir.clone())),
+            _ => Err("'--add' takes exactly one directory".to_string()),
         },
         "-f" => Ok(Command::Find(substrings()?)),
         "-t" => forced(Mode::Shortest),
@@ -176,6 +182,13 @@ mod tests {
             Ok(Command::Alias(AliasArgs::Set { alias: "x".into(), dir: "d".into() }))
         );
         assert!(parse_str("-a x d y").is_err());
+    }
+
+    #[test]
+    fn add_takes_exactly_one_directory() {
+        assert_eq!(parse_str("--add /a"), Ok(Command::Add("/a".into())));
+        assert!(parse_str("--add").is_err());
+        assert!(parse_str("--add /a /b").is_err());
     }
 
     #[test]

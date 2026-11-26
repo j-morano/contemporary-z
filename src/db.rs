@@ -161,22 +161,27 @@ impl Database {
 
 
     fn insert_at(&mut self, name: &str, alias: Option<&str>, now: i64) {
-        match self.dirs.iter_mut().find(|dir| dir.name == name) {
-            Some(dir) => {
+        let mut dir = match self.dirs.iter().position(|dir| dir.name == name) {
+            Some(i) => {
+                let mut dir = self.dirs.remove(i);
                 dir.counter += 1.0;
                 dir.last_access = now;
-                if let Some(alias) = alias {
-                    dir.alias = alias.to_string();
-                }
+                dir
             }
-            None => self.dirs.push(Directory {
+            None => Directory {
                 name: name.to_string(),
                 counter: 1.0,
                 last_access: now,
                 score: 0.0,
-                alias: alias.unwrap_or_default().to_string(),
-            }),
+                alias: String::new(),
+            },
+        };
+        if let Some(alias) = alias {
+            dir.alias = alias.to_string();
         }
+        // Most recent last: the order breaks ties between visits that happen
+        // within the same second (access times have a resolution of 1 s)
+        self.dirs.push(dir);
     }
 
 
@@ -225,7 +230,8 @@ impl Database {
 
     /// The `n`-th most recently accessed directory (0 is the most recent).
     pub(crate) fn nth_recent(&self, n: usize) -> Option<String> {
-        let mut dirs: Vec<&Directory> = self.dirs.iter().collect();
+        // The stable sort keeps the order of insert for equal times
+        let mut dirs: Vec<&Directory> = self.dirs.iter().rev().collect();
         dirs.sort_by_key(|dir| std::cmp::Reverse(dir.last_access));
         dirs.get(n).map(|dir| dir.name.clone())
     }
@@ -397,6 +403,18 @@ mod tests {
         assert_eq!(d.dirs[0].last_access, 200);
         assert_eq!(d.dirs[1].alias, "bee");
         assert!(d.contains("/a") && !d.contains("/c"));
+    }
+
+    #[test]
+    fn visits_within_the_same_second_keep_their_order() {
+        let mut d = db(vec![]);
+        for name in ["/a", "/b", "/a", "/c"] {
+            d.insert_at(name, None, 100);
+        }
+        assert_eq!(d.nth_recent(0).as_deref(), Some("/c"));
+        assert_eq!(d.nth_recent(1).as_deref(), Some("/a"));
+        assert_eq!(d.nth_recent(2).as_deref(), Some("/b"));
+        assert_eq!(d.dirs.iter().find(|x| x.name == "/a").unwrap().counter, 2.0);
     }
 
     #[test]
