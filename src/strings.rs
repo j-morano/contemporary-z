@@ -61,7 +61,7 @@ Mandatory arguments to long options are mandatory for short options too.
                                substrings, even if they start with '-'.
       --sync                 sync directories (remove all non-existent
                                 directories).
-      --help     display this help and exit.
+  -h, --help                 display this help and exit.
   -v, --version              display version information and exit.
 
 Exit status:
@@ -125,3 +125,25 @@ max_age = 10000
 
 Source code: <https://github.com/j-morano/contemporary-z>
 ";
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn readme_shows_the_same_help() {
+        let readme = include_str!("../README.md");
+        let start = readme.find("$ z --help\n").expect("help block in README") + "$ z --help\n".len();
+        let end = start + readme[start..].find("```").unwrap();
+        assert_eq!(readme[start..end].trim_end(), HELP.trim_end(), "update the README");
+    }
+
+    #[test]
+    fn every_default_option_is_documented() {
+        for line in DEFAULT_CONFIG.lines() {
+            let option = line.split(" = ").next().unwrap();
+            assert!(HELP.contains(&format!("\n  {}: ", option)), "'{}' not documented", option);
+        }
+    }
+}

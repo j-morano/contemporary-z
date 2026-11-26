@@ -197,7 +197,7 @@ Mandatory arguments to long options are mandatory for short options too.
                                substrings, even if they start with '-'.
       --sync                 sync directories (remove all non-existent
                                 directories).
-      --help     display this help and exit.
+  -h, --help                 display this help and exit.
   -v, --version              display version information and exit.
 
 Exit status:
