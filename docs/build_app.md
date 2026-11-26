@@ -12,8 +12,6 @@
 
 ### Rust
 
-Rust 1.89 or newer.
-
 ```sh
 rustup target add x86_64-unknown-linux-musl
 ```

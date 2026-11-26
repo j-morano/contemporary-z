@@ -49,22 +49,9 @@ pub(crate) fn parse(args: &[String]) -> Result<Command, String> {
         None => return Ok(Command::Select),
     };
 
-    // Options that take no arguments
-    let alone = |command: Command| match rest.first() {
-        None => Ok(command),
-        Some(extra) => Err(format!("unexpected argument '{}' after '{}'", extra, first)),
-    };
-    // Options that take one or more substrings
-    let substrings = || {
-        if rest.is_empty() {
-            Err(format!("'{}' requires at least one substring", first))
-        } else {
-            Ok(rest.to_vec())
-        }
-    };
-    let forced = |mode: Mode| {
-        Ok(Command::Cd { patterns: substrings()?, mode: Some(mode) })
-    };
+    // Shorthands for the two most common kinds of options
+    let alone = |command| no_arguments(first, rest, command);
+    let forced = |mode| Ok(Command::Cd { patterns: substrings(first, rest)?, mode: Some(mode) });
 
     match first {
         "-v" | "--version" => alone(Command::Version),
@@ -101,7 +88,7 @@ pub(crate) fn parse(args: &[String]) -> Result<Command, String> {
             [dir] => Ok(Command::Add(dir.clone())),
             _ => Err("'--add' takes exactly one directory".to_string()),
         },
-        "-f" => Ok(Command::Find(substrings()?)),
+        "-f" => Ok(Command::Find(substrings(first, rest)?)),
         "-t" => forced(Mode::Shortest),
         "-e" => forced(Mode::Score),
         "-b" => forced(Mode::Basename),
@@ -113,6 +100,25 @@ pub(crate) fn parse(args: &[String]) -> Result<Command, String> {
         },
         option if option.starts_with('-') => Err(format!("unknown option '{}'", option)),
         _ => Ok(Command::Cd { patterns: args.to_vec(), mode: None }),
+    }
+}
+
+
+/// For options that take no arguments.
+fn no_arguments(option: &str, rest: &[String], command: Command) -> Result<Command, String> {
+    match rest.first() {
+        None => Ok(command),
+        Some(extra) => Err(format!("unexpected argument '{}' after '{}'", extra, option)),
+    }
+}
+
+
+/// For options that take one or more substrings.
+fn substrings(option: &str, rest: &[String]) -> Result<Vec<String>, String> {
+    if rest.is_empty() {
+        Err(format!("'{}' requires at least one substring", option))
+    } else {
+        Ok(rest.to_vec())
     }
 }
 

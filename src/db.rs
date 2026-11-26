@@ -1,10 +1,8 @@
 use std::fs;
 use std::io::ErrorKind;
 use std::path::Path;
-use std::time::Duration;
 
 use crate::config::Mode;
-use crate::lock::Lock;
 use crate::utils::get_current_seconds;
 
 
@@ -13,6 +11,7 @@ pub(crate) struct Directory {
     pub name: String,
     /// Visit count. Fractional after aging (see `Database::age`).
     pub counter: f64,
+    /// Seconds since the Unix epoch.
     pub last_access: i64,
     /// Frecency, computed when the database is loaded.
     pub score: f64,
@@ -20,8 +19,10 @@ pub(crate) struct Directory {
 }
 
 
+/// Higher for directories visited often and recently.
 fn frecency(counter: f64, last_access: i64, now: i64) -> f64 {
-    10000.0 * counter * (3.75 / ((0.0001 * (now - last_access) as f64 + 1.0) + 0.25))
+    let age = (now - last_access) as f64;
+    10000.0 * counter * (3.75 / ((0.0001 * age + 1.0) + 0.25))
 }
 
 
@@ -32,44 +33,24 @@ pub(crate) fn valid_alias(alias: &str) -> bool {
 }
 
 
-/// A change to the database. Changes are applied to the in-memory database
-/// immediately and also recorded, so that `commit` can re-apply them to the
-/// latest version on disk (another `cz` may have saved it in the meantime).
-#[derive(Clone, Debug)]
-enum Change {
-    Visit { name: String, alias: Option<String>, now: i64 },
-    SetAlias { dir: String, alias: String },
-    RemoveAlias(String),
-    Remove(String),
-    Clear,
-}
-
-
-/// The directories database. The text format is:
+/// The directories database, stored as a text file with one block per
+/// directory:
 ///
 /// ```text
-/// name1
-/// counter1
-/// last_access1
-/// alias1        (optional)
+/// name
+/// counter
+/// last_access
+/// alias        (optional)
 /// ---
-/// name2
-/// ...
 /// ```
 pub(crate) struct Database {
     dirs: Vec<Directory>,
-    changes: Vec<Change>,
 }
 
 
 impl Database {
     /// Load the database; a missing file is an empty database.
     pub(crate) fn load(path: &str) -> Database {
-        if let Some(parent) = Path::new(path).parent() {
-            fs::create_dir_all(parent).unwrap_or_else(
-                |e| panic!("Error creating dir: {}", e)
-            );
-        }
         let text = match fs::read_to_string(path) {
             Ok(text) => text,
             Err(e) if e.kind() == ErrorKind::NotFound => String::new(),
@@ -79,29 +60,19 @@ impl Database {
     }
 
 
-    /// Save the changes merged with the latest version on disk: under the
-    /// lock, reload the database, re-apply the changes, age it and write it.
-    /// The lock is only held for that, never while waiting for the user.
-    /// Nothing is written if there are no changes. `Err` if the lock could not
-    /// be acquired within `timeout`.
-    pub(crate) fn commit(&self, path: &str, max_age: f64, timeout: Duration) -> Result<(), ()> {
-        if self.changes.is_empty() {
-            return Ok(());
+    /// Write the database to a temporary file and then rename it, so that
+    /// the file is never left half-written. If several `cz` save at the same
+    /// time (e.g., hooks of several shells), the last one wins: there is no
+    /// locking, so a visit may occasionally be lost.
+    pub(crate) fn save(&self, path: &str) {
+        if let Some(parent) = Path::new(path).parent() {
+            fs::create_dir_all(parent).unwrap_or_else(
+                |e| panic!("Error creating dir: {}", e)
+            );
         }
-        let _lock = Lock::acquire(path, timeout).ok_or(())?;
-        let mut latest = Database::load(path);
-        for change in &self.changes {
-            latest.apply(change);
-        }
-        latest.age(max_age);
-        latest.write(path);
-        Ok(())
-    }
-
-
-    /// Write atomically: a crash mid-write must not truncate the database.
-    fn write(&self, path: &str) {
-        let tmp_path = format!("{}.tmp", path);
+        // One temporary file per process, so that concurrent saves do not
+        // write into the same file
+        let tmp_path = format!("{}.{}.tmp", path, std::process::id());
         fs::write(&tmp_path, self.serialize())
             .and_then(|_| fs::rename(&tmp_path, path))
             .unwrap_or_else(|e| panic!("Error writing file: {}", e));
@@ -112,40 +83,25 @@ impl Database {
     fn parse(text: &str, now: i64) -> Database {
         let mut dirs = Vec::new();
         let mut block: Vec<&str> = Vec::new();
-        // Blocks are terminated by a line that is exactly "---"
-        for line in text.lines().chain(std::iter::once("---")) {
-            if line != "---" {
+        for line in text.lines() {
+            if line == "---" {
+                dirs.extend(parse_block(&block, now));
+                block.clear();
+            } else {
                 block.push(line);
-                continue;
             }
-            let fields = std::mem::take(&mut block);
-            if fields.len() < 3 {
-                continue;
-            }
-            let (counter, last_access) = match (
-                fields[1].parse::<f64>(),
-                fields[2].parse::<i64>(),
-            ) {
-                (Ok(c), Ok(l)) => (c, l),
-                _ => continue,
-            };
-            dirs.push(Directory {
-                name: fields[0].to_string(),
-                counter,
-                last_access,
-                score: frecency(counter, last_access, now),
-                alias: fields.get(3).map(|a| a.to_string()).unwrap_or_default(),
-            });
         }
-        Database { dirs, changes: Vec::new() }
+        // In case the last block has no separator
+        dirs.extend(parse_block(&block, now));
+        Database { dirs }
     }
 
 
     fn serialize(&self) -> String {
         let mut text = String::new();
         for dir in &self.dirs {
-            // Aging produces long fractions: keep a few decimals (whole
-            // counters are written as integers)
+            // Aging produces long fractions: keep 4 decimals (whole counters
+            // are written as integers)
             let counter = (dir.counter * 10_000.0).round() / 10_000.0;
             text.push_str(&format!("{}\n{}\n{}\n", dir.name, counter, dir.last_access));
             if !dir.alias.is_empty() {
@@ -161,7 +117,7 @@ impl Database {
     /// of all counters exceeds `max_age`, scale them all down so that the sum
     /// is 90% of `max_age`, and drop the directories whose counter falls below
     /// 1. Aliased directories are never dropped.
-    fn age(&mut self, max_age: f64) {
+    pub(crate) fn age(&mut self, max_age: f64) {
         let total: f64 = self.dirs.iter().map(|dir| dir.counter).sum();
         if total <= max_age {
             return;
@@ -174,56 +130,14 @@ impl Database {
     }
 
 
-    fn record(&mut self, change: Change) {
-        self.apply(&change);
-        self.changes.push(change);
-    }
-
-
-    fn apply(&mut self, change: &Change) {
-        match change {
-            Change::Visit { name, alias, now } => self.insert_at(name, alias.as_deref(), *now),
-            Change::SetAlias { dir, alias } => {
-                for d in self.dirs.iter_mut() {
-                    if d.alias == *alias {
-                        d.alias.clear();
-                    }
-                    if d.name == *dir {
-                        d.alias = alias.clone();
-                    }
-                }
-            }
-            Change::RemoveAlias(dir) => {
-                if let Some(d) = self.dirs.iter_mut().find(|d| d.name == *dir) {
-                    d.alias.clear();
-                }
-            }
-            Change::Remove(name) => {
-                if let Some(i) = self.dirs.iter().position(|dir| dir.name == *name) {
-                    self.dirs.remove(i);
-                }
-            }
-            Change::Clear => self.dirs.clear(),
-        }
-    }
-
-
     pub(crate) fn clear(&mut self) {
-        self.record(Change::Clear);
+        self.dirs.clear();
     }
 
 
     /// Remove the directories for which `keep` is false.
-    pub(crate) fn retain(&mut self, mut keep: impl FnMut(&Directory) -> bool) {
-        let removed: Vec<String> = self
-            .dirs
-            .iter()
-            .filter(|dir| !keep(dir))
-            .map(|dir| dir.name.clone())
-            .collect();
-        for name in removed {
-            self.remove(&name);
-        }
+    pub(crate) fn retain(&mut self, keep: impl FnMut(&Directory) -> bool) {
+        self.dirs.retain(keep);
     }
 
 
@@ -243,38 +157,31 @@ impl Database {
     /// Register a visit to `name` (adding it if needed). Names that do not
     /// fit in one line of the database file are ignored.
     pub(crate) fn insert(&mut self, name: &str, alias: Option<&str>) {
-        if name.contains('\n') {
-            return;
-        }
-        self.record(Change::Visit {
-            name: name.to_string(),
-            alias: alias.map(String::from),
-            now: get_current_seconds(),
-        });
+        self.insert_at(name, alias, get_current_seconds());
     }
 
 
     fn insert_at(&mut self, name: &str, alias: Option<&str>, now: i64) {
+        if name.contains('\n') {
+            return;
+        }
         let mut dir = match self.dirs.iter().position(|dir| dir.name == name) {
-            Some(i) => {
-                let mut dir = self.dirs.remove(i);
-                dir.counter += 1.0;
-                dir.last_access = now;
-                dir
-            }
+            Some(i) => self.dirs.remove(i),
             None => Directory {
                 name: name.to_string(),
-                counter: 1.0,
+                counter: 0.0,
                 last_access: now,
                 score: 0.0,
                 alias: String::new(),
             },
         };
+        dir.counter += 1.0;
+        dir.last_access = now;
         if let Some(alias) = alias {
             dir.alias = alias.to_string();
         }
-        // Most recent last: the order breaks ties between visits that happen
-        // within the same second (access times have a resolution of 1 s)
+        // Visited directories go to the end, so the list is in visit order:
+        // that orders visits that happen within the same second
         self.dirs.push(dir);
     }
 
@@ -282,17 +189,26 @@ impl Database {
     /// Give `dir` the alias `alias`; aliases are unique, so any other
     /// directory that had it loses it.
     pub(crate) fn set_alias(&mut self, dir: &str, alias: &str) {
-        self.record(Change::SetAlias { dir: dir.to_string(), alias: alias.to_string() });
+        for d in self.dirs.iter_mut() {
+            if d.alias == alias {
+                d.alias.clear();
+            }
+            if d.name == dir {
+                d.alias = alias.to_string();
+            }
+        }
     }
 
 
     pub(crate) fn remove_alias(&mut self, dir: &str) {
-        self.record(Change::RemoveAlias(dir.to_string()));
+        if let Some(d) = self.dirs.iter_mut().find(|d| d.name == dir) {
+            d.alias.clear();
+        }
     }
 
 
     pub(crate) fn remove(&mut self, name: &str) {
-        self.record(Change::Remove(name.to_string()));
+        self.dirs.retain(|dir| dir.name != name);
     }
 
 
@@ -311,13 +227,31 @@ impl Database {
     }
 
 
-    /// Directory names, most recently accessed first.
+    /// Directory names, most recently accessed first. Visits within the same
+    /// second are ordered by their position in the list (see `insert_at`).
     pub(crate) fn by_recency(&self) -> Vec<String> {
-        // The stable sort keeps the order of insert for equal times
-        let mut dirs: Vec<&Directory> = self.dirs.iter().rev().collect();
-        dirs.sort_by_key(|dir| std::cmp::Reverse(dir.last_access));
-        dirs.into_iter().map(|dir| dir.name.clone()).collect()
+        let mut dirs: Vec<(usize, &Directory)> = self.dirs.iter().enumerate().collect();
+        dirs.sort_by_key(|(position, dir)| std::cmp::Reverse((dir.last_access, *position)));
+        dirs.into_iter().map(|(_, dir)| dir.name.clone()).collect()
     }
+}
+
+
+/// The directory described by the lines of one block of the database file,
+/// or `None` if the block is malformed.
+fn parse_block(lines: &[&str], now: i64) -> Option<Directory> {
+    if lines.len() < 3 {
+        return None;
+    }
+    let counter: f64 = lines[1].parse().ok()?;
+    let last_access: i64 = lines[2].parse().ok()?;
+    Some(Directory {
+        name: lines[0].to_string(),
+        counter,
+        last_access,
+        score: frecency(counter, last_access, now),
+        alias: lines.get(3).unwrap_or(&"").to_string(),
+    })
 }
 
 
@@ -367,19 +301,11 @@ mod tests {
     }
 
     fn db(dirs: Vec<Directory>) -> Database {
-        Database { dirs, changes: Vec::new() }
+        Database { dirs }
     }
 
     fn nth_recent(d: &Database, n: usize) -> Option<String> {
         d.by_recency().get(n).cloned()
-    }
-
-    /// A database file in a fresh temporary directory.
-    fn temp_db_path(test: &str) -> (std::path::PathBuf, String) {
-        let dir = std::env::temp_dir().join(format!("cz-db-test-{}-{}", test, std::process::id()));
-        let _ = fs::remove_dir_all(&dir);
-        let path = dir.join("db.dir").to_str().unwrap().to_string();
-        (dir, path)
     }
 
     fn names(dirs: &[Directory]) -> Vec<&str> {
@@ -519,45 +445,6 @@ mod tests {
         assert!(d.dirs.is_empty());
         assert!(valid_alias("x") && valid_alias("my alias"));
         assert!(!valid_alias("") && !valid_alias("a\nb") && !valid_alias("---"));
-    }
-
-    // ---- saving
-
-    #[test]
-    fn commit_merges_with_changes_saved_meanwhile() {
-        let (dir, path) = temp_db_path("merge");
-        let long = Duration::from_secs(5);
-        let mut setup = Database::load(&path);
-        setup.insert("/shared", None);
-        setup.insert("/gone", None);
-        setup.commit(&path, 1e9, long).unwrap();
-
-        // Two processes load the same version...
-        let mut first = Database::load(&path);
-        let mut second = Database::load(&path);
-        first.insert("/first", None);
-        first.insert("/shared", None);
-        second.insert("/second", Some("s"));
-        second.remove("/gone");
-        // ...and save one after the other: no change is lost
-        first.commit(&path, 1e9, long).unwrap();
-        second.commit(&path, 1e9, long).unwrap();
-
-        let result = Database::load(&path);
-        let mut result_names: Vec<&str> = result.dirs.iter().map(|d| d.name.as_str()).collect();
-        result_names.sort();
-        assert_eq!(result_names, vec!["/first", "/second", "/shared"]);
-        assert_eq!(result.dirs.iter().find(|d| d.name == "/shared").unwrap().counter, 2.0);
-        assert_eq!(result.by_alias("s").unwrap().name, "/second");
-        let _ = fs::remove_dir_all(dir);
-    }
-
-    #[test]
-    fn commit_without_changes_writes_nothing() {
-        let (dir, path) = temp_db_path("nochange");
-        Database::load(&path).commit(&path, 1e9, Duration::from_secs(1)).unwrap();
-        assert!(!Path::new(&path).exists());
-        let _ = fs::remove_dir_all(dir);
     }
 
     #[test]

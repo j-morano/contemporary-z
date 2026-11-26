@@ -3,7 +3,6 @@
 use std::fs;
 use std::io;
 use std::path::Path;
-use std::time::Duration;
 
 use crate::cli::AliasArgs;
 use crate::config::{Config, Mode};
@@ -25,12 +24,10 @@ impl App {
     }
 
 
-    /// Save the changes to the database (see `Database::commit`). `false` if
-    /// the database stayed locked by another process for `timeout`.
-    pub(crate) fn save(&self, timeout: Duration) -> bool {
-        self.db
-            .commit(&self.config.database_path, self.config.max_age as f64, timeout)
-            .is_ok()
+    /// Age the database and write it to disk.
+    pub(crate) fn save(&mut self) {
+        self.db.age(self.config.max_age as f64);
+        self.db.save(&self.config.database_path);
     }
 
 

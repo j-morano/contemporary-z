@@ -5,10 +5,20 @@ use std::io;
 use std::io::prelude::*;
 use std::process::exit;
 
-use crate::colors::{color_code, sgr_code};
 use crate::config::{Config, ShowFiles, Theme};
 use crate::db::Directory;
 use crate::utils::{get_home_dir, get_user, write_dir};
+
+
+// ANSI colour codes
+const GREEN: u8 = 32;
+const BLUE: u8 = 34;
+const MAGENTA: u8 = 35;
+
+
+fn bold(text: &str) -> String {
+    format!("\x1b[1m{}\x1b[0m", text)
+}
 
 
 pub(crate) struct Ui {
@@ -37,17 +47,11 @@ impl Ui {
     }
 
 
-    fn format(&self, sgr: &str, color: &str, text: String) -> String {
-        if color.is_empty() {
-            return format!("\x1b[{}m{}\x1b[0m", sgr_code(sgr), text);
-        }
-        let full_color = if self.config.theme == Theme::Bright {
-            // If a black fg is forced, replace it by white
-            format!("bright_{}_fg", color).replace("black", "white")
-        } else {
-            format!("{}_fg", color)
-        };
-        format!("\x1b[{};{}m{}\x1b[0m", sgr_code(sgr), color_code(full_color.as_str()), text)
+    /// `text` in bold and in `color` (one of the ANSI codes above; the bright
+    /// theme uses their bright variants).
+    fn colored(&self, color: u8, text: &str) -> String {
+        let color = if self.config.theme == Theme::Bright { color + 60 } else { color };
+        format!("\x1b[1;{}m{}\x1b[0m", color, text)
     }
 
 
@@ -55,29 +59,29 @@ impl Ui {
     pub(crate) fn show_error(&self, text: &str, error: &str) -> ! {
         write_dir("".to_string());
         let joint = if error.is_empty() { "" } else { ":" };
-        println!("{}{} {}", self.format("bold", "magenta", text.to_string()), joint, error);
+        println!("{}{} {}", self.colored(MAGENTA, text), joint, error);
         exit(1);
     }
 
 
     /// Like `show_error`, but does not exit.
     pub(crate) fn show_warning(&self, text: &str, error: &str) {
-        println!("{}: {}", self.format("bold", "magenta", text.to_string()), error);
+        println!("{}: {}", self.colored(MAGENTA, text), error);
     }
 
 
     pub(crate) fn show_message(&self, text: &str) {
-        println!("{}", self.format("bold", "green", text.to_string()));
+        println!("{}", self.colored(GREEN, text));
     }
 
 
     pub(crate) fn show_detailed_message(&self, message: &str, details: &str) {
-        println!("{}: {}", self.format("bold", "green", message.to_string()), details);
+        println!("{}: {}", self.colored(GREEN, message), details);
     }
 
 
     pub(crate) fn show_bold(&self, text: &str) {
-        println!("{}", self.format("bold", "", text.to_string()));
+        println!("{}", bold(text));
     }
 
 
@@ -132,9 +136,9 @@ impl Ui {
             let alias = if alias.is_empty() { String::new() } else { format!("{}:", alias) };
             println!(
                 "{}) {}{}",
-                self.format("bold", "", (i + start).to_string()),
+                bold(&(i + start).to_string()),
                 alias,
-                self.format("bold", "blue", name),
+                self.colored(BLUE, &name),
             );
         }
     }

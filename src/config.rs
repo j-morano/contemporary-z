@@ -1,5 +1,4 @@
 use std::fs;
-use std::str::FromStr;
 
 use crate::utils::get_home_dir;
 
@@ -10,16 +9,6 @@ pub(crate) enum Theme {
     Bright,
 }
 
-impl FromStr for Theme {
-    type Err = ();
-    fn from_str(s: &str) -> Result<Self, ()> {
-        match s {
-            "dark" => Ok(Theme::Dark),
-            "bright" => Ok(Theme::Bright),
-            _ => Err(()),
-        }
-    }
-}
 
 
 /// How to choose among the directories that match the given substring(s).
@@ -35,18 +24,6 @@ pub(crate) enum Mode {
     Select,
 }
 
-impl FromStr for Mode {
-    type Err = ();
-    fn from_str(s: &str) -> Result<Self, ()> {
-        match s {
-            "shortest" => Ok(Mode::Shortest),
-            "score" => Ok(Mode::Score),
-            "basename" => Ok(Mode::Basename),
-            "none" => Ok(Mode::Select),
-            _ => Err(()),
-        }
-    }
-}
 
 
 /// Where to show non-directory files in interactive navigation.
@@ -58,17 +35,6 @@ pub(crate) enum ShowFiles {
     Off,
 }
 
-impl FromStr for ShowFiles {
-    type Err = ();
-    fn from_str(s: &str) -> Result<Self, ()> {
-        match s {
-            "top" => Ok(ShowFiles::Top),
-            "bottom" => Ok(ShowFiles::Bottom),
-            "none" => Ok(ShowFiles::Off),
-            _ => Err(()),
-        }
-    }
-}
 
 
 #[derive(Clone, PartialEq, Debug)]
@@ -81,7 +47,7 @@ pub(crate) struct Config {
     pub(crate) substring: Mode,
     pub(crate) show_files: ShowFiles,
     pub(crate) nav_start_number: usize,
-    /// Limit of the sum of all the visit counters (see `data::age`).
+    /// Limit of the sum of all the visit counters (see `Database::age`).
     pub(crate) max_age: usize,
 }
 
@@ -90,7 +56,7 @@ fn expand_home(path: &str) -> String {
 }
 
 impl Default for Config {
-    /// Must match `DEFAULT_CONFIG` (checked by a test).
+    /// Must match the default config shown in the help (checked by a test).
     fn default() -> Config {
         Config {
             theme: Theme::Dark,
@@ -111,7 +77,13 @@ impl Config {
     /// an invalid value is an error and leaves the option unchanged.
     fn set(&mut self, option: &str, value: &str) -> Result<(), ()> {
         match option {
-            "theme" => self.theme = value.parse()?,
+            "theme" => {
+                self.theme = match value {
+                    "dark" => Theme::Dark,
+                    "bright" => Theme::Bright,
+                    _ => return Err(()),
+                }
+            }
             "abs_paths" => self.abs_paths = value.parse().map_err(|_| ())?,
             "compact_paths" => self.compact_paths = value.parse().map_err(|_| ())?,
             "max_results" => {
@@ -131,8 +103,23 @@ impl Config {
                 self.max_age = n;
             }
             "database_path" => self.database_path = expand_home(value),
-            "substring" => self.substring = value.parse()?,
-            "show_files" => self.show_files = value.parse()?,
+            "substring" => {
+                self.substring = match value {
+                    "shortest" => Mode::Shortest,
+                    "score" => Mode::Score,
+                    "basename" => Mode::Basename,
+                    "none" => Mode::Select,
+                    _ => return Err(()),
+                }
+            }
+            "show_files" => {
+                self.show_files = match value {
+                    "top" => ShowFiles::Top,
+                    "bottom" => ShowFiles::Bottom,
+                    "none" => ShowFiles::Off,
+                    _ => return Err(()),
+                }
+            }
             _ => {}
         }
         Ok(())
@@ -162,7 +149,7 @@ impl Config {
 
 
 fn parse_config(config_string: &str) -> Vec<(String, String)> {
-    /* File format (see DEFAULT_CONFIG):
+    /* File format (see the default config in the help):
      * option = value
      * Lines starting with '#' and malformed lines are ignored.
      */
@@ -183,7 +170,14 @@ fn parse_config(config_string: &str) -> Vec<(String, String)> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::strings::DEFAULT_CONFIG;
+    use crate::strings::HELP;
+
+    /// The default config shown in the help.
+    fn default_config_text() -> &'static str {
+        let start = HELP.find("cz.conf\n").unwrap() + "cz.conf\n".len();
+        let end = start + HELP[start..].find("---").unwrap();
+        &HELP[start..end]
+    }
 
     #[test]
     fn config_skips_comments_and_bad_lines() {
@@ -199,7 +193,7 @@ mod tests {
 
     #[test]
     fn config_default_matches_default_config_text() {
-        assert_eq!(Config::parse(DEFAULT_CONFIG), Config::default());
+        assert_eq!(Config::parse(default_config_text()), Config::default());
     }
 
     #[test]

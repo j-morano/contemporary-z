@@ -134,8 +134,6 @@ By default, `cz` only learns the directories you reach with `z`. To also registe
 * Fish: copy `hook.fish` to `$HOME/.config/fish/conf.d/cz_hook.fish`.
 * Bash/Zsh: add the code from `hook.sh` to `.bashrc`/`.zshrc`, after the `z` function.
 
-`cz` saves its database under a lock, merging its changes with the ones other `cz` processes saved in the meantime, so several shells can use it at the same time. The lock is only held for a moment, never while a selection list is shown. A hook never waits more than a fraction of a second: if the database is busy, that visit is simply not registered.
-
 > [!NOTE]
 > Since version 0.6.0, the shell function gives `cz` a private temporary file (`CZ_PATH_FILE`) to write the directory to `cd` to, instead of the shared `/tmp/cz_path`. If you installed the function before, update it with the current `z.fish` or `z.sh`. (Older functions still work through `$XDG_RUNTIME_DIR/cz_path` or `/tmp/cz_path_$USER`.)
 

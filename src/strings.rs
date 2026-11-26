@@ -1,18 +1,3 @@
-// Only used by tests: the help text documents it and `Config::default` mirrors it.
-#[cfg_attr(not(test), allow(dead_code))]
-pub(crate) const DEFAULT_CONFIG: &str = "\
-theme = dark
-max_results = 9
-abs_paths = true
-compact_paths = true
-database_path = $HOME/.local/share/contemporary-z/directories.dir
-substring = score
-show_files = none
-nav_start_number = 1
-max_age = 10000
-";
-
-
 pub(crate) const HELP: &str = "\
 Usage: z [OPTION]... [DIRECTORY|SUBSTRING]...
 
@@ -137,13 +122,5 @@ mod tests {
         let start = readme.find("$ z --help\n").expect("help block in README") + "$ z --help\n".len();
         let end = start + readme[start..].find("```").unwrap();
         assert_eq!(readme[start..end].trim_end(), HELP.trim_end(), "update the README");
-    }
-
-    #[test]
-    fn every_default_option_is_documented() {
-        for line in DEFAULT_CONFIG.lines() {
-            let option = line.split(" = ").next().unwrap();
-            assert!(HELP.contains(&format!("\n  {}: ", option)), "'{}' not documented", option);
-        }
     }
 }
